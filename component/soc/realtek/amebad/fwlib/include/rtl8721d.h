@@ -15,7 +15,7 @@
 #include "memproc.h"
 #include "rtl8721d_sys_on.h"
 #include "rtl8721d_peri_on.h"
-#include "hal_platform.h"
+#include "hal_platform_rtl.h"
 #include "rtl8721d_vector.h"
 #include "rtl8721d_loguart.h"
 #include "rtl8721d_soc_ps.h"

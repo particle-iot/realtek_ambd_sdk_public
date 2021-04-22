@@ -27,9 +27,9 @@
 #define SERVER_TYPE		SERVER_LOCAL						/*configure OTA demo type*/
 #define MAX_IMG_NUM		2
 
-#define HTTP_OTA_UPDATE	
-#define HTTPS_OTA_UPDATE	
-#define SDCARD_OTA_UPDATE
+// #define HTTP_OTA_UPDATE	
+// #define HTTPS_OTA_UPDATE	
+// #define SDCARD_OTA_UPDATE
 
 #if (defined HTTP_OTA_UPDATE) || (defined HTTPS_OTA_UPDATE)
 
