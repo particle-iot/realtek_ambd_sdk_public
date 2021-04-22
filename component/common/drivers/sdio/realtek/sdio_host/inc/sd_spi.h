@@ -17,9 +17,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "diskio.h"
-#include "hal_platform.h"
+#include "hal_platform_rtl.h"
 
-//¸ù¾ÝSPIÊ±ÖÓÆµÂÊ×÷ÏàÓ¦ÐÞ¸Ä
+//ï¿½ï¿½ï¿½ï¿½SPIÊ±ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Þ¸ï¿½
 #define INIT_RETRY_MAX    400000
 #define READ_BLOCK_MAX    200000 //200ms
 #define WAIT_READY_MAX    500000 //500ms
