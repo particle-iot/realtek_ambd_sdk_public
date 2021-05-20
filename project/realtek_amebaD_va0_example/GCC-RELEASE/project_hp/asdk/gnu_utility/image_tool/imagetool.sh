@@ -57,7 +57,8 @@ fi
 if [ "$COMPILEOS" == "GNU/Linux" ]; then
 	IMAGE_FULLNAME=$1
 elif [ "$COMPILEOS" == "Darwin" ]; then
-	IMAGE_FULLNAME=$(relative_to_path $(pwd) $1)
+	IMAGE_FULLNAME=$1
+	# IMAGE_FULLNAME=$(relative_to_path $(pwd) $1)
 else
 	IMAGE_FULLNAME=$(realpath --relative-to=$(pwd) $1)
 fi
@@ -69,7 +70,8 @@ if [ "$2" != "" ]; then
 	if [ "$COMPILEOS" == "GNU/Linux" ]; then
 		COPY_PATH=$2
         elif [ "$COMPILEOS" == "Darwin" ]; then
-		COPY_PATH=$(relative_to_path $(pwd) $2)
+		COPY_PATH=$2
+		# COPY_PATH=$(relative_to_path $(pwd) $2)
 	else
 		COPY_PATH=$(realpath --relative-to=$(pwd) $2)
 	fi
@@ -79,7 +81,8 @@ if [ "$3" != "" ]; then
 	if [ "$COMPILEOS" == "GNU/Linux" ]; then
 		BUILD_TYPE=$3
         elif [ "$COMPILEOS" == "Darwin" ]; then
-		BUILD_TYPE=$(relative_to_path $(pwd) $3)
+		BUILD_TYPE=$3
+		# BUILD_TYPE=$(relative_to_path $(pwd) $3)
 	else
 		BUILD_TYPE=$(realpath --relative-to=$(pwd) $3)
 	fi

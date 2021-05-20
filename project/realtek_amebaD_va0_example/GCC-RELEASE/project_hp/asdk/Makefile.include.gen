@@ -81,8 +81,10 @@ else ifeq ($(COMPILEOS_CYGWIN),Cygwin)
 ASDK_TOOLCHAIN = $(TOOLCHAINDIR)/cygwin/asdk-6.4.1/cygwin/newlib
 ASDK_TOOLCHAIN_R = ../toolchain/cygwin/asdk-6.4.1/cygwin/newlib
 else ifeq ($(COMPILEOS),$(DARWIN_OS))
-ASDK_TOOLCHAIN = $(TOOLCHAINDIR)/darwin/asdk-6.5.0-darwin-newlib-build-999+-10.13/darwin/newlib
-ASDK_TOOLCHAIN_R = ../toolchain/darwin/asdk-6.5.0-darwin-newlib-build-999+-10.13/darwin/newlib
+# ASDK_TOOLCHAIN = $(TOOLCHAINDIR)/darwin/asdk-6.5.0-darwin-newlib-build-999+-10.13/darwin/newlib
+# ASDK_TOOLCHAIN_R = ../toolchain/darwin/asdk-6.5.0-darwin-newlib-build-999+-10.13/darwin/newlib
+ASDK_TOOLCHAIN = $(dir $(shell which arm-none-eabi-gcc))../.
+ASDK_TOOLCHAIN_R =
 endif
 
 tool_dir = $(ASDK_TOOLCHAIN)/bin
