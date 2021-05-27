@@ -535,6 +535,7 @@ gdb_all: gdb_prepare
 	$(GDB) -x $(GNU_SCRIPT)/rtl_gdb_flash_write_all.txt
 
 gdb: gdb_prepare
+	$(MKDIR) -p $(FLASHDLIMGDIR)
 	$(COPY) $(FLASHDLIMGDIR_KM0)/*  $(FLASHDLIMGDIR)/
 	$(COPY) $(GNU_SCRIPT)/acut_loader/*  $(GNU_SCRIPT)/
 	$(GNU_SCRIPT)/SetupGDB_FPGA.sh $(GNU_SCRIPT)
