@@ -22,10 +22,6 @@ all:
 #                        RULES TO CLEAN TARGETS                               #
 #*****************************************************************************#
 clean: CLEAN_OBJS
-	$(REMOVE) *.o
-	$(REMOVE) *.i
-	$(REMOVE) *.s
-	$(REMOVE) *.d
-	$(REMOVE) *.su
+	@make -C $(SRCDIR) clean
 
 -include $(DEPS)
