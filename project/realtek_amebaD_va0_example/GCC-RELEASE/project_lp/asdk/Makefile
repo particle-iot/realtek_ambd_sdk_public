@@ -459,8 +459,8 @@ endif
 #*****************************************************************************#
 copy_flashloader:
 
-	$(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf
-	$(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin
+	# $(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf
+	# $(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin
 
 copy_imgtool_flashloader:
 
