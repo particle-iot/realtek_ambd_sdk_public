@@ -95,7 +95,7 @@
  #define IMAGE2_ENTRY_SECTION                     \
             SECTION(".image2.entry.data")
 #define IMAGE2_RAM_TEXT_SECTION                     \
-            SECTION(".image2.ram.text")
+            SECTION(".image2.ram.text") __attribute__((noinline))
             
 #define SDRAM_DATA_SECTION				
 
@@ -115,7 +115,7 @@
 #define WLAN_RAM_MAP_SECTION
 
 #undef CONFIG_WIFI_CRITICAL_CODE_SECTION
-#define CONFIG_WIFI_CRITICAL_CODE_SECTION		SECTION(".image2.net.ram.text")
+#define CONFIG_WIFI_CRITICAL_CODE_SECTION		SECTION(".image2.net.ram.text") __attribute__((noinline))
 #define CONFIG_FW_CRITICAL_CODE_SECTION		//IMAGE2_RAM_TEXT_SECTION
 //3 Apple  Section
 #define APPLE_ROM_TEXT_SECTION                      \
