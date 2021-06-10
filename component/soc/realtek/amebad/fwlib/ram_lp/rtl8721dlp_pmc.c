@@ -916,7 +916,7 @@ VOID SOCPS_InitSYSIRQ(VOID)
 	/* open snooze mode */
 	SOCPS_SNOOZE_Config((BIT_XTAL_REQ_SNOOZE_MSK | BIT_CAPTOUCH_SNOOZE_MSK), ENABLE);
 	
-	InterruptRegister((IRQ_FUN) SOCPS_SYSIrq, SYSTEM_ON_IRQ_LP, NULL, 0);
+	InterruptRegister((IRQ_FUN) SOCPS_SYSIrq, SYSTEM_ON_IRQ_LP, (uint32_t)NULL, 0);
 	InterruptEn(SYSTEM_ON_IRQ_LP, 0);
 }
 

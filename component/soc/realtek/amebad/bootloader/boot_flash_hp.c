@@ -393,7 +393,6 @@ void BOOT_FLASH_WakeFromPG(void)
 BOOT_RAM_TEXT_SECTION
 void INT_HardFault_Patch_C(uint32_t mstack[], uint32_t pstack[], uint32_t lr_value, uint32_t fault_id)
 {
-	int i;
 	u8 IsPstack = 0;
 	u32 control_ns;
 
@@ -530,7 +529,7 @@ u32 BOOT_FLASH_Image2SignatureCheck(void)
 	/* get image header */	
 	IMAGE_HEADER *Image2Hdr = (IMAGE_HEADER *)((__flash_text_start__) - IMAGE_HEADER_LEN);
 	SB_HEADER *SbHeader = (SB_HEADER *)(Image2Hdr->sb_header);
-	IMAGE_HEADER *Image2DataHdr = (IMAGE_HEADER *)(__flash_text_start__ + Image2Hdr->image_size);
+	//IMAGE_HEADER *Image2DataHdr = (IMAGE_HEADER *)(__flash_text_start__ + Image2Hdr->image_size);
 	ROM_SECURE_CALL_NS_ENTRY *prom_sec_call_ns_entry = (ROM_SECURE_CALL_NS_ENTRY *)__rom_entry_ns_start__;
 	//u32 len = Image2Hdr->image_size + Image2DataHdr->image_size + IMAGE_HEADER_LEN; //header included
 	u32 len = Image2Hdr->sb_header - 0x0E000000 - IMAGE_HEADER_LEN;

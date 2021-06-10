@@ -21,7 +21,7 @@ extern u8 __ls_flash_text_start__[];
 extern u8 __hs_flash_text_start__[];
 
 BOOT_RAM_DATA_SECTION
-CPU_PWR_SEQ SYSPLL_ON_SEQ[] = {
+static CPU_PWR_SEQ SYSPLL_ON_SEQ[] = {
 	/* Enable SYS PLL */
 	{0x48000208, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			(0x01 << 28)},
 	{0x48000280, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			0x00000003},
@@ -81,8 +81,8 @@ static u32 BOOT_FLASH_OTA_Force1Check(void)
 FLASH_BOOT_TEXT_SECTION
 static u8 BOOT_FLASH_OTA_MMU(u8 idx, u32 vAddr, u32 pAddr, u32 *size)
 {
-	IMAGE_HEADER *Img2Hdr, *Img2DataHdr, *PsramHdr;
-	u32 ImgSize, IsMinus, Offset, SBheader;
+	IMAGE_HEADER *Img2Hdr, *Img2DataHdr = NULL, *PsramHdr;
+	u32 ImgSize, IsMinus, Offset, SecureBootOn;
 	u8 res = _TRUE;
 
 	/* Calculate mapping offset */
