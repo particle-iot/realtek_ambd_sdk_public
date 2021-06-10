@@ -56,7 +56,7 @@ const IPC_INIT_TABLE  ipc_init_config[] =
 	{0xFFFFFFFF,		OFF,								OFF},	/* Table end */
 };
 #else
-#if CONFIG_WIFI_FW_EN
+#if defined(CONFIG_WIFI_FW_EN) && CONFIG_WIFI_FW_EN
 extern void driver_fw_flow_ipc_int(VOID *Data, u32 IrqStatus, u32 ChanNum);
 #define fw_flow_ipc_int driver_fw_flow_ipc_int
 #else
