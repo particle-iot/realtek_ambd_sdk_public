@@ -1,5 +1,6 @@
 //----------------------------------------------------------------------------//
 //#include <flash/stm32_flash.h>
+#include "platform_opts.h"
 #if !defined(CONFIG_MBED_ENABLED) && !defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)
 #include "main.h"
 #include <lwip_netconf.h>
@@ -331,6 +332,7 @@ static void wifi_no_network_hdl(char* buf, int buf_len, int flags, void* userdat
 	( void ) buf_len;
 	( void ) flags;
 	( void ) userdata;
+	RTW_API_INFO("\r\nno network!!!\r\b");
 	
   if(join_user_data!=NULL)
  	 rtw_join_status = JOIN_NO_NETWORKS | JOIN_CONNECTING;
@@ -386,7 +388,9 @@ static void wifi_handshake_done_hdl( char* buf, int buf_len, int flags, void* us
 	if(join_user_data != NULL)
 		rtw_up_sema(&join_user_data->join_sema);
 }
+#if CONFIG_LWIP_LAYER
 extern void dhcp_stop(struct netif *netif);
+#endif
 
 extern u32 rltk_wlan_get_link_err(void);
 static void wifi_link_err_parse(u16 reason_code)
@@ -489,7 +493,7 @@ static void wifi_disconn_hdl( char* buf, int buf_len, int flags, void* userdata)
 	( void ) flags;
 	( void ) userdata;
 #define REASON_4WAY_HNDSHK_TIMEOUT 15
-	u16 disconn_reason;
+	u16 disconn_reason = 0;
 	if (buf != NULL){
 		/* buf detail: mac addr + disconn_reason, buf_len = ETH_ALEN+2*/
 		disconn_reason =*(u16*)(buf+6);
@@ -742,7 +746,6 @@ int wifi_connect_simple(
 	//unsigned long tick1 = xTaskGetTickCount();
 	//unsigned long tick2, tick3;
 	int ssid_len,password_len;
-
 
 	ssid_len = strlen(ssid);
 	password_len = strlen(password);	
@@ -1595,8 +1598,8 @@ _WEAK void wifi_set_mib(void)
 //----------------------------------------------------------------------------//
 _WEAK void wifi_set_country_code(void)
 {
-	//wifi_set_country(RTW_COUNTRY_US); // 2.4G only
-	//wifi_change_channel_plan(0x25); // Support 2.4G and 5G, ex: 0x25 = 2G_FCC1, 5G_FCC1
+	// wifi_set_country(RTW_COUNTRY_WORLD1); // 2.4G only
+	// wifi_change_channel_plan(0x79); // Support 2.4G and 5G, ex: 0x25 = 2G_FCC1, 5G_FCC1
 }
 
 //----------------------------------------------------------------------------//
@@ -2271,7 +2274,9 @@ void wifi_scan_each_report_hdl( char* buf, int buf_len, int flags, void* userdat
 	( void ) buf_len;
 	( void ) flags;
 	( void ) userdata;
-	
+
+	RTW_API_INFO("WIFICONF: report");
+
 	int i =0;
 	int j =0;
 	int insert_pos = 0;
@@ -2338,6 +2343,9 @@ void wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
 	( void ) flags;
 	( void ) userdata;
 	
+
+	RTW_API_INFO("WIFICONF: scan done");
+
 	int i = 0;
 	rtw_scan_handler_result_t scan_result_report;
 
@@ -4004,7 +4012,7 @@ int wifi_set_null1_param(uint8_t check_period, uint8_t pkt_num, uint8_t limit, u
 #endif
 
 
-#if WIFI_LOGO_CERTIFICATION_CONFIG
+#if defined(WIFI_LOGO_CERTIFICATION_CONFIG) && WIFI_LOGO_CERTIFICATION_CONFIG
 #ifdef CONFIG_IEEE80211W
 u32 wifi_set_pmf(unsigned char pmf_mode){
 	int ret;

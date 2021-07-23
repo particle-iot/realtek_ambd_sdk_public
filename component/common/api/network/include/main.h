@@ -3,7 +3,9 @@
 
 #include <autoconf.h>
 
+#ifndef CONFIG_WLAN
 #define CONFIG_WLAN	1
+#endif
 
 
 /* Header file declaration*/

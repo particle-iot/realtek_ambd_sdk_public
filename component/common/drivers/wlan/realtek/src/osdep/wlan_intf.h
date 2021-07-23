@@ -94,6 +94,7 @@ void rltk_wlan_enable_wep_auth_algo_switch(unsigned char enable);
 void rltk_wlan_enable_delayed_reordering(unsigned char enable);
 void rltk_wlan_disable_dpk(void);
 unsigned char rltk_wlan_scan_with_ssid_by_extended_security_is_enable(void);
+void rltk_wlan_enable_scan_with_ssid_by_extended_security(int);
 void rltk_wlan_enable_channel_switch_announcement(unsigned char enable);
 int rltk_set_tx_pause(unsigned char pause);
 void rltk_set_rts_cts_mode(unsigned char mode);
