@@ -66,6 +66,7 @@ static rtw_result_t rtw_send_event_to_worker(int event_cmd, char *buf, int buf_l
 #else
 static rtw_result_t rtw_indicate_event_handle(int event_cmd, char *buf, int buf_len, int flags)
 {
+	rtl_wifi_log("indicate %x", event_cmd);
 	rtw_event_handler_t handle = NULL;
 	int i;
 	
@@ -228,12 +229,14 @@ void wifi_indication( rtw_event_indicate_t event, char *buf, int buf_len, int fl
 
 void wifi_reg_event_handler(unsigned int event_cmds, rtw_event_handler_t handler_func, void *handler_user_data)
 {
+	rtl_wifi_log("reg event handler %x", event_cmds);
 	int i = 0, j = 0;
 	if(event_cmds < WIFI_EVENT_MAX){
 		for(i=0; i < WIFI_EVENT_MAX_ROW; i++){
 			if(event_callback_list[event_cmds][i].handler == NULL){
 			    for(j=0; j<WIFI_EVENT_MAX_ROW; j++){
 			        if(event_callback_list[event_cmds][j].handler == handler_func){
+						rtl_wifi_log("already present");
 			            return;
 			        }
 			    }
@@ -243,10 +246,12 @@ void wifi_reg_event_handler(unsigned int event_cmds, rtw_event_handler_t handler
 			}
 		}
 	}
+	rtl_wifi_log("not inserted");
 }
 
 void wifi_unreg_event_handler(unsigned int event_cmds, rtw_event_handler_t handler_func)
 {
+	rtl_wifi_log("unreg event handler %x", event_cmds);
 	int i;
 	if(event_cmds < WIFI_EVENT_MAX){
 		for(i = 0; i < WIFI_EVENT_MAX_ROW; i++){

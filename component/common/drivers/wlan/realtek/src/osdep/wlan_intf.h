@@ -75,6 +75,7 @@ void rltk_wlan_btcoex_set_bt_state(unsigned char state);
 int rltk_wlan_change_channel_plan(unsigned char channel_plan);
 int rltk_set_tx_pause(unsigned char pause);
 void rltk_set_rts_cts_mode(unsigned char mode);
+void rltk_wlan_enable_scan_with_ssid_by_extended_security(int);
 
 #ifdef CONFIG_IEEE80211W
 void rltk_wlan_tx_sa_query(unsigned char key_type);

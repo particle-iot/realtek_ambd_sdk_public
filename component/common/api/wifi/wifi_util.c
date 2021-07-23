@@ -1153,8 +1153,9 @@ void wext_wlan_indicate(unsigned int cmd, union rtwreq_data *wrqu, char *extra)
 		case RTKIOCGIWSCAN:
 			if(wrqu->data.pointer == NULL)
 				wifi_indication(WIFI_EVENT_SCAN_DONE, NULL, 0, 0);
-			else
+			else {
 				wifi_indication(WIFI_EVENT_SCAN_RESULT_REPORT, wrqu->data.pointer, wrqu->data.length, 0);
+			}
 			break;
 		case RTWEVMGNTRECV:
 			wifi_indication(WIFI_EVENT_RX_MGNT, wrqu->data.pointer, wrqu->data.length, wrqu->data.flags);
@@ -1684,6 +1685,7 @@ void wext_suspend_softap_beacon(const char *ifname)
 	rltk_suspend_softap_beacon(ifname);
 }
 extern int rtw_ap_switch_chl_and_inform(unsigned char new_channel);
+
 int wext_ap_switch_chl_and_inform(unsigned char new_channel)
 {
 	if(rtw_ap_switch_chl_and_inform(new_channel))

@@ -48,18 +48,19 @@
 
 #define RTW_ENABLE_API_INFO
 
+extern void rtl_wifi_log(const char *fmt, ...);
 #ifdef RTW_ENABLE_API_INFO
 #if defined(CONFIG_MBED_ENABLED)
     extern __u32 GlobalDebugEnable;
     #define RTW_API_INFO(...)     do {\
-        if (GlobalDebugEnable) \
-            printf(__VA_ARGS__);\
+        if (GlobalDebugEnable || true) \
+            rtl_wifi_log(__VA_ARGS__);\
     }while(0)
 #else
-    #define RTW_API_INFO printf
+    #define RTW_API_INFO rtl_wifi_log
 #endif
 #else
-    #define RTW_API_INFO(args)
+    #define RTW_API_INFO rtl_wifi_log
 #endif
 
 #define MAC_ARG(x) ((u8*)(x))[0],((u8*)(x))[1],((u8*)(x))[2],((u8*)(x))[3],((u8*)(x))[4],((u8*)(x))[5]

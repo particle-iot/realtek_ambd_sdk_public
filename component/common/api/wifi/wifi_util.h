@@ -125,6 +125,11 @@ int wext_wlan_redl_fw(const char *ifname);
 extern int (*p_wlan_mgmt_filter)(__u8 *ie, __u16 ie_len, __u16 frame_type);
 extern int (*p_wlan_action_filter)(__u8 *ie, __u16 ie_len, __u16 frame_type);
 
+int wext_get_bcn_rssi(const char *ifname, int *rssi);
+int wext_set_bw40_enable(__u8 enable);
+int wext_set_ant_div_gpio(__u8 type);
+void wext_set_powersave_mode(__u8 ps_mode);
+
 #ifdef	__cplusplus
 }
 #endif

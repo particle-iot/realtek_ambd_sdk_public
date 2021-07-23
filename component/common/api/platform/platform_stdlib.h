@@ -26,10 +26,11 @@ extern "C" {
 		defined(CONFIG_PLATFORM_8195BHP)+\
 		defined(USE_STM322xG_EVAL)+\
 		defined(USE_STM324xG_EVAL)+\
-		defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)+\
 		defined(STM32F10X_XL) > 1
 		#error "Cannot define two or more platform at one time"
 #endif
+
+#ifndef CONFIG_PLATFOMR_CUSTOMER_RTOS
 
 #if defined(CONFIG_PLATFORM_8195A)
 	#include "platform_stdlib_rtl8195a.h"
@@ -41,16 +42,17 @@ extern "C" {
 	#include "platform_stdlib_rtl8195bhp.h"	
 #elif defined(USE_STM322xG_EVAL) || defined(USE_STM324xG_EVAL)  || defined(STM32F10X_XL) 
 	#include "platform_stdlib_stm32.h"
-#elif defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)
-	#include "platform_stdlib_customer.h"
 #elif defined (CONFIG_PLATFORM_8710C)
 	#include "platform_stdlib_rtl8710c.h"
 #else
 	#error "Undefined Platform stdlib"
 #endif
+#else
+#include "platform_stdlib_customer.h"
+#endif // CONFIG_PLATFOMR_CUSTOMER_RTOS
 
 
-#if (CONFIG_PLATFORM_AMEBA_X == 0)
+#if defined(CONFIG_PLATFORM_AMEBA_X) && (CONFIG_PLATFORM_AMEBA_X == 0)
 #ifndef CONFIG_PLATFOMR_CUSTOMER_RTOS
 #include "basic_types.h"
 #endif

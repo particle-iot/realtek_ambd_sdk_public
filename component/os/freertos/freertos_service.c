@@ -756,7 +756,7 @@ static int _freertos_create_task(struct task_struct *ptask, const char *name,
 		task_ctx = thctx;
 	}
 
-	priority += tskIDLE_PRIORITY;
+	priority += tskIDLE_PRIORITY + 3;
 #if defined(CONFIG_WIFI_NORMAL) && defined(CONFIG_NETWORK)
 	if(rtw_if_wifi_thread((char*)name) == 0){
 

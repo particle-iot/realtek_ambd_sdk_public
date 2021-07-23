@@ -11,6 +11,8 @@
 #ifndef __NETCONF_H
 #define __NETCONF_H
 
+#if defined(CONFIG_LWIP_LAYER) && CONFIG_LWIP_LAYER
+
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -78,6 +80,8 @@ uint32_t LWIP_Get_Dynamic_Sleep_Interval(void);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // defined(CONFIG_LWIP_LAYER) && CONFIG_LWIP_LAYER
 
 #endif /* __NETCONF_H */
 
