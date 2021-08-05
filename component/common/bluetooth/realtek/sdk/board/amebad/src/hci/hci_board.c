@@ -300,23 +300,23 @@ uint8_t *hci_find_patch_address(void)
     hci_board_debug("\nWe use DEBUG VAL:0x%x\n", HAL_READ32(0x08000000, 0x3028));
     }
 
-    if(CHECK_SW(EFUSE_SW_USE_FLASH_PATCH))
-    {
+    // if(CHECK_SW(EFUSE_SW_USE_FLASH_PATCH))
+    // {
         //1
         return (uint8_t *)rltk_bt_get_patch_code();
-    }
-    else if (ota_get_cur_index() == OTA_INDEX_1)
-    {
-        hci_board_debug("\nWe use BT ROM OTA2 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA2);
-        HCI_PRINT_INFO1("\nWe use BT ROM OTA2 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA2);
-        return (uint8_t *)MERGE_PATCH_ADDRESS_OTA2;
-    }
-    else
-    {
-        hci_board_debug("\nWe use BT ROM OTA1 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA1);
-        HCI_PRINT_INFO1("\nWe use BT ROM OTA1 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA1);
-        return (uint8_t *)MERGE_PATCH_ADDRESS_OTA1;
-    }
+    // }
+    // else if (ota_get_cur_index() == OTA_INDEX_1)
+    // {
+    //     hci_board_debug("\nWe use BT ROM OTA2 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA2);
+    //     HCI_PRINT_INFO1("\nWe use BT ROM OTA2 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA2);
+    //     return (uint8_t *)MERGE_PATCH_ADDRESS_OTA2;
+    // }
+    // else
+    // {
+    //     hci_board_debug("\nWe use BT ROM OTA1 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA1);
+    //     HCI_PRINT_INFO1("\nWe use BT ROM OTA1 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA1);
+    //     return (uint8_t *)MERGE_PATCH_ADDRESS_OTA1;
+    // }
 }
 
 
@@ -637,7 +637,7 @@ void bt_reset(void)
 
 bool hci_board_init()
 {
-
+    // bool ret=false;
 	
     if(!(wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
         hci_board_debug("\nWIFI is off !Please restart BT after WIFI on!\n");
