@@ -35,36 +35,36 @@ unsigned int send_coex_mailbox_to_wifi_from_BtAPP(uint8_t state)
     return 1;
 }
 
-static void rtk_notify_info_to_wifi(uint8_t length, uint8_t *report_info)
-{
-    uint8_t para_length = 1 + length;
-    uint8_t *p = (uint8_t *)malloc(para_length * sizeof(uint8_t));
-    struct rtl_btinfo *report = (struct rtl_btinfo *)(report_info);
+// static void rtk_notify_info_to_wifi(uint8_t length, uint8_t *report_info)
+// {
+//     uint8_t para_length = 1 + length;
+//     uint8_t *p = (uint8_t *)malloc(para_length * sizeof(uint8_t));
+//     struct rtl_btinfo *report = (struct rtl_btinfo *)(report_info);
 
-    *(p++) = report->cmd;
-    //*p++ = 0x07;
-    *(p++) = report->len;
-    if (length)
-    {
-        memcpy(p, report->data, report->len);
-    }
-    if (length)
-    {
-        HCI_PRINT_TRACE1("bt info: cmd %2.2X", report->cmd);
-        HCI_PRINT_TRACE1("bt info: len %2.2X", report->len);
-        HCI_PRINT_TRACE6("bt info: data %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X",
-                         report->data[0], report->data[1], report->data[2],
-                         report->data[3], report->data[4], report->data[5]);
-    }
+//     *(p++) = report->cmd;
+//     //*p++ = 0x07;
+//     *(p++) = report->len;
+//     if (length)
+//     {
+//         memcpy(p, report->data, report->len);
+//     }
+//     if (length)
+//     {
+//         HCI_PRINT_TRACE1("bt info: cmd %2.2X", report->cmd);
+//         HCI_PRINT_TRACE1("bt info: len %2.2X", report->len);
+//         HCI_PRINT_TRACE6("bt info: data %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X",
+//                          report->data[0], report->data[1], report->data[2],
+//                          report->data[3], report->data[4], report->data[5]);
+//     }
 
     
 
-    	rltk_coex_mailbox_to_wifi(report_info, report->len + 2);
-    free(p);
-    //rtk_btcoex_send_msg_towifi(buf, para_length + HCI_CMD_PREAMBLE_SIZE);
-   // mailbox_to_wifi(buf, para_length + HCI_CMD_PREAMBLE_SIZE);
-    /* send BT INFO to Wi-Fi driver */
-}
+//     	rltk_coex_mailbox_to_wifi(report_info, report->len + 2);
+//     free(p);
+//     //rtk_btcoex_send_msg_towifi(buf, para_length + HCI_CMD_PREAMBLE_SIZE);
+//    // mailbox_to_wifi(buf, para_length + HCI_CMD_PREAMBLE_SIZE);
+//     /* send BT INFO to Wi-Fi driver */
+// }
 
 void bt_coex_handle_cmd_complete_evt(uint16_t opcode, uint16_t cause, uint8_t total_len, uint8_t *p)
 {
