@@ -903,7 +903,7 @@ __attribute__((weak)) void vApplicationIdleHook( void )
 }
 
 #include "diag.h"
-void vApplicationStackOverflowHook( xTaskHandle pxTask, signed char *pcTaskName )
+__attribute__((weak)) void vApplicationStackOverflowHook( xTaskHandle pxTask, signed char *pcTaskName )
 {
 	/* To avoid gcc warnings */
 	( void ) pxTask;
