@@ -31,13 +31,18 @@ uint8_t flag_for_hci_trx = 0;
 uint8_t g_hci_step = 0;
 extern HCI_PROCESS_TABLE hci_process_table[];
 extern uint8_t hci_total_step;
+extern QueueHandle_t hciUartQueue;
 extern bool hci_board_complete(void);
 //================================internal===========================
 bool hci_rtk_tx_cb(void)
 {
     if (p_hci_rtk->tx_buf != NULL)
     {
-        os_mem_free(p_hci_rtk->tx_buf);
+        // os_mem_free(p_hci_rtk->tx_buf);
+        void* ptr = p_hci_rtk->tx_buf;
+        BaseType_t woken = pdFALSE;
+        xQueueSendFromISR(hciUartQueue, &ptr, &woken);
+        portYIELD_FROM_ISR(woken);
         p_hci_rtk->tx_buf = NULL;
     }
     return true;

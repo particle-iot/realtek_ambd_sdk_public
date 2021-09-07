@@ -12,6 +12,7 @@
 #include "os_pool.h"
 #include "os_sync.h"
 #include "os_mem.h"
+#include "os_task.h"
 
 #include "trace_app.h"
 
@@ -407,6 +408,15 @@ bool hci_uart_free(void)
     return true;
 }
 
+QueueHandle_t hciUartQueue;
+void memFreeThread(void *context) {
+    while (true) {
+        void* ptr;
+        xQueueReceive(hciUartQueue, &ptr, 0xFFFFFFFF);
+        os_mem_free(ptr);
+    }
+}
+
 bool hci_uart_init(P_UART_RX_CB rx_ind)
 {
     if(!hci_uart_malloc())
@@ -455,6 +465,18 @@ bool hci_uart_init(P_UART_RX_CB rx_ind)
     UART_RxCmd(HCI_UART_DEV, ENABLE);
 
     hci_uart_obj->rx_ind = rx_ind;
+
+    static void* th;
+    hciUartQueue = xQueueCreate(30, sizeof(void*));
+    if (hciUartQueue == NULL) {
+        DiagPrintf("xQueueCreate() failed\r\n");
+        while (1);
+    }
+    if (os_task_create(&th, "memFreeThread", memFreeThread, NULL, 4096, 9) != true) {
+        DiagPrintf("os_task_create() failed\r\n");
+        while (1);
+    }
+
     return true;
 }
 
