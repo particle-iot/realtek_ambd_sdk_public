@@ -66,7 +66,7 @@ static rtw_result_t rtw_send_event_to_worker(int event_cmd, char *buf, int buf_l
 #else
 static rtw_result_t rtw_indicate_event_handle(int event_cmd, char *buf, int buf_len, int flags)
 {
-	rtl_wifi_log("indicate %x", event_cmd);
+	// rtl_wifi_log("indicate %x", event_cmd);
 	rtw_event_handler_t handle = NULL;
 	int i;
 	
