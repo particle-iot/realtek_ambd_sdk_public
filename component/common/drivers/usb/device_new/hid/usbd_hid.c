@@ -400,6 +400,7 @@ static u8 hid_set_config(usb_dev_t *dev, u8 config)
 	u16 ep_mps;
 	u8 ret = HAL_OK;
 	struct usb_hid_device_t *hid = &hid_device;
+	
 
 	UNUSED(config);
 

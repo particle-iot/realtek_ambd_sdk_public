@@ -51,8 +51,7 @@ extern "C" {
 #include "platform_stdlib_customer.h"
 #endif // CONFIG_PLATFOMR_CUSTOMER_RTOS
 
-
-#if defined(CONFIG_PLATFORM_AMEBA_X) && (CONFIG_PLATFORM_AMEBA_X == 0)
+#if !defined(CONFIG_PLATFORM_AMEBA_X) || (CONFIG_PLATFORM_AMEBA_X == 0)
 #ifndef CONFIG_PLATFOMR_CUSTOMER_RTOS
 #include "basic_types.h"
 #endif
