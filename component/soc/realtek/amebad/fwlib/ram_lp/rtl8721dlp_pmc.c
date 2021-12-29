@@ -1111,27 +1111,27 @@ void SOCPS_SleepInit(void)
 	/* set aon wake pin */
 	/* clear all wakeup pin first, and then enable by config */
 	SOCPS_ClearWakePin();
-	for (i = 0;;) {
-		/*  Check if search to end */
-		if (sleep_wakepin_config[i].Pinmux == 0xFFFFFFFF) {
-			break;
-		}
+	// for (i = 0;;) {
+	// 	/*  Check if search to end */
+	// 	if (sleep_wakepin_config[i].Pinmux == 0xFFFFFFFF) {
+	// 		break;
+	// 	}
 
-		if (sleep_wakepin_config[i].Status == ON) {
-			u32 pinmux = sleep_wakepin_config[i].Pinmux;
+	// 	if (sleep_wakepin_config[i].Status == ON) {
+	// 		u32 pinmux = sleep_wakepin_config[i].Pinmux;
 
-			if(sleep_wakepin_config[i].Polarity) {
-				PAD_PullCtrl(aon_wakepin[i][pinmux], GPIO_PuPd_DOWN);
-			} else {
-				PAD_PullCtrl(aon_wakepin[i][pinmux], GPIO_PuPd_UP);
-			}
+	// 		if(sleep_wakepin_config[i].Polarity) {
+	// 			PAD_PullCtrl(aon_wakepin[i][pinmux], GPIO_PuPd_DOWN);
+	// 		} else {
+	// 			PAD_PullCtrl(aon_wakepin[i][pinmux], GPIO_PuPd_UP);
+	// 		}
 
-			Pinmux_Config(aon_wakepin[i][pinmux], PINMUX_FUNCTION_WAKEUP);
-			SOCPS_SetWakepin(i, sleep_wakepin_config[i].Polarity);
-		}
+	// 		Pinmux_Config(aon_wakepin[i][pinmux], PINMUX_FUNCTION_WAKEUP);
+	// 		SOCPS_SetWakepin(i, sleep_wakepin_config[i].Polarity);
+	// 	}
 		
-		i++;
-	}
+	// 	i++;
+	// }
 end:
 	;
 }

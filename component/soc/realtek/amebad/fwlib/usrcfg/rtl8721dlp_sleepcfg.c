@@ -31,12 +31,12 @@ PWRCFG_TypeDef sleep_wevent_config[]=
 	{BIT_LP_WEVT_AON_MSK,				ON},
 	{BIT_LP_WEVT_SGPIO_MSK,			OFF},
 	{BIT_LP_WEVT_COMP_MSK,				OFF},
-	{BIT_LP_WEVT_ADC_MSK,				OFF},
+	{BIT_LP_WEVT_ADC_MSK,				ON},
 	{BIT_LP_WEVT_I2C_MSK,				OFF},
 	{BIT_LP_WEVT_UART_MSK,				ON},
 	{BIT_LP_WEVT_BOD_MSK,				OFF},
-	{BIT_LP_WEVT_WLAN_MSK,				ON},
-	{BIT_LP_WEVT_GPIO_MSK,				OFF},
+	{BIT_LP_WEVT_WLAN_MSK,				OFF},
+	{BIT_LP_WEVT_GPIO_MSK,				ON},
 	{BIT_LP_WEVT_SWRD_OCP_MSK,		OFF},
 	{BIT_LP_WEVT_TIMER_MSK,				OFF},
 
@@ -46,9 +46,9 @@ PWRCFG_TypeDef sleep_wevent_config[]=
 PWRCFG_TypeDef sleep_aon_wevent_config[]=
 {
 //  	Module									Status
-	{BIT_CHIP_PDB_MSK,			ON},	/* [7]	R/W	0		1: Indicate chip power-down */
-	{BIT_CAPTOUCH_WAKE_MSK,		ON},	/* [6]	R/W	0		1: Indicate captouch wake event */
-	{BIT_KEYSCAN_WAKE_MSK,		ON},	/* [4]	R/W	0		1: Indicate keyscan wake */
+	{BIT_CHIP_PDB_MSK,			OFF},	/* [7]	R/W	0		1: Indicate chip power-down */
+	{BIT_CAPTOUCH_WAKE_MSK,		OFF},	/* [6]	R/W	0		1: Indicate captouch wake event */
+	{BIT_KEYSCAN_WAKE_MSK,		OFF},	/* [4]	R/W	0		1: Indicate keyscan wake */
 	{BIT_DLPS_TSF_WAKE_MSK,		OFF},	/* [3]	R/W	0		1: Indicate tsf wake under deep-lps mode */
 	{BIT_RTC_WAKE_MSK,			OFF},	/* [2]	R/W	0		1: Indicate RTC wake */
 	{BIT_AON_WAKE_TIM0_MSK,	ON},	/* [1]	R/W	0		1: Indicate AON timer wake */
@@ -60,7 +60,7 @@ PWRCFG_TypeDef sleep_aon_wevent_config[]=
 HSWAKEEVENT_TypeDef hs_wakeevent_config[]=
 {
 //  	Module								Event					Status
-	{REG_LP_SLP_WAKE_EVENT_STATUS0,	BIT_LP_WEVT_HS_STS,			ON},		/* [30] 1: Indicate HS Wakeup event */
+	{REG_LP_SLP_WAKE_EVENT_STATUS0,	BIT_LP_WEVT_HS_STS,			OFF},		/* [30] 1: Indicate HS Wakeup event */
 	{REG_LP_SLP_WAKE_EVENT_STATUS0,	BIT_LP_WEVT_AON_STS,		OFF},	/* [29] 1: Indicate AON Wakeup event (0x128) */
 	{REG_LP_SLP_WAKE_EVENT_STATUS0,	BIT_LP_WEVT_SGPIO_STS,		OFF},	/* [28] 1: Indicate SGPIO Wakeup event */
 	{REG_LP_SLP_WAKE_EVENT_STATUS0,	BIT_LP_WEVT_COMP_STS,		OFF},	/* [27] 1: Indicate Comparetor Wakeup  event */
@@ -74,12 +74,12 @@ HSWAKEEVENT_TypeDef hs_wakeevent_config[]=
 	{REG_LP_SLP_WAKE_EVENT_STATUS0,	BIT_LP_WEVT_TIMER_STS,		OFF},	/* [1]   1: Indicate GTimer Wakeup system event; */
 
 	{REG_AON_WAKE_OPT_STS,				BIT_CHIP_PDB_STS,			OFF},	/* [7] 1: Indicate chip power-down */
-	{REG_AON_WAKE_OPT_STS,				BIT_CAPTOUCH_WAKE_STS,		ON},		/* [6] 1: Indicate captouch wake event */
-	{REG_AON_WAKE_OPT_STS,				BIT_KEYSCAN_WAKE_STS,		ON},		/* [4] 1: Indicate keyscan wake */
+	{REG_AON_WAKE_OPT_STS,				BIT_CAPTOUCH_WAKE_STS,		OFF},		/* [6] 1: Indicate captouch wake event */
+	{REG_AON_WAKE_OPT_STS,				BIT_KEYSCAN_WAKE_STS,		OFF},		/* [4] 1: Indicate keyscan wake */
 	{REG_AON_WAKE_OPT_STS,				BIT_DLPS_TSF_WAKE_STS,		OFF},	/* [3] 1: Indicate tsf wake under deep-lps mode */
-	{REG_AON_WAKE_OPT_STS,				BIT_RTC_WAKE_STS,			ON},		/* [2] 1: Indicate RTC wake */
+	{REG_AON_WAKE_OPT_STS,				BIT_RTC_WAKE_STS,			OFF},		/* [2] 1: Indicate RTC wake */
 	{REG_AON_WAKE_OPT_STS,				BIT_AON_WAKE_TIM0_STS,		OFF},	/* [1] 1: Indicate AON timer wake */
-	{REG_AON_WAKE_OPT_STS,				BIT_GPIO_WAKE_STS,			ON},		/* [0] 1: Indicate GPIO wake, see aon_wakepin & dsleep_wakepin_config */
+	{REG_AON_WAKE_OPT_STS,				BIT_GPIO_WAKE_STS,			OFF},		/* [0] 1: Indicate GPIO wake, see aon_wakepin & dsleep_wakepin_config */
 	
 	{0xFFFFFFFF,		OFF,			0},	/* Table end */
 };
@@ -89,9 +89,9 @@ HSWAKEEVENT_TypeDef hs_wakeevent_config[]=
 PWRCFG_TypeDef dsleep_aon_wevent_config[]=
 {
 //  	Module									Status
-	{BIT_CAPTOUCH_WAKE_STS,	ON},	/* [6]	R/W	0		1: Indicate captouch wake event */
-	{BIT_KEYSCAN_WAKE_STS,		ON},	/* [4]	R/W	0		1: Indicate keyscan wake */
-	{BIT_DLPS_TSF_WAKE_STS,		ON},	/* [3]	R/W	0		1: Indicate tsf wake under deep-lps mode */
+	{BIT_CAPTOUCH_WAKE_STS,	OFF},	/* [6]	R/W	0		1: Indicate captouch wake event */
+	{BIT_KEYSCAN_WAKE_STS,		OFF},	/* [4]	R/W	0		1: Indicate keyscan wake */
+	{BIT_DLPS_TSF_WAKE_STS,		OFF},	/* [3]	R/W	0		1: Indicate tsf wake under deep-lps mode */
 	{BIT_RTC_WAKE_STS,			OFF},	/* [2]	R/W	0		1: Indicate RTC wake */
 	{BIT_AON_WAKE_TIM0_STS,	ON},	/* [1]	R/W	0		1: Indicate AON timer wake */
 	{BIT_GPIO_WAKE_STS,			ON},	/* [0]	R/W	0		1: Indicate GPIO wake, see aon_wakepin & dsleep_wakepin_config */
