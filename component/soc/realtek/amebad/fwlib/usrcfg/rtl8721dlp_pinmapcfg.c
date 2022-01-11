@@ -36,8 +36,8 @@ const PMAP_TypeDef pmap_func[]=
     {_PA_4,         GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PA_5,         GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PA_6,         GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
-    {_PA_7,         GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //UART_LOG_TXD
-    {_PA_8,         GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //UART_LOG_RXD
+    {_PA_7,         GPIO_PuPd_KEEP,             GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //UART_LOG_TXD
+    {_PA_8,         GPIO_PuPd_KEEP,             GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //UART_LOG_RXD
     {_PA_9,         GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PA_10,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PA_11,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
