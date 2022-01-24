@@ -384,6 +384,7 @@ static void wifi_handshake_done_hdl( char* buf, int buf_len, int flags, void* us
 #if !defined(CONFIG_MBED_ENABLED) && !defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)
 extern void dhcp_stop(struct netif *netif);
 #endif
+#endif
 static void wifi_disconn_hdl( char* buf, int buf_len, int flags, void* userdata)
 {
 	/* To avoid gcc warnings */
@@ -2302,7 +2303,7 @@ int wifi_scan_networks_with_ssid(int (results_handler)(char*buf, int buflen, cha
 #define P2P_ROLE_CLIENT  2
 #define P2P_ROLE_GO      3 
 #endif
-extern void rltk_wlan_enable_scan_with_ssid_by_extended_security(BOOL);
+
 int wifi_scan_networks_with_ssid_by_extended_security(int (results_handler)(char*buf, int buflen, char *ssid, void *user_data), 
 	OUT void* user_data, IN int scan_buflen, IN char* ssid, IN int ssid_len)
 {
@@ -3701,6 +3702,8 @@ int wifi_ap_switch_chl_and_inform(unsigned char new_channel)
 {
 	return wext_ap_switch_chl_and_inform(new_channel);
 }
+
+extern int rltk_wlan_set_igi(uint8_t, uint8_t);
 
 int wifi_set_igi(uint8_t igi, uint8_t enable)
 {

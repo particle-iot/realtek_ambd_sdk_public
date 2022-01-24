@@ -12,6 +12,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include "os_sync.h"
 #include "cycle_queue.h"
 #include "trace_app.h"

@@ -10,6 +10,7 @@
 
 #include "os_msg.h"
 #include "os_task.h"
+#include "os_sched.h"
 
 #include "trace_app.h"
 #include "cycle_queue.h"
