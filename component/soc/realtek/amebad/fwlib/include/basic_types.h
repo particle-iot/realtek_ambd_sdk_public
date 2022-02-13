@@ -26,6 +26,8 @@
 
 #define SYSTEM_ENDIAN                           PLATFORM_LITTLE_ENDIAN
 
+#ifdef REALTEK_AMBD_SDK
+
 #define SUCCESS	0
 #define FAIL	(-1)
 
@@ -34,6 +36,8 @@
 
 #undef _FAIL
 #define _FAIL		0
+
+#endif // REALTEK_AMBD_SDK
 
 #ifndef FALSE		
     #define FALSE   0
@@ -429,7 +433,9 @@ typedef	    __kernel_ssize_t	SSIZE_T;
 // Get the N-bytes aligment offset from the current length
 #define N_BYTE_ALIGMENT(__Value, __Aligment) ((__Aligment == 1) ? (__Value) : (((__Value + __Aligment - 1) / __Aligment) * __Aligment))
 
+#ifdef REALTEK_AMBD_SDK
 typedef unsigned char	BOOLEAN,*PBOOLEAN;
+#endif // REALTEK_AMBD_SDK
 
 #define TEST_FLAG(__Flag,__testFlag)		(((__Flag) & (__testFlag)) != 0)
 #define SET_FLAG(__Flag, __setFlag)			((__Flag) |= __setFlag)
