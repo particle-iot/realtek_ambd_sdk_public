@@ -101,7 +101,9 @@
   * @}
   */
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 /** @defgroup BKUP_REG_Exported_Functions BKUP_REG Exported Functions
   * @{
   */
@@ -110,6 +112,9 @@ _LONG_CALL_ u32 BKUP_Read(u32 DwordIdx);
 _LONG_CALL_ void BKUP_Set(u32 DwordIdx, u32 BitMask);
 _LONG_CALL_ void BKUP_Clear(u32 DwordIdx, u32 BitMask);
 _LONG_CALL_ u32 BOOT_Reason(void);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 /**
   * @}
   */
