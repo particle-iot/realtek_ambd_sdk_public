@@ -174,7 +174,7 @@ void PSRAM_CTRL_Init(PCTL_InitTypeDef *PCTL_InitStruct)
   *			@arg PSRAM_READ_TRANSACTION: indicate a read transaction.
   * @retval None
   */
-__attribute__((section(".ram_text"), optimize("O0")))
+__attribute__((section(".ram_text")))
 void PSRAM_CTRL_CA_Gen(u8* PSRAM_CA, u32 StartAddr, u8 BurstType, u8 AddSpace, u8 RW)
 {
 	assert_param(IS_PSRAM_BURST_TYPE(BurstType));
@@ -257,7 +257,7 @@ void PSRAM_CTRL_DPin_Mem(u8* PSRAM_CA, u32* PSRAM_data, u32 PSRAM_byteen, u8 RW)
   * @note cache should be disable in Dpin mode
   * @note Dpin register write is in little-endian
   */
-__attribute__((section(".ram_text"), optimize("O0")))
+__attribute__((section(".ram_text")))
 void PSRAM_CTRL_DPin_Reg(u8* PSRAM_CA, u32* PSRAM_data, u8 RW)
 {
 	PCTL_TypeDef *psram_ctrl = PSRAM_DEV;
