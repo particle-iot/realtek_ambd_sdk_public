@@ -75,8 +75,8 @@ swdpwd: CORE_TARGETS
 #bootloader: CORE_TARGETS
 #	make -C asdk bootloader
 #
-#flashloader:
-#	make -C asdk flashloader
+flashloader:
+	make -C asdk flashloader
 #
 #
 #gdbboot: CORE_TARGETS

@@ -19,3 +19,13 @@ project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/make/**/*.d
 project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/make/**/*.i
 project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/make/**/*.s
 project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/make/**/*.su
+
+project/realtek_amebaD_va0_example/src/src_lp/*.o
+project/realtek_amebaD_va0_example/src/src_lp/*.d
+project/realtek_amebaD_va0_example/src/src_lp/*.i
+project/realtek_amebaD_va0_example/src/src_lp/*.s
+project/realtek_amebaD_va0_example/src/src_lp/*.su
+project/realtek_amebaD_va0_example/inc/inc_lp/build_info.h
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/gnu_utility/gnu_script/acut_loader
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/obj_list.txt
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/ram_size.txt

@@ -63,7 +63,7 @@ image2:LINK_APP_LIB += $(ROOTDIR)/lib/application/lib_wifi_fw.a
 ucps_image2:LINK_APP_LIB += $(ROOTDIR)/lib/application/lib_wifi_ucps_fw.a
 
 
-flashloader: build_target_folder copy_ld_img1 check_toolchain build_info.h make_subdirs_flashloader linker_loader gen_rom_symbol copy_flashloader
+flashloader: build_target_folder copy_ld_flashloader check_toolchain build_info.h make_subdirs_flashloader linker_flashloader gen_rom_symbol copy_flashloader
 imgtool_flashloader: build_target_folder copy_ld_floader check_toolchain build_info.h make_subdirs_imgtool_flashloader linker_loader copy_imgtool_flashloader
 rom: build_target_folder copy_ld_rom check_toolchain build_info.h make_subdirs_rom package_prebuilt_rom_objs rom_linker
 all: build_target_folder copy_ld_ram check_toolchain build_info.h make_subdirs linker_image2 
@@ -220,6 +220,38 @@ linker_loader:
 	$(UTILITYDIR)/image_tool/imagetool.sh $(IMAGE_TARGET_FOLDER)/km0_boot_all.bin
 
 	@echo "========== Image manipulating end =========="
+
+
+linker_flashloader:
+	@echo "========= linker loader start ========="
+	$(LD) $(LD_ARG) target_loader.axf $(RAM_OBJS_LIST) $(LINK_ROM_LIB) 
+
+	$(MOVE) text.map $(IMAGE_TARGET_FOLDER)/flashloader.map
+	$(MOVE) target_loader.axf $(IMAGE_TARGET_FOLDER)
+	$(NM) $(IMAGE_TARGET_FOLDER)/target_loader.axf | sort > $(IMAGE_TARGET_FOLDER)/target_loader.map
+	$(OBJDUMP) -d $(IMAGE_TARGET_FOLDER)/target_loader.axf > $(IMAGE_TARGET_FOLDER)/target_loader.asm
+	$(COPY) $(IMAGE_TARGET_FOLDER)/target_loader.axf $(IMAGE_TARGET_FOLDER)/target_pure_loader.axf
+	$(STRIP) $(IMAGE_TARGET_FOLDER)/target_pure_loader.axf
+
+	$(FROMELF) -j .ram_image1.entry  -j .ram_image1.text -j .ram_image1.data -j .ram_flashloader \
+	-Obinary $(IMAGE_TARGET_FOLDER)/target_pure_loader.axf $(IMAGE_TARGET_FOLDER)/ram_1.bin
+
+	$(FROMELF) -j .xip_image1.text \
+	-Obinary $(IMAGE_TARGET_FOLDER)/target_pure_loader.axf $(IMAGE_TARGET_FOLDER)/xip_boot.bin
+
+	@echo "========== Image Info HEX =========="
+	$(CC_SIZE) -A --radix=16 $(IMAGE_TARGET_FOLDER)/target_loader.axf
+	$(CC_SIZE) -t --radix=16 $(IMAGE_TARGET_FOLDER)/target_loader.axf
+	@echo "========== Image Info HEX =========="
+
+	@echo "========== Image Info DEC =========="
+	$(CC_SIZE) -A --radix=10 $(IMAGE_TARGET_FOLDER)/target_loader.axf
+	$(CC_SIZE) -t --radix=10 $(IMAGE_TARGET_FOLDER)/target_loader.axf
+	@echo "========== Image Info DEC =========="
+
+	$(RM) -f $(RAM_OBJS_LIST)
+	@echo "========== linker end =========="
+
 
 #*****************************************************************************#
 #                      RULES TO SET MENUCONFIG                                #
@@ -450,6 +482,9 @@ copy_ld_rom:
 	$(COPY) $(ROOTDIR)/ld/rlx8721d_rom_bin.ld  $(BUILD_TARGET_FOLDER)/rlx8721d.ld
 copy_ld_floader:
 	$(COPY) $(ROOTDIR)/ld/rlx8721d_boot.ld $(BUILD_TARGET_FOLDER)/rlx8721d.ld
+copy_ld_flashloader:
+	$(COPY) $(ROOTDIR)/ld/rlx8721d_flashloader.ld $(BUILD_TARGET_FOLDER)/rlx8721d.ld
+	cat $(LINK_ROM_SYMBOL) >> $(BUILD_TARGET_FOLDER)/rlx8721d.ld
 ifeq ($(CONFIG_LINK_ROM_SYMB),y)
 	cat ./ld/rlx8721d_rom_symbol.ld >> $(BUILD_TARGET_FOLDER)/rlx8721d.ld
 endif
@@ -458,9 +493,14 @@ endif
 #              COPY flashloader into flashdownload folder                     #
 #*****************************************************************************#
 copy_flashloader:
-
-	# $(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf
-	# $(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin
+	-rm $(ROOTDIR)/flashloader/tcl_script_generator/rtl872x_flashloader.tcl
+	cat $(ROOTDIR)/flashloader/tcl_script_generator/rtl872x_flashloader_template.tcl \
+		>> $(ROOTDIR)/flashloader/tcl_script_generator/rtl872x_flashloader.tcl
+	$(ROOTDIR)/flashloader/tcl_script_generator/make_array_macos \
+		< $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin \
+		>> $(ROOTDIR)/flashloader/tcl_script_generator/rtl872x_flashloader.tcl
 
 copy_imgtool_flashloader:
 
