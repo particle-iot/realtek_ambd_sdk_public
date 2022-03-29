@@ -93,6 +93,13 @@ static int wifi_get_mac_efuse_mac_address(uint8_t* dest, size_t dest_len) {
     return read_logical_efuse(WIFI_MAC_OFFSET, dest, dest_len);
 }
 
+static void disable_rsip(void) {
+    if ((HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_SYS_EFUSE_SYSCFG3) & BIT_SYS_FLASH_ENCRYPT_EN) != 0) {
+        uint32_t km0_system_control = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_LP_KM0_CTRL);
+        HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_KM0_CTRL, (km0_system_control & (~BIT_LSYS_PLFM_FLASH_SCE)));
+    }
+}
+
 static const uint32_t 
 BOOT_RAM_RODATA_SECTION crc32_tab[] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -210,6 +217,9 @@ RtlFlashProgram(VOID)
     uint8_t config[2] = {};
     FLASH_RxCmd(0x15, 2, config);
     DBG_LOG("config: TB: %d, L/H: %d", config[0]&(1<<3), config[1]&(1<<1));
+
+    // Disable RSIP as during verification step we need the raw data, not decrypted data
+    disable_rsip();
 
     volatile uint32_t* p_cmd = (volatile uint32_t*)&pcMsgBuf[PC_MSG_CMD_OFFSET];
     volatile uint8_t* p_data = (volatile uint8_t*)&pcMsgBuf[PC_MSG_DATA_OFFSET];
