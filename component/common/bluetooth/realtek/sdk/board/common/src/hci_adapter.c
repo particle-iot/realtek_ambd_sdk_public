@@ -41,7 +41,7 @@ bool hci_rtk_tx_cb(void)
         // os_mem_free(p_hci_rtk->tx_buf);
         void* ptr = p_hci_rtk->tx_buf;
         BaseType_t woken = pdFALSE;
-        xQueueSendFromISR(hciUartQueue, &ptr, &woken);
+        assert_param(xQueueSendFromISR(hciUartQueue, &ptr, &woken) == pdTRUE);
         portYIELD_FROM_ISR(woken);
         p_hci_rtk->tx_buf = NULL;
     }

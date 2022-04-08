@@ -47,8 +47,10 @@ typedef struct
 }T_HCI_UART;
 
 //===========
-T_HCI_UART *hci_uart_obj;
+T_HCI_UART *hci_uart_obj = NULL;
 extern uint8_t flag_for_hci_trx;
+
+QueueHandle_t hciUartQueue = NULL;
 
 #define TX_TRASMIT_COUNT 16
 #define hci_board_debug DBG_8195A
@@ -405,16 +407,27 @@ bool hci_uart_free(void)
         os_mem_free(hci_uart_obj);
         hci_uart_obj = NULL;
     }
+
+    if (hciUartQueue) {
+        void* ptr = (void*)0xffffffff;
+        assert_param(xQueueSendToBack(hciUartQueue, &ptr, 1000 / portTICK_PERIOD_MS) == pdTRUE);
+        hciUartQueue = NULL;
+    }
     return true;
 }
 
-QueueHandle_t hciUartQueue;
 void memFreeThread(void *context) {
+    QueueHandle_t queue = (QueueHandle_t)context;
     while (true) {
-        void* ptr;
-        xQueueReceive(hciUartQueue, &ptr, 0xFFFFFFFF);
+        void* ptr = NULL;
+        xQueueReceive(queue, &ptr, 0xFFFFFFFF);
+        if (ptr == (void*)0xffffffff) {
+            break;
+        }
         os_mem_free(ptr);
     }
+    vQueueDelete(queue);
+    os_task_delete(NULL);
 }
 
 bool hci_uart_init(P_UART_RX_CB rx_ind)
@@ -466,15 +479,15 @@ bool hci_uart_init(P_UART_RX_CB rx_ind)
 
     hci_uart_obj->rx_ind = rx_ind;
 
-    static void* th;
+    void* th = NULL;
     hciUartQueue = xQueueCreate(30, sizeof(void*));
     if (hciUartQueue == NULL) {
         DiagPrintf("xQueueCreate() failed\r\n");
-        while (1);
+        assert_param(hciUartQueue);
     }
-    if (os_task_create(&th, "memFreeThread", memFreeThread, NULL, 4096, 9) != true) {
+    if (os_task_create(&th, "memFreeThread", memFreeThread, hciUartQueue, 4096, 9) != true) {
         DiagPrintf("os_task_create() failed\r\n");
-        while (1);
+        assert_param(th);
     }
 
     return true;
