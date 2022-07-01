@@ -31,16 +31,25 @@
 #define USB_LEN_LANGID_STR_DESC                        0x04U
 #define USB_LEN_OTHER_SPEED_DESC_SIZ                   0x09U
 
+/* bmRequestType :D7 Data Phase Transfer Direction  */
+#define USB_REQ_DIR_MASK                               0x80U
+#define USB_H2D                                        0x00U
+#define USB_D2H                                        0x80U
+
+/* bmRequestType D6..5 Type */
 #define USB_REQ_TYPE_STANDARD                          0x00U
 #define USB_REQ_TYPE_CLASS                             0x20U
 #define USB_REQ_TYPE_VENDOR                            0x40U
 #define USB_REQ_TYPE_MASK                              0x60U
 
+/* bmRequestType D4..0 Recipient */
 #define USB_REQ_RECIPIENT_DEVICE                       0x00U
 #define USB_REQ_RECIPIENT_INTERFACE                    0x01U
 #define USB_REQ_RECIPIENT_ENDPOINT                     0x02U
 #define USB_REQ_RECIPIENT_MASK                         0x03U
 
+/* Table 9-4. Standard Request Codes  */
+/* bRequest , Value */
 #define USB_REQ_GET_STATUS                             0x00U
 #define USB_REQ_CLEAR_FEATURE                          0x01U
 #define USB_REQ_SET_FEATURE                            0x03U
@@ -53,6 +62,7 @@
 #define USB_REQ_SET_INTERFACE                          0x0BU
 #define USB_REQ_SYNCH_FRAME                            0x0CU
 
+/* Table 9-5. Descriptor Types of USB Specifications */
 #define USB_DESC_TYPE_DEVICE                           0x01U
 #define USB_DESC_TYPE_CONFIGURATION                    0x02U
 #define USB_DESC_TYPE_STRING                           0x03U
@@ -60,7 +70,16 @@
 #define USB_DESC_TYPE_ENDPOINT                         0x05U
 #define USB_DESC_TYPE_DEVICE_QUALIFIER                 0x06U
 #define USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION        0x07U
-#define USB_DESC_TYPE_BOS                              0x0FU
+#define USB_DESC_TYPE_INTERFACE_POWER                  0x08U
+
+#define USB_DESC_DEVICE                                ((USB_DESC_TYPE_DEVICE << 8) & 0xFF00U)
+#define USB_DESC_CONFIGURATION                         ((USB_DESC_TYPE_CONFIGURATION << 8) & 0xFF00U)
+#define USB_DESC_STRING                                ((USB_DESC_TYPE_STRING << 8) & 0xFF00U)
+#define USB_DESC_INTERFACE                             ((USB_DESC_TYPE_INTERFACE << 8) & 0xFF00U)
+#define USB_DESC_ENDPOINT                              ((USB_DESC_TYPE_INTERFACE << 8) & 0xFF00U)
+#define USB_DESC_DEVICE_QUALIFIER                      ((USB_DESC_TYPE_DEVICE_QUALIFIER << 8) & 0xFF00U)
+#define USB_DESC_OTHER_SPEED_CONFIGURATION             ((USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION << 8) & 0xFF00U)
+#define USB_DESC_INTERFACE_POWER                       ((USB_DESC_TYPE_INTERFACE_POWER << 8) & 0xFF00U)
 
 #define USB_CONFIG_REMOTE_WAKEUP                       0x02U
 #define USB_CONFIG_SELF_POWERED                        0x01U
@@ -77,13 +96,21 @@
 
 /* Exported types ------------------------------------------------------------*/
 
+/* USB Endpoint Type */
+typedef enum {
+	USB_CH_EP_TYPE_CTRL = 0U,
+	USB_CH_EP_TYPE_ISOC,
+	USB_CH_EP_TYPE_BULK,
+	USB_CH_EP_TYPE_INTR
+} usb_ch_ep_type_t;
+
 /* USB setup request */
 typedef struct {
-	u8   bmRequestType;		/* Request type */
-	u8   bRequest;			/* Request */
-	u16  wValue;			/* Value */
-	u16  wIndex;			/* Index */
-	u16  wLength;			/* Number of bytes to transfer if there is a data phase */
+	u8  bmRequestType;	/* Request type */
+	u8  bRequest;		/* Request */
+	u16 wValue;			/* Value */
+	u16 wIndex;			/* Index */
+	u16 wLength;		/* Number of bytes to transfer if there is a data phase */
 } usb_setup_req_t;
 
 /* Exported macros -----------------------------------------------------------*/

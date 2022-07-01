@@ -34,9 +34,9 @@
 #define CDC_ACM_PID                                 0x4042U
 #define CDC_ACM_CONFIG_DESC_SIZE                    67U
 #define CDC_ACM_LANGID_STRING                       0x0409U
-#define CDC_ACM_MFG_STRING_DESC_SIZE                9U
-#define CDC_ACM_PRODUCT_STRING_DESC_SIZE            18U
-#define CDC_ACM_SN_STRING_DESC_SIZE                 12U
+#define CDC_ACM_MFG_STRING_DESC_SIZE                16U
+#define CDC_ACM_PRODUCT_STRING_DESC_SIZE            34U
+#define CDC_ACM_SN_STRING_DESC_SIZE                 26U
 #define CDC_ACM_SELF_POWERED						1U
 
 /* CDC ACM Endpoint parameters */
@@ -87,7 +87,7 @@ typedef struct {
 
 	u8 *bulk_in_buf;
 	u32 bulk_in_buf_size;
-	__IO volatile u32 bulk_in_state;
+	__IO u32 bulk_in_state;
 
 	usbd_cdc_acm_cb_t *cb;
 	usb_dev_t *dev;

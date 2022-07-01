@@ -42,14 +42,6 @@
 
 /* Exported types ------------------------------------------------------------*/
 
-/* USB device endpoint type */
-typedef enum {
-	USBD_EP_TYPE_CTRL  = 0U,
-	USBD_EP_TYPE_ISOC  = 1U,
-	USBD_EP_TYPE_BULK  = 2U,
-	USBD_EP_TYPE_INTR  = 3U,
-} usbd_ep_type_t;
-
 /* USB device state */
 typedef enum {
 	USBD_STATE_INIT       = 0U,
@@ -72,20 +64,6 @@ typedef enum {
 	USBD_SPEED_FULL  = 1U,
 	USBD_SPEED_LOW   = 2U,
 } usbd_speed_type_t;
-
-/* USB device string descriptor type */
-typedef enum {
-	USBD_DESC_DEVICE				= 0U,
-	USBD_DESC_CONFIG				= 1U,
-	USBD_DESC_OTHER_SPEED_CONFIG	= 2U,
-	USBD_DESC_DEVICE_QUALIFIER		= 3U,
-	USBD_DESC_LANGID_STR			= 4U,
-	USBD_DESC_MFG_STR				= 5U,
-	USBD_DESC_PRODUCT_STR			= 6U,
-	USBD_DESC_SN_STR				= 7U,
-	USBD_DESC_CONFIG_STR			= 8U,
-	USBD_DESC_INTERFACE_STR			= 9U
-} usbd_desc_type_t;
 
 /* USB configuration structure */
 typedef struct {
@@ -137,7 +115,7 @@ typedef struct {
 
 /* USB class driver */
 typedef struct _usbd_class_driver_t {
-	u8 *(*get_descriptor)(usbd_desc_type_t desc, usbd_speed_type_t speed, u16 *len);
+	u8 *(*get_descriptor)(usb_setup_req_t *req, usbd_speed_type_t speed, u16 *len);
 
 	u8(*set_config)(usb_dev_t *dev, u8 config);
 	u8(*clear_config)(usb_dev_t *dev, u8 config);
@@ -174,6 +152,8 @@ u8 usbd_ep_transmit(usb_dev_t *dev, u8 ep_addr, u8 *buf, u16  len);
 u8 usbd_ep_receive(usb_dev_t *dev, u8 ep_addr, u8 *buf, u16  len);
 u8 usbd_ep0_transmit(usb_dev_t *dev, u8 *buf, u16 len);
 u8 usbd_ep0_receive(usb_dev_t *dev, u8 *buf, u16 len);
+u8 usbd_ep0_transmit_status(usb_dev_t *dev);
+u8 usbd_ep0_receive_status(usb_dev_t *dev);
 
 #endif /* USBD_H */
 
