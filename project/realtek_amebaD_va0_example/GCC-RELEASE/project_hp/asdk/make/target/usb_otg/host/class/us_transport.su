@@ -1,0 +1,10 @@
+us_transport.c:24:13:usb_stor_blocking_completion	0	static
+us_transport.c:37:12:usb_stor_msg_common	32	static
+us_transport.c:99:5:usb_stor_control_msg	40	static
+us_transport.c:140:5:usb_stor_clear_halt	40	static
+us_transport.c:238:5:usb_stor_bulk_transfer_buf	40	static
+us_transport.c:344:6:usb_stor_invoke_transport	208	static
+us_transport.c:645:5:usb_stor_Bulk_max_lun	48	static
+us_transport.c:675:5:usb_stor_Bulk_transport	64	static
+us_transport.c:977:5:usb_stor_Bulk_reset	40	static
+us_transport.c:987:5:usb_stor_port_reset	8	static

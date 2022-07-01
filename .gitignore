@@ -1,0 +1,11 @@
+component/common/bluetooth/realtek/sdk/example/bt_mesh
+component/common/drivers/usb/device
+component/common/drivers/usb/host
+component/common/media/
+component/common/utilities/webserver.c
+component/common/utilities/webserver.h
+component/os/freertos/freertos_v10.2.0/Source/portable/MemMang/ReadMe.url
+component/os/freertos/freertos_v10.2.0/Source/portable/readme.txt
+component/soc/realtek/amebad/fwlib/usb_otg/device/inc/usb_gadget.h
+component/soc/realtek/amebad/fwlib/usb_otg/host/inc/usb_defs.h
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_hp/asdk/config/scripts/lxdialog

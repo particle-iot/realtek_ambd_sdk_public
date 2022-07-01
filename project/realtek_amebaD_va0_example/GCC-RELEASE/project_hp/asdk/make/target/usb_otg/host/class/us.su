@@ -1,0 +1,9 @@
+us.c:393:6:usb_stor_control_thread	40	static
+us.c:553:13:release_everything	8	static
+us.c:663:6:usb_stor_disconnect	8	static
+us.c:86:6:usb_stor_adjust_quirks	32	static
+us.c:560:5:usb_stor_probe1	24	static
+us.c:603:5:usb_stor_probe2	32	static
+us.c:685:5:storage_probe	24	static
+us.c:790:5:usb_storage_init	0	static
+us.c:796:5:usb_storage_deinit	8	static
