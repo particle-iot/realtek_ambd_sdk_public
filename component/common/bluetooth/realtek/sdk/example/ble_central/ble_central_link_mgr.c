@@ -15,6 +15,10 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if ((defined(CONFIG_BT_CENTRAL) && CONFIG_BT_CENTRAL) || \
+	(defined(CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) && CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) || \
+	(defined(CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE) && CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE))
 #include <ble_central_link_mgr.h>
 #include <trace_app.h>
 #include <string.h>
@@ -66,6 +70,7 @@ uint32_t ble_central_app_load_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_
     }
     return result;
 }
+#endif
 #endif
 
 /** @} */

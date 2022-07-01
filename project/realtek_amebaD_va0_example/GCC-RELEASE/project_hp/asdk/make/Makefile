@@ -30,13 +30,16 @@ ifeq ($(CONFIG_GUI_EN),y)
 	@make -C ui all
 endif
 
+ifeq ($(CONFIG_LINKKIT_AWSS),y)
+	@make -C linkkit all
+endif
 	#@make -C bootloader all
 	@make -C app all
 	@make -C target all
 	@make -C drivers all
 	@make -C cmsis all
 	@make -C mbed all
-	@make -C audio all
+	#@make -C audio all
 	@make -C graphic all
 	#@make -C media all
 	@make -C utilities_example all
@@ -74,5 +77,5 @@ clean:
 	@make -C project clean
 	@make -C ui clean
 	@make -C media clean
-	@make -C linkkit clean
+	@make -C video clean
 -include $(DEPS)

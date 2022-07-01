@@ -95,18 +95,27 @@ int  linkkit_flash_stream_write(uint32_t address, uint32_t len, uint8_t * data);
 void  linkkit_flash_erase_sector(uint32_t address);
 int  linkkit_flash_stream_read(uint32_t address, uint32_t len, uint8_t * data);
 
+
+dct_handle_t aliyun_kv_handle;
+uint16_t        len_variable;
+
+
 int HAL_Kv_Get(const char *key, void *val, int *buffer_len)
 {
-	return (int)1;
+	link_printf(LINK_INFO, "[%s] %s \n", __FUNCTION__, (char *)key);
+	return dct_get_variable_new(&aliyun_kv_handle, (char *)key, (char *)val, (uint16_t *)buffer_len);
 }
 
 int HAL_Kv_Set(const char *key, const void *val, int len, int sync)
 {
-	return (int)1;
+	link_printf(LINK_INFO, "[%s] %s: %s \n", __FUNCTION__, (char *)key, (char *)val);
+	return dct_set_variable_new(&aliyun_kv_handle, (char *)key, (char *)val, (uint16_t)len);
 }
+
 int HAL_Kv_Del(const char *key)
 {
-	return (int)1;
+	link_printf(LINK_INFO, "[%s] %s \n", __FUNCTION__, (char *)key);
+	return dct_delete_variable_new(&aliyun_kv_handle, (char *)key);
 }
 
                                             /*************os hal*******************/
@@ -483,7 +492,7 @@ void HAL_ThreadDelete(void *thread_handle)
 void *HAL_Timer_Create(const char *name, void (*func)(void *), void *user_data)
 {
    link_printf(LINK_INFO,"create timer:%s.\n",name); 
-   return xTimerCreate((const char *)name,TIMER_PERIOD, pdFALSE, NULL, (TimerCallbackFunction_t)func);	
+   return xTimerCreate((const char *)name,TIMER_PERIOD, pdFALSE, user_data, (TimerCallbackFunction_t)func);	
 }
 
 
@@ -2004,7 +2013,7 @@ int rtl_check_ap_mode()
 	//Check if in AP mode
 	wext_get_mode(WLAN0_NAME, &mode);
 
-	if(mode == IW_MODE_MASTER) {
+	if(mode == RTW_MODE_MASTER) {
 #if CONFIG_LWIP_LAYER
 		dhcps_deinit();
 #endif
@@ -2042,11 +2051,11 @@ static int find_ap_from_scan_buf(char*buf, u32 buflen, char *target_ssid, void *
 			pwifi->channel = *(buf + plen + 13);
 			// security_mode offset = 11
 			security_mode = (u8)*(buf + plen + 11);
-			if(security_mode == IW_ENCODE_ALG_NONE)
+			if(security_mode == RTW_ENCODE_ALG_NONE)
 				pwifi->security_type = RTW_SECURITY_OPEN;
-			else if(security_mode == IW_ENCODE_ALG_WEP)
+			else if(security_mode == RTW_ENCODE_ALG_WEP)
 				pwifi->security_type = RTW_SECURITY_WEP_PSK;
-			else if(security_mode == IW_ENCODE_ALG_CCMP)
+			else if(security_mode == RTW_ENCODE_ALG_CCMP)
 				pwifi->security_type = RTW_SECURITY_WPA2_AES_PSK;
 			break;
 		}
@@ -2104,13 +2113,13 @@ int scan_networks_with_ssid(int (results_handler)(char*buf, u32 buflen, char *ss
 				// security_mode
 				security_mode = (int)*(scan_buf.buf + plen + 1 + 6 + 4);
 				switch (security_mode) {
-					case IW_ENCODE_ALG_NONE:
+					case RTW_ENCODE_ALG_NONE:
 						HAL_Printf("sec = open    ,\t");
 						break;
-					case IW_ENCODE_ALG_WEP:
+					case RTW_ENCODE_ALG_WEP:
 						HAL_Printf("sec = wep     ,\t");
 						break;
-					case IW_ENCODE_ALG_CCMP:
+					case RTW_ENCODE_ALG_CCMP:
 						HAL_Printf("sec = wpa/wpa2,\t");
 						break;
 				}

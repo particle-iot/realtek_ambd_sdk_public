@@ -12,6 +12,8 @@
   */
 
 /** Add Includes here **/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include "trace_app.h"
 #include <string.h>
 #include "ble_throughput_vendor_tp_client.h"
@@ -290,4 +292,4 @@ T_CLIENT_ID tp_client_add(P_FUN_GENERAL_APP_CB app_cb)
     return client_id;
 }
 #endif
-
+#endif

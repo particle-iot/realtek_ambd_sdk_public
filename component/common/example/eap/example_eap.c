@@ -150,9 +150,12 @@ static void example_eap_thread(void *method){
 	else if(strcmp(method, "ttls") == 0){
 		eap_start("ttls");
 	}
+	else if(strcmp(method, "fast") == 0){
+		eap_start("fast");
+	}
 	else
 		printf("Invalid method\n");
-	
+
 	vTaskDelete(NULL);
 }
 

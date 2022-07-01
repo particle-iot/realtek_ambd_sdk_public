@@ -1,4 +1,5 @@
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include "app_msg.h"
 #include "trace_app.h"
@@ -12,6 +13,8 @@
 #include "ble_throughput_link_mgr.h"
 #include "ble_throughput_user_cmd.h"
 #include "user_cmd_parse.h"
+#include <ble_throughput_200_sut.h>
+#include "os_sched.h"
 
 #if F_BT_LE_GATT_SERVER_SUPPORT
 #include "profile_server.h"
@@ -23,8 +26,6 @@
 #if F_BT_LE_GAP_PERIPHERAL_SUPPORT
 #include "gap_adv.h"
 #endif
-
-
 
 #if F_BT_LE_GATT_CLIENT_SUPPORT
 #include <gaps_client.h>
@@ -52,43 +53,6 @@ T_GAP_DEV_STATE ble_throughput_gap_dev_state = {0, 0, 0, 0, 0};
 extern T_CLIENT_ID   vendor_tp_client_id;
 #endif
 
-
-// GAP - SCAN RSP data (max size = 31 bytes)
-const uint8_t scan_rsp_data[] =
-{
-    0x03,           /* length     */
-    0x03,           /* type="More 16-bit UUIDs available" */
-    0x12,
-    0x18,
-    0x03,           /* length     */
-    0x19,           /* type="Appearance" */
-    0xc2, 0x03,     /* Mouse */
-};
-
-// GAP - Advertisement data (max size = 31 bytes, though this is
-// best kept short to conserve power while advertisting)
-const uint8_t adv_data[] =
-{
-    0x02,            /* length     */
-    //XXXXMJMJ 0x01, 0x06,      /* type="flags", data="bit 1: LE General Discoverable Mode", BR/EDR not supp. */
-    0x01, 0x05,      /* type="flags", data="bit 1: LE General Discoverable Mode" */
-    /* Service */
-    0x03,           /* length     */
-    0x03,           /* type="More 16-bit UUIDs available" */
-    0x12,
-    0x18,
-    /* place holder for Local Name, filled by BT stack. if not present */
-    /* BT stack appends Local Name.                                    */
-    0x03,           /* length     */
-    0x19,           /* type="Appearance" */
-    0xc2, 0x03,     /* Mouse */
-    0x0C,           /* length     */
-    0x09,           /* type="Complete local name" */
-//    0x42, 0x65, 0x65, 0x5F, 0x6D, 0x6F, 0x75, 0x73, 0x65  /* Bee_perip */
-    'B', 'e', 'e', '_', 'G', 'a', 'p', 'T', 'e', 's', 't' /* Bee_perip */
-};
-
-
 void ble_throughput_app_handle_gap_msg(T_IO_MSG *pBeeIoMsg);
 
 /**
@@ -100,6 +64,7 @@ void ble_throughput_app_handle_gap_msg(T_IO_MSG *pBeeIoMsg);
 * @param   io_msg  The T_IO_MSG from peripherals or BT stack state machine.
 * @return  void
 */
+extern int ble_throughput_app_handle_at_cmd(uint16_t subtype, void *arg);
 void ble_throughput_app_handle_io_msg(T_IO_MSG io_msg)
 {
     uint16_t msg_type = io_msg.type;
@@ -190,6 +155,13 @@ void ble_throughput_app_handle_dev_state_evt(T_GAP_DEV_STATE new_state, uint16_t
   * @param  disc_cause: when new_state=GAP_CONN_STATE_DISCONNECTED, this value is valid.
   * @retval none
   */
+
+extern TC_206_SUT_MGR *p_tc_206_sut_mgr;
+extern TC_207_SUT_MGR *p_tc_207_sut_mgr;
+extern TTP_PERFER_PARAM g_206_sut_prefer_param;
+extern TTP_PERFER_PARAM g_207_sut_prefer_param;
+extern T_TP_TEST_PARAM g_207_tp_test_param;
+
 void ble_throughput_app_handle_conn_state_evt(uint8_t conn_id, T_GAP_CONN_STATE new_state, uint16_t disc_cause)
 {
     if (conn_id >= APP_MAX_LINKS)
@@ -217,6 +189,15 @@ void ble_throughput_app_handle_conn_state_evt(uint8_t conn_id, T_GAP_CONN_STATE 
                 }
                 else if (ble_throughput_app_get_cur_test_case() == TC_0207_TP_WRITE_COMMAND_RX_02)
                 {
+                	if(disc_cause != (HCI_ERR | HCI_ERR_LOCAL_HOST_TERMINATE))
+                	{
+                		g_207_tp_test_param.end_time = os_sys_time_get();
+       				 	g_207_tp_test_param.elapsed_time = ble_throughput_os_time_get_elapsed(g_207_tp_test_param.begin_time,
+                                                               								g_207_tp_test_param.end_time);
+        				g_207_tp_test_param.data_rate =
+            			g_207_tp_test_param.count * g_207_tp_test_param.length * 1000 / (g_207_tp_test_param.elapsed_time);
+            										
+                	}
                     ble_throughput_207_link_disconnected(conn_id, disc_cause);
                 }
                 else
@@ -229,10 +210,21 @@ void ble_throughput_app_handle_conn_state_evt(uint8_t conn_id, T_GAP_CONN_STATE 
             {    
                 if (ble_throughput_app_get_cur_test_case() == TC_0206_TP_NOTIFICATION_TX_02)
                 {
+                	p_tc_206_sut_mgr->end_time = os_sys_time_get();
+               		p_tc_206_sut_mgr->elapsed_time = ble_throughput_os_time_get_elapsed(p_tc_206_sut_mgr->begin_time,
+                                                                     p_tc_206_sut_mgr->end_time);
+                	p_tc_206_sut_mgr->data_rate = p_tc_206_sut_mgr->total_notify_rx_count * g_206_sut_prefer_param.length * 1000 /
+                    												(p_tc_206_sut_mgr->elapsed_time);
                     ble_throughput_206_sut_link_disconnected(conn_id, disc_cause);
                 }
                 else if (ble_throughput_app_get_cur_test_case() == TC_0207_TP_WRITE_COMMAND_RX_02)
                 {
+                	int sut_tx_count = g_207_sut_prefer_param.count - p_tc_207_sut_mgr->count_remain;
+                	p_tc_207_sut_mgr->end_time = os_sys_time_get();
+                	p_tc_207_sut_mgr->elapsed_time = ble_throughput_os_time_get_elapsed(p_tc_207_sut_mgr->begin_time,
+                                                                     p_tc_207_sut_mgr->end_time);
+                	p_tc_207_sut_mgr->data_rate = sut_tx_count * g_207_sut_prefer_param.length * 1000 /
+                    												(p_tc_207_sut_mgr->elapsed_time);
                     ble_throughput_207_sut_link_disconnected(conn_id, disc_cause);
                 }
                 else
@@ -257,7 +249,7 @@ void ble_throughput_app_handle_conn_state_evt(uint8_t conn_id, T_GAP_CONN_STATE 
         {
             uint16_t mtu_size;
             le_get_conn_param(GAP_PARAM_CONN_MTU_SIZE, &mtu_size, conn_id);
-            data_uart_print("Connected conn_id = %d, mtu size = %d\r\n", conn_id, mtu_size);
+            //data_uart_print("Connected conn_id = %d, mtu size = %d\r\n", conn_id, mtu_size);
             if (ble_throughput_app_get_cur_role() == TC_ROLE_DUT)
             {
 #if F_BT_LE_GAP_PERIPHERAL_SUPPORT
@@ -402,6 +394,7 @@ void ble_throughput_app_handle_conn_param_update_evt(uint8_t conn_id, uint8_t st
 void ble_throughput_app_handle_conn_mtu_info_evt(uint8_t conn_id, uint16_t mtu_size)
 {
     APP_PRINT_INFO2("ble_throughput_app_handle_conn_mtu_info_evt: conn_id %d, mtu_size %d", conn_id, mtu_size);
+    printf("ble_throughput_app_handle_conn_mtu_info_evt: conn_id %d, mtu_size %d\r\n", conn_id, mtu_size);
 }
 /**
   * @brief  handle messages from GAP layer.
@@ -780,16 +773,4 @@ T_APP_RESULT ble_throughput_app_profile_callback(T_SERVER_ID serviceID, void *p_
     return appResult;
 }
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif

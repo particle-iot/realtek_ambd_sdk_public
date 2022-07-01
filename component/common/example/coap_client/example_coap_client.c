@@ -14,7 +14,8 @@
     ||!defined(MEMP_USE_CUSTOM_POOLS)||!defined(LWIP_IPV6)
 #error ("some define missing, please check example_coap_client.c")
 #endif
-      
+time_t clock_offset; 
+
 char SERVER_HOST[20] =  "coap://coap.me/hello";
 #define SERVER_PORT     "5683"
 

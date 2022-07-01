@@ -16,13 +16,15 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if (defined(CONFIG_BT_CONFIG) && CONFIG_BT_CONFIG) || (defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG)
+
 #include <os_msg.h>
 #include <os_task.h>
 #include <gap.h>
 #include <gap_le.h>
 #include <gap_msg.h>
 #include <app_msg.h>
-#include "FreeRTOS.h"
 #include "wifi_conf.h"
 #include "wifi_util.h"
 #include "wifi_structures.h"
@@ -581,3 +583,4 @@ T_APP_RESULT bt_config_app_profile_callback(T_SERVER_ID service_id, void *p_data
 
     return app_result;
 }
+#endif

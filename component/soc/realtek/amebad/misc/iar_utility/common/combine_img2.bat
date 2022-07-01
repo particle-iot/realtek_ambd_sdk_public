@@ -14,6 +14,14 @@ if not exist %km4_dir%\km4_image2_all.bin (
 	xcopy %libdir%\image\km4_image2_all.bin %km4_dir%\
 )
 
+:: ECC sign
+if %SIMG2_ENABLE% equ 1 (
+	%tooldir%\EncTool.exe sboot %km4_dir%\km4_image2_all.bin %km4_dir%\km4_image2_all-sb.bin key_pair.txt %SBOOT_SEED% 2
+	del %km4_dir%\km4_image2_all.bin
+	rename %km4_dir%\km4_image2_all-sb.bin km4_image2_all.bin
+	%tooldir%\pad %km4_dir%\km4_image2_all.bin 4096
+)
+
 if %RSIP_ENABLE% equ 1 (
 	:: encrpyt km0_image2_all.bin => km0_image2_all-en.bin
 	%tooldir%\EncTool.exe rsip %km0_dir%\km0_image2_all.bin %km0_dir%\km0_image2_all-en.bin 0x0c000000 %RSIP_KEY% %RSIP_IV%
@@ -36,6 +44,9 @@ if %RDP_ENABLE% equ 1 (
 ) else (
 	rename %target_dir%\km0_km4_image2_tmp.bin km0_km4_image2.bin
 )
+
+copy %target_dir%\km0_km4_image2.bin %km0_dir%\
+copy %target_dir%\km0_km4_image2.bin %km4_dir%\
 
 if exist %target_dir%\km0_km4_image2_tmp.bin (
 	del %target_dir%\km0_km4_image2_tmp.bin

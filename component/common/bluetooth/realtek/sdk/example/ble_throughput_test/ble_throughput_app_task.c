@@ -15,6 +15,8 @@
   */
 
 /** Add Includes here **/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include <os_msg.h>
 #include <os_task.h>
@@ -88,24 +90,25 @@ void ble_throughput_app_task_init()
 
 void ble_throughput_app_task_deinit(void)
 {
+	if (ble_throughput_app_task_handle) {
+		os_task_delete(ble_throughput_app_task_handle);
+	}
 	if (ble_throughput_io_queue_handle) {
 		os_msg_queue_delete(ble_throughput_io_queue_handle);
 	}
 	if (ble_throughput_evt_queue_handle) {
 		os_msg_queue_delete(ble_throughput_evt_queue_handle);
 	}
-	if (ble_throughput_app_task_handle) {
-		os_task_delete(ble_throughput_app_task_handle);
-	}
 	ble_throughput_io_queue_handle = NULL;
 	ble_throughput_evt_queue_handle = NULL;
 	ble_throughput_app_task_handle = NULL;
 
 	ble_throughput_gap_dev_state.gap_init_state = 0;
+	ble_throughput_gap_dev_state.gap_adv_sub_state = 0;
 	ble_throughput_gap_dev_state.gap_adv_state = 0;
 	ble_throughput_gap_dev_state.gap_scan_state = 0;
 	ble_throughput_gap_dev_state.gap_conn_state = 0;
 
 }
-
+#endif
 

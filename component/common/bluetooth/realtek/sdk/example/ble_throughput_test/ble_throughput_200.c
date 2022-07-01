@@ -1,3 +1,5 @@
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include "app_msg.h"
 #include "trace_app.h"
@@ -419,4 +421,4 @@ void ble_throughput_207_link_disconnected(uint8_t conn_id, uint16_t reason)
     data_uart_print("\r\nDisc reason 0x%04x\r\n", reason);
     ble_throughput_207_dump_result();
 }
-
+#endif

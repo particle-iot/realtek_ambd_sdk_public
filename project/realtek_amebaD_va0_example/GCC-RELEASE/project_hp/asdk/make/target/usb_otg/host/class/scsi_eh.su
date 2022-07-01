@@ -1,4 +1,0 @@
-scsi_eh.c:23:6:scsi_eh_prep_cmnd	40	static
-scsi_eh.c:95:6:scsi_eh_restore_cmnd	24	static
-scsi_eh.c:129:5:scsi_normalize_sense	16	static
-scsi_eh.c:185:17:scsi_sense_desc_find	12	static

@@ -10,7 +10,8 @@
 * @version
 *********************************************************************************************************
 */
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_CONFIG) && CONFIG_BT_CONFIG
 #include <string.h>
 #include <trace_app.h>
 #include "bt_config_service.h"
@@ -238,3 +239,4 @@ T_SERVER_ID bt_config_service_add_service(void *p_func)
     pfn_bt_config_service_cb = (P_FUN_SERVER_GENERAL_CB)p_func;
     return bt_config_service_id;
 }
+#endif

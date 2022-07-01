@@ -10,6 +10,8 @@
 * @version  v0.1
 *********************************************************************************************************
 */
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include "trace_app.h"
 #include <string.h>
 #include "ble_throughput_vendor_tp_service.h"
@@ -343,4 +345,4 @@ T_SERVER_ID vendor_tp_service_add(void *pFunc)
     pfn_vendor_tp_service_cb = (P_FUN_SERVER_GENERAL_CB)pFunc;
     return vendor_tp_service_id;
 }
-
+#endif

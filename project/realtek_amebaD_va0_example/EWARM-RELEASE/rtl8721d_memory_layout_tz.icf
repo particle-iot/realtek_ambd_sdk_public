@@ -45,7 +45,7 @@ define symbol __ICFEDIT_region_HS_MSP_RAM_S_end__         	= 0x10080000-1;
 define symbol __ICFEDIT_region_HS_EXTENTION_SRAM_start__   = 0x100E0000;
 define symbol __ICFEDIT_region_HS_EXTENTION_SRAM_end__     = 0x10100000-1;
 
-define symbol __ICFEDIT_region_HS_PSRAM_NS_start__       	= 0x02000000;
+define symbol __ICFEDIT_region_HS_PSRAM_NS_start__       	= 0x02000020;
 define symbol __ICFEDIT_region_HS_PSRAM_NS_end__         	= 0x02300000-1;
 define symbol __ICFEDIT_region_HS_PSRAM_S_start__       	= 0x02300000;
 define symbol __ICFEDIT_region_HS_PSRAM_S_end__         	= 0x02400000-1;

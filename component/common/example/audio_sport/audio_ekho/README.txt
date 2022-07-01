@@ -16,11 +16,10 @@ This amr example is used to run ekho, which is a TTS application. In order to ru
 	    Ameba-1, Ameba-z, Ameba-pro
 
 [Compilation Tips]
-	1. WI-FI and Network are needed in order to run this example. If you don't need WI-FI and Network, change "#define CONFIG_EXAMPLE_WLAN_FAST_CONNECT	1"
-	to "#define CONFIG_EXAMPLE_WLAN_FAST_CONNECT 0" in platform_opts.h file, then, in project/realtek_amebaD_va0_example/src/src_hp/main.c
-	move these 2 function calls -- pre_example_entry() and example_entry()-- out of the "#if defined(CONFIG_WIFI_NORMAL) && defined(CONFIG_NETWORK)" area.
+	1. You need to turn WI-FI and Network on to make sure the entry of this example will be called automatically. If not, you need to 
+	call it on your own.
 	
-	2. When WI-FI and Network are off, the program may not run in a normal way due to the default small heap size. 
-	You can set configTOTAL_HEAP_SIZE to ( ( size_t ) ( 250 * 1024 ) ) to make sure that ram allocated is enough to run this example.
+	2. You may need to change the value of configTOTAL_HEAP_SIZE  defined in project\realtek_amebaD_va0_example\inc\inc_hp\FreeRTOSConfig.h 
+	to make sure that ram allocated is enough to run this example.
 	
-	3. In IAR, you need to include lib_ekho.a and lib_gsm610.a under "km4_application/lib" and .c file in this folder under "km4_application/utilities/example".
+	3. In IAR, you need to include lib_ekho.a and lib_gsm610.a under "km4_application/lib" and example_audio_ekho.c file in this folder under "km4_application/utilities/example".

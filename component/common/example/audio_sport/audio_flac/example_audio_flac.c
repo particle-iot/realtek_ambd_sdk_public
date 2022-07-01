@@ -12,33 +12,14 @@
 
 #if CONFIG_EXAMPLE_AUDIO_FLAC
 
-//-----------------Frequency Mapping Table--------------------//
-/*+-------------+-------------------------+--------------------+
-| Frequency(hz) | Number of Channels      | Decoded Bytes      |
-                |(CH_MONO:1 CH_STEREO:2)  |(I2S_DMA_PAGE_SIZE) |
-+---------------+-------------------------+--------------------+
-|          8000 |                       1 |               1152 |
-|          8000 |                       2 |               2304 |
-|         16000 |                       1 |               1152 |
-|         16000 |                       2 |               2304 |
-|         22050 |                       1 |               1152 |
-|         22050 |                       2 |               2304 |
-|         24000 |                       1 |               1152 |
-|         24000 |                       2 |               2304 |
-|         32000 |                       1 |               2304 |
-|         32000 |                       2 |               4608 |
-|         44100 |                       1 |               2304 |
-|         44100 |                       2 |               4608 |
-|         48000 |                       1 |               2304 |
-|         48000 |                       2 |               4608 |
-+---------------+-------------------------+------------------+*/
 
 
 //------------------------------------- ---CONFIG Parameters-----------------------------------------------//
+//#define MEM_ALLOC Psram_reserve_malloc
+#define MEM_ALLOC malloc
+//#define MEM_FREE Psram_reserve_free
+#define MEM_FREE free
 
-
-//------------------------------------- ---CONFIG Parameters-----------------------------------------------//
-                                
 #ifdef __GNUC__
 #undef SDRAM_DATA_SECTION
 #define SDRAM_DATA_SECTION 
@@ -82,8 +63,8 @@ static file_info file[FILE_NUM] = {
 
 #define decoderScatchSize MAX_FRAMESIZE + MAX_BLOCKSIZE*8
 // Buffer for all decoders
-static unsigned char g_decoderScratch[decoderScatchSize];
-
+//static unsigned char g_decoderScratch[decoderScatchSize];
+static u8 *g_decoderScratch;
 
 static u8 *sp_get_free_tx_page(void)
 {
@@ -671,13 +652,14 @@ void example_audio_flac_thread(void* param)
 		AUDIO_SP_TXGDMA_Init(0, &SPGdmaStruct.SpTxGdmaInitStruct, &SPGdmaStruct, (IRQ_FUN)sp_tx_complete, tx_addr, tx_length);
 		Flac_Play(wav);
 	}
+	MEM_FREE(g_decoderScratch);
 exit:
 	vTaskDelete(NULL);
 }
 
 void example_audio_flac(void)
 {
-	
+	g_decoderScratch = MEM_ALLOC(decoderScatchSize);
 	sp_obj.mono_stereo = NUM_CHANNELS;
 	sp_obj.direction = APP_LINE_OUT;
 	RTIM_Cmd(TIM0, ENABLE);

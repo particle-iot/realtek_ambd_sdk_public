@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_CENTRAL) && CONFIG_BT_CENTRAL
 #include <os_msg.h>
 #include <os_task.h>
 #include <gap.h>
@@ -110,14 +112,14 @@ void ble_central_app_main_task(void *p_param)
 
 void ble_central_app_task_deinit(void)
 {
+	if (ble_central_app_task_handle) {
+		os_task_delete(ble_central_app_task_handle);
+	}
 	if (ble_central_io_queue_handle) {
 		os_msg_queue_delete(ble_central_io_queue_handle);
 	}
 	if (ble_central_evt_queue_handle) {
 		os_msg_queue_delete(ble_central_evt_queue_handle);
-	}
-	if (ble_central_app_task_handle) {
-		os_task_delete(ble_central_app_task_handle);
 	}
 	ble_central_io_queue_handle = NULL;
 	ble_central_evt_queue_handle = NULL;
@@ -132,5 +134,5 @@ void ble_central_app_task_deinit(void)
 }
 
 /** @} */ /* End of group CENTRAL_CLIENT_APP_TASK */
-
+#endif
 

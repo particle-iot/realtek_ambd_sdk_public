@@ -11,6 +11,7 @@ Modify the argument of example_eap() in example_entry.c to set which EAP methods
 	example_eap("tls");
 	//example_eap("peap");
 	//example_eap("ttls");
+	// example_eap("fast");
 #endif
 
 Modify the connection config (ssid, identity, password, cert) in example_eap_config() of example_eap.c based on your server's setting.
@@ -23,6 +24,7 @@ Modify the connection config (ssid, identity, password, cert) in example_eap_con
 	# define CONFIG_ENABLE_PEAP	1
 	# define CONFIG_ENABLE_TLS	1
 	# define CONFIG_ENABLE_TTLS	1
+	# define CONFIG_ENABLE_FAST	1
 
 	// If you want to verify the certificate of radius server, turn this on
 	# define ENABLE_EAP_SSL_VERIFY_SERVER	1

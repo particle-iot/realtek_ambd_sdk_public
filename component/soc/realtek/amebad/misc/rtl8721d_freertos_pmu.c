@@ -23,6 +23,14 @@ static uint32_t sysactive_timeout_flag = 0;
 
 u32 tickless_debug = 0;
 
+unsigned char roaming_type_flag;			// 1-tickless roaming; 2-normal roaming
+static u8 roaming_awake_flag = 0;			// tickless roaming enable or not flag
+static u8 roaming_awake_bcnrssi_thrhd = 0;	// tickless awake threshhold
+static u8 roaming_awake_delay = 0;			// tickless awake delay
+u8 roaming_awake_rssi_range = 0;			// tickless awake |rssi| change range
+u8 roaming_normal_rssi_range = 0;
+xSemaphoreHandle roaming_sema = NULL;	// start roaming semaphore
+
 /* ++++++++ FreeRTOS macro implementation ++++++++ */
 
 /* psm dd hook info */
@@ -64,6 +72,20 @@ void pmu_exec_wakeup_hook_funs(u32 nDeviceIdMax)
 	}
 }
 
+#define SYSTICK_THRES 0xffffff
+/*
+return: TRUE: time1 > time2
+*/
+int freertos_systick_check(u32 time1, u32 time2)
+{
+	u32 delta = time1 > time2 ? time1 - time2 : time2 - time1;
+	if (delta < SYSTICK_THRES) {
+		return time1 > time2 ? TRUE : FALSE;
+	} else {	//overflow
+		return time1 < time2 ? TRUE : FALSE;
+	}
+}
+
 uint32_t pmu_set_sysactive_time(uint32_t timeout)
 {
 	u32 TimeOut = 0;
@@ -82,7 +104,7 @@ uint32_t pmu_set_sysactive_time(uint32_t timeout)
 
 	TimeOut = xTaskGetTickCount() + timeout;
 
-	if (TimeOut > sleepwakelock_timeout) {
+	if (freertos_systick_check(TimeOut, sleepwakelock_timeout)) {
 		sleepwakelock_timeout = TimeOut;
 	}
 	return 0;
@@ -133,7 +155,7 @@ int freertos_ready_to_sleep(void)
 	u32 current_tick = xTaskGetTickCount();
 
 	/* timeout */
-	if (current_tick < sleepwakelock_timeout) {
+	if (freertos_systick_check(current_tick, sleepwakelock_timeout) == FALSE) {
 		return FALSE;
 	}
 
@@ -202,7 +224,6 @@ void freertos_pre_sleep_processing(unsigned int *expected_idle_time)
 		sleep_param.dlps_enable = ENABLE;
 	} else {
 		sleep_param.sleep_time = max_sleep_time;//*expected_idle_time;
-		max_sleep_time = 0;
 		sleep_param.dlps_enable = DISABLE;
 	}
 	sleep_param.sleep_type = sleep_type;
@@ -367,11 +388,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 	
 	/* Enter a critical section but don't use the taskENTER_CRITICAL()
 	method as that will mask interrupts that should exit sleep mode. */
-#if defined (ARM_CORE_CM0)
 	taskENTER_CRITICAL();
-#else
-	__asm volatile( "cpsid i" );
-#endif
 
 	eSleepStatus = eTaskConfirmSleepModeStatus();
 	
@@ -409,11 +426,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 #endif
 	/* Re-enable interrupts - see comments above the cpsid instruction()
 	above. */
-#if defined (ARM_CORE_CM0)
 	taskEXIT_CRITICAL();
-#else
-	__asm volatile( "cpsie i" );
-#endif
 		
 	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 
@@ -467,6 +480,11 @@ void pmu_set_max_sleep_time(uint32_t timer_ms)
 	max_sleep_time = timer_ms;
 }
 
+uint32_t pmu_get_max_sleep_time(void)
+{
+	return max_sleep_time;
+}
+
 void pmu_set_dsleep_active_time(uint32_t TimeOutMs)
 {
 	u32 timeout = 0;
@@ -503,4 +521,70 @@ void pmu_tickless_debug(u32 NewStatus)
 	} else {
 		tickless_debug = 0;
 	}
+}
+
+void pmu_reset_awake(u8 type)
+{
+	if(type == 1) {
+		roaming_awake_delay = 0;
+		roaming_awake_rssi_range = 0;
+	}else if(type == 2) {
+		roaming_normal_rssi_range = 0;
+	}
+}
+
+void pmu_degrade_awake(u8 type)
+{
+	if(type == 1) {
+		if(!roaming_awake_delay)
+			roaming_awake_delay = 4;
+		roaming_awake_rssi_range = 3; // temp fix to 6db range
+		
+		if(++roaming_awake_delay > 7)	
+			roaming_awake_delay = 7; // max 7 second
+	}else if(type == 2) {
+		if(!roaming_normal_rssi_range)
+			roaming_normal_rssi_range = 5; // temp fix to 5db range
+		else if(roaming_normal_rssi_range < 8)
+			roaming_normal_rssi_range++;
+	}
+}
+
+void pmu_set_roaming_awake(u8 enable, u8 threshhold, u8 winsize)
+{	
+	assert_param(enable == 1 || enable == 0);
+	assert_param(threshhold > 0 && threshhold < 100);
+	assert_param(winsize > 0 && winsize < 100);
+	
+	roaming_awake_flag = enable;
+	if(1 == enable) {
+		extern u8 bcnrssi_count_slide_winsize;
+		roaming_awake_bcnrssi_thrhd = threshhold;
+		bcnrssi_count_slide_winsize = winsize;
+		if(roaming_sema == NULL) {
+			vSemaphoreCreateBinary(roaming_sema);
+			xSemaphoreTake(roaming_sema, 1/portTICK_RATE_MS);
+		}
+	}else if(0 == enable) {
+		roaming_awake_bcnrssi_thrhd = 0;
+		if(roaming_sema != NULL) {
+			vSemaphoreDelete(roaming_sema);
+			roaming_sema = NULL;
+		}
+	}
+	pmu_reset_awake(1);
+	pmu_reset_awake(2);
+}
+
+u8 pmu_get_roaming_awake(u8 *p)
+{	
+	if(roaming_awake_flag && p != NULL) {
+		p[0] = roaming_awake_flag | (1<<7);
+		p[0] &= 0xf1;
+		p[0] |= (roaming_awake_delay & 0x7) << 1;
+		p[0] &= 0xcf;
+		p[0] |= (roaming_awake_rssi_range & 0x3) << 4;
+		p[1] = roaming_awake_bcnrssi_thrhd;
+	}
+	return roaming_awake_flag;
 }

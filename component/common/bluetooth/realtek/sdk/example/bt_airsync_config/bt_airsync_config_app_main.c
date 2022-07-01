@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include <os_sched.h>
 #include <string.h>
 #include <trace_app.h>
@@ -40,6 +42,7 @@
 #include "rtk_coex.h"
 #include <stdio.h>
 #include "wechat_airsync_protocol.h"
+
 /** @defgroup  PERIPH_DEMO_MAIN Peripheral Main
     * @brief Main file to initialize hardware and BT stack and start task scheduling
     * @{
@@ -108,6 +111,7 @@ static const uint8_t adv_data[] =
 void bt_airsync_config_stack_config_init(void)
 {
     gap_config_max_le_link_num(APP_MAX_LINKS);
+    gap_config_max_le_paired_device(APP_MAX_LINKS);
 }
 
 /**
@@ -184,7 +188,7 @@ void bt_airsync_config_app_le_gap_init(void)
  */
 void bt_airsync_config_app_le_profile_init(void)
 {
-    server_init(3);
+    server_init(1);
 
     bt_airsync_config_srv_id = airsync_add_service((void *)bt_airsync_config_app_profile_callback);
 	server_register_app_cb(bt_airsync_config_app_profile_callback);
@@ -193,7 +197,7 @@ void bt_airsync_config_app_le_profile_init(void)
 void bt_airsync_config_task_init(void)
 {
 	bt_airsync_config_app_task_init();
-	p_airsync_send_data_handler = airsync_send_data;
+	p_airsync_send_data_handler = bt_airsync_config_send_data_to_apptask;
 	airsync_specific = 1;
 	bt_config_wifi_init();
 }
@@ -250,7 +254,7 @@ int bt_airsync_config_app_init(void)
 
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE, &new_state);
 	} while (new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
 
@@ -284,4 +288,4 @@ void bt_airsync_config_app_deinit(void)
 	}
 #endif
 }
-
+#endif

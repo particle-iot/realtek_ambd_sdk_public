@@ -1,4 +1,5 @@
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include "app_msg.h"
 #include "trace_app.h"
@@ -7,7 +8,7 @@
 #include "gap_msg.h"
 #include "gap_bond_le.h"
 #include "ble_throughput_app.h"
-
+#include "os_sched.h"
 #include "ble_throughput_user_cmd.h"
 #include "user_cmd_parse.h"
 #if F_BT_LE_GATT_SERVER_SUPPORT
@@ -310,6 +311,36 @@ void ble_throughput_app_select_cur_test_case(T_USER_CMD_PARSED_VALUE *p_parse_va
 
     g_cur_test_case = test_case_id;
 }
+
+extern T_TP_TEST_PARAM g_206_tp_test_param;
+extern T_TP_TEST_PARAM g_207_tp_test_param;
+
+void ble_throughput_app_get_result(void)
+{
+	if(ble_throughput_app_get_cur_role() == TC_ROLE_DUT)
+	{
+		if(ble_throughput_app_get_cur_test_case() == TC_0206_TP_NOTIFICATION_TX_02)
+		{
+			int tx_count = g_206_tp_test_param.count - g_206_tp_test_param.count_remain;
+			g_206_tp_test_param.end_time = os_sys_time_get();
+			g_206_tp_test_param.elapsed_time = ble_throughput_os_time_get_elapsed(g_206_tp_test_param.begin_time,
+																	g_206_tp_test_param.end_time);
+			g_206_tp_test_param.data_rate = tx_count * g_206_tp_test_param.length * 1000 /
+																	(g_206_tp_test_param.elapsed_time);
+		} else if(ble_throughput_app_get_cur_test_case() == TC_0207_TP_WRITE_COMMAND_RX_02){
+			g_207_tp_test_param.end_time = os_sys_time_get();
+			g_207_tp_test_param.elapsed_time = ble_throughput_os_time_get_elapsed(g_207_tp_test_param.begin_time,
+																			   g_207_tp_test_param.end_time);
+			g_207_tp_test_param.data_rate = g_207_tp_test_param.count * g_207_tp_test_param.length * 1000 /
+																	(g_207_tp_test_param.elapsed_time);
+		}
+		le_disconnect(0);		
+	}
+	else {
+		printf("ATBT=RESULT only used by DUT!!\n\r");
+	}		
+}
+
 int ble_throughput_at_cmd(int argc, char **argv)
 {
 	int ret = 0;
@@ -362,6 +393,8 @@ int ble_throughput_at_cmd(int argc, char **argv)
 			i++;
 		}while(i<argc-2);
 		ble_throughput_app_select_cur_test_case(p_parsed_value);
+	}else if(strcmp(argv[1], "RESULT") == 0){
+		ble_throughput_app_get_result();
 	}else{
 		printf("ERROR:input parameter error!\n\r");
 		return -1;
@@ -386,4 +419,4 @@ int ble_throughput_app_handle_at_cmd(uint16_t subtype, void *arg)
 		
 	return common_cmd_flag;
 }
-
+#endif

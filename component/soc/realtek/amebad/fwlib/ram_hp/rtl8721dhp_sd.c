@@ -324,12 +324,10 @@ static SD_RESULT SD_GetOCR(u8 voltage_mismatch)
 	SDIOH_CmdTypeDef cmd_attr;
 	u8 resp_byte1;
 
-	card_info.is_sdhc_sdxc = 1;
-
 	resp_byte1 = SDIOH_GetResponse(SDIO_RESP1);
 
 	do{
-		cmd_attr.arg = 0x40FF8080;
+		cmd_attr.arg = 0x40FF8080;            //value of OCR
 		cmd_attr.idx = EMMC_CMD_SendOpCond;
 		cmd_attr.rsp_type = SDIOH_RSP_6B;
 		cmd_attr.rsp_crc_chk = DISABLE;
@@ -347,10 +345,16 @@ static SD_RESULT SD_GetOCR(u8 voltage_mismatch)
 
 		DelayMs(1);
 		
-		if(resp_byte1&BIT7) {
+		if(resp_byte1&BIT7) {              //bit7: busy bit
+			if(resp_byte1&BIT6){           //bit6: 1, sector mode(>2GB); 0, byte mode()
+				card_info.is_sdhc_sdxc = 1;
+			}else{
+				card_info.is_sdhc_sdxc = 0;
+			}
 			return HAL_OK;
 		}
 	}while(cnt--);
+	
 
 	return HAL_ERR_UNKNOWN;
 	
@@ -428,7 +432,11 @@ static u32 SD_GetRCA(void)
 	SDIOH_CmdTypeDef cmd_attr;
 
 	/***** CMD3 *****/
+#if defined(SDIO) && (SDIO == SD) 	
 	cmd_attr.arg = 0;
+#else
+	cmd_attr.arg = 0x1;      //emmc card: RCA set by HOST.
+#endif
 	cmd_attr.idx = SD_CMD_SendRelAddr;
 	cmd_attr.rsp_type = SDIOH_RSP_6B;
 	cmd_attr.rsp_crc_chk = ENABLE;
@@ -609,7 +617,7 @@ static u32 SD_SetBusWidth(u8 bus_width)
 	wid_arg_4bit = 0x2;
 	wid_arg_1bit = 0x0;
 #else
-	wid_arg_4bit = 0x03B70100;   //EXT_CSD register B7 byte: 01, 4bit mode; 00, 1bit mode
+	wid_arg_4bit = 0x03B70100;   //03: set bit; B7:EXT_CSD register B7; byte: 01, 4bit mode; 
 	wid_arg_1bit = 0x03B70000;
 #endif
 	/***** ACMD6 (CMD6) *****/
@@ -859,7 +867,7 @@ SD_RESULT SD_GetEXTCSD(u8 *pbuf)
 		if (ret != HAL_OK)
 			DBG_PRINTF(MODULE_SDIO, LEVEL_ERROR, "Stop transmission error !!\r\n");
 
-		return HAL_ERR_UNKNOWN;
+		return SD_ERROR;
 	}
 
 	DCache_Invalidate((u32)pbuf, SD_BLOCK_SIZE);
@@ -1363,8 +1371,8 @@ u32 SD_GetSDStatus(u8 *buf_32align)
 				 }
 			 }
 		 } else {
-			 DBG_PRINTF(MODULE_SDIO, LEVEL_WARN, "This card doesn't support the specified speed mode !!\r\n");
-			 return HAL_ERR_HW;
+			 DBG_PRINTF(MODULE_SDIO, LEVEL_WARN, "This card doesn't support the specified speed mode, use current speed mode !!\r\n");
+			 return HAL_OK;
 		 }
 	 } else {
 		 DBG_PRINTF(MODULE_SDIO, LEVEL_WARN,"This card doesn't support CMD6 and can't switch the bus speed !!\r\n");

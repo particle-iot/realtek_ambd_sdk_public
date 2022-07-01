@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_PERIPHERAL) && CONFIG_BT_PERIPHERAL
 #include <os_sched.h>
 #include <string.h>
 #include <trace_app.h>
@@ -34,9 +36,7 @@
 #include "app_flags.h"
 #include <stdio.h>
 #include "wifi_constants.h"
-#include "FreeRTOS.h"
 #include <wifi/wifi_conf.h>
-#include "task.h"
 #include "rtk_coex.h"
 
 
@@ -49,9 +49,9 @@
  *                              Constants
  *============================================================================*/
 /** @brief  Default minimum advertising interval when device is discoverable (units of 625us, 160=100ms) */
-#define DEFAULT_ADVERTISING_INTERVAL_MIN            320
+#define DEFAULT_ADVERTISING_INTERVAL_MIN            352 //220ms
 /** @brief  Default maximum advertising interval */
-#define DEFAULT_ADVERTISING_INTERVAL_MAX            400
+#define DEFAULT_ADVERTISING_INTERVAL_MAX            384 //240ms
 
 
 /*============================================================================*
@@ -94,11 +94,10 @@ static const uint8_t adv_data[] =
  * NOTE: This function shall be called before @ref bte_init is invoked.
  * @return void
  */
-extern void gap_config_hci_task_secure_context(uint32_t size);
 void bt_stack_config_init(void)
 {
     gap_config_max_le_link_num(APP_MAX_LINKS);
-    gap_config_hci_task_secure_context (280);
+    gap_config_max_le_paired_device(APP_MAX_LINKS);
 }
 
 /**
@@ -167,6 +166,14 @@ void app_le_gap_init(void)
 
     /* register gap message callback */
     le_register_app_cb(app_gap_callback);
+#if F_BT_LE_5_0_SET_PHY_SUPPORT
+	uint8_t phys_prefer = GAP_PHYS_PREFER_ALL;
+	uint8_t tx_phys_prefer = GAP_PHYS_PREFER_1M_BIT | GAP_PHYS_PREFER_2M_BIT;
+	uint8_t rx_phys_prefer = GAP_PHYS_PREFER_1M_BIT | GAP_PHYS_PREFER_2M_BIT;
+	le_set_gap_param(GAP_PARAM_DEFAULT_PHYS_PREFER, sizeof(phys_prefer), &phys_prefer);
+	le_set_gap_param(GAP_PARAM_DEFAULT_TX_PHYS_PREFER, sizeof(tx_phys_prefer), &tx_phys_prefer);
+	le_set_gap_param(GAP_PARAM_DEFAULT_RX_PHYS_PREFER, sizeof(rx_phys_prefer), &rx_phys_prefer);
+#endif
 }
 
 /**
@@ -251,7 +258,7 @@ int ble_app_init(void)
 	
 	/*Wait WIFI init complete*/
 	while(!(wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		os_delay(1000);
 	}
 
 	//judge BLE central is already on
@@ -268,7 +275,7 @@ int ble_app_init(void)
 
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	}while(new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
 
@@ -302,5 +309,4 @@ void ble_app_deinit(void)
 }
 
 /** @} */ /* End of group PERIPH_DEMO_MAIN */
-
-
+#endif

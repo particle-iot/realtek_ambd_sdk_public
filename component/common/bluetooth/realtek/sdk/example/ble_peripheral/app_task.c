@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_PERIPHERAL) && CONFIG_BT_PERIPHERAL
 #include <os_msg.h>
 #include <os_task.h>
 #include <gap.h>
@@ -26,7 +28,6 @@
 #include <stdio.h>
 #include <basic_types.h>
 #include <gap_msg.h>
-
 
 /** @defgroup  PERIPH_APP_TASK Peripheral App Task
     * @brief This file handles the implementation of application task related functions.
@@ -103,14 +104,14 @@ void app_task_init(void)
 
 void app_task_deinit(void)
 {
+	if (app_task_handle) {
+		os_task_delete(app_task_handle);
+	}
 	if (io_queue_handle) {
 		os_msg_queue_delete(io_queue_handle);
 	}
 	if (evt_queue_handle) {
 		os_msg_queue_delete(evt_queue_handle);
-	}
-	if (app_task_handle) {
-		os_task_delete(app_task_handle);
 	}
 	io_queue_handle = NULL;
 	evt_queue_handle = NULL;
@@ -124,5 +125,5 @@ void app_task_deinit(void)
 }
 
 /** @} */ /* End of group PERIPH_APP_TASK */
-
+#endif
 

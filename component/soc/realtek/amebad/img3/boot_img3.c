@@ -120,12 +120,44 @@ NS_ENTRY void load_psram_image_s(void)
 		vPortFree(buf);
 
 	} else if (RdpStatus == 0) {  /* MP image*/
+		u32 OTF_Enable = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_SYS_EFUSE_SYSCFG3) & BIT_SYS_FLASH_ENCRYPT_EN;
+
 		IMAGE_HEADER *Img3SecureHdr = (IMAGE_HEADER *)RDPPsramStartAddr;
+
+		/* RSIP mask to prevent psram IMG3 from being decrypted. If customers use RDP+RSIP function, IMG3 only need
+			RDP encryption, and don't need RSIP encryption. */
+		if(OTF_Enable) {
+			RSIP_OTF_Mask(3, (u32)Img3SecureHdr, 1, ENABLE);
+			RSIP_OTF_Mask(3, (u32)Img3SecureHdr, (((Img3SecureHdr->image_size + IMAGE_HEADER_LEN) - 1) >> 12) + 1, ENABLE);
+		}
 
 		if((Img3SecureHdr->signature[0] == 0x35393138) && (Img3SecureHdr->signature[1] == 0x31313738)) {			
 			DBG_PRINTF(MODULE_BOOT, LEVEL_INFO,"IMG3 PSRAM_S:[0x%x:%d:0x%x]\n", Img3SecureHdr->image_addr, Img3SecureHdr->image_size, (void*)(Img3SecureHdr+1));
 			_memcpy((void*)Img3SecureHdr->image_addr, (void*)(Img3SecureHdr+1), Img3SecureHdr->image_size);
 		}
+
+		/* Relase temporary-used RSIP Mask entry */
+		if(OTF_Enable)
+			RSIP_OTF_Mask(3, 0, 0, DISABLE);
 	}
 }
 
+IMAGE3_ENTRY_SECTION
+NS_ENTRY void mpu_s_no_cache_init(void)
+{
+	mpu_region_config mpu_cfg;
+	u32 mpu_entry = 0;
+
+	mpu_init();
+
+	/* set Security PSRAM Memory Write-Back */
+    mpu_entry = mpu_entry_alloc();
+    mpu_cfg.region_base = 0x02000000;
+    mpu_cfg.region_size = 0x400000;
+    mpu_cfg.xn = MPU_EXEC_ALLOW;
+    mpu_cfg.ap = MPU_UN_PRIV_RW;
+    mpu_cfg.sh = MPU_NON_SHAREABLE;
+    mpu_cfg.attr_idx = MPU_MEM_ATTR_IDX_WB_T_RWA;
+    mpu_region_cfg(mpu_entry, &mpu_cfg);
+
+}

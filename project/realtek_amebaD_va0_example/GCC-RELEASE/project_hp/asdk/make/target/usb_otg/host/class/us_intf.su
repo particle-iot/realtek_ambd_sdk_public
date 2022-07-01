@@ -1,8 +1,0 @@
-us_intf.c:20:12:us_init	8	static
-us_intf.c:30:12:us_deinit	8	static
-us_intf.c:36:12:us_isready	8	static
-us_intf.c:46:12:us_getStatus	0	static
-us_intf.c:52:12:us_inquiry	8	static
-us_intf.c:61:12:us_getcap	40	static
-us_intf.c:100:12:us_read_blocks	8	static
-us_intf.c:109:12:us_write_blocks	8	static

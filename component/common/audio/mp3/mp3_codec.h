@@ -25,6 +25,7 @@ typedef void* mp3_decoder_t;
 extern mp3_decoder_t mp3_create(void);
 extern int mp3_decode(mp3_decoder_t *dec, void *buf, int bytes, signed short *out, mp3_info_t *info);
 extern void mp3_done(mp3_decoder_t *dec);
+extern void mp3_reset(mp3_decoder_t *dec);
 #define mp3_free(dec) do { mp3_done(dec); dec = NULL; } while(0)
 
 #endif//__MINIMP3_DEC_H_INCLUDED__

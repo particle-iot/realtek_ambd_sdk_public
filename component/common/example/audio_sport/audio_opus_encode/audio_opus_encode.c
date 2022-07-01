@@ -103,7 +103,7 @@ void opus_audio_opus_encode(u8* source_file, u8* dest_file, opus_int32 sample_ra
 
 void opus_audio_opus_encode_thread(void* param){
     //source_file is stored in SD card, dest_file is the one converted from source_file
-    u8* source_file[] = {"1000Hz_48k_stereo.wav", "1000Hz_48k_mono.wav", "1000Hz_16k_mono.wav", "arashi_mono_48k.wav"};
+    u8* source_file[] = {"1000Hz_48k_stereo.wav", "1000Hz_48k_mono.wav", "1000Hz_16k_mono.wav"};
     u8* dest_file[] = {"48_stereo_256_10.opus", "48_stereo_256_3.opus","48_stereo_256_0.opus","48_mono_256_3.opus","16_mono_48_3.opus","16_mono_20_3.opus"};
     opus_audio_opus_encode(source_file[0], dest_file[0], 48000, 2, 10, 256000);
     opus_audio_opus_encode(source_file[0], dest_file[1], 48000, 2, 3, 256000);

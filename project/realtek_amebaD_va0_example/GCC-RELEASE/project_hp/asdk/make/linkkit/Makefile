@@ -294,8 +294,9 @@ OBJS = $(CSRC:.c=.o)
 #*****************************************************************************#
 #                        RULES TO GENERATE TARGETS                            #
 #*****************************************************************************#
-all: CORE_TARGETS COPY_RAM_OBJS
+all: CORE_TARGETS
 	$(AR) rvs lib_aliiot.a $(OBJS)
+	$(FROMELF) --strip-debug lib_aliiot.a
 	$(MOVE) -f lib_aliiot.a $(ROOTDIR)/lib/application
 #*****************************************************************************#
 #              GENERATE OBJECT FILE 

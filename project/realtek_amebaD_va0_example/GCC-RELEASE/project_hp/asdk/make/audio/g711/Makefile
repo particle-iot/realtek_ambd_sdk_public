@@ -28,6 +28,7 @@ OBJS = $(notdir $(CSRC:.c=.o))
 # Define the Rules to build the core targets
 all: CORE_TARGETS COPY_RAM_OBJS
 	$(AR) rvs lib_g711.a $(OBJS)
+	$(FROMELF) --strip-debug lib_g711.a
 	$(MOVE) -f lib_g711.a $(ROOTDIR)/lib/application
 	
 #*****************************************************************************#

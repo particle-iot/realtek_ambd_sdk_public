@@ -4,12 +4,12 @@
 #include "section_config.h"
 #ifdef CONFIG_EXAMPLE_AUDIO_AC3
 //------------------------------------- ---CONFIG Parameters-----------------------------------------------//
-//real audio files are difined in a52dec.c
-#define FILE_NAME "AudioSDTest.ac3"    
+//real audio files to be played are defined in a52dec.c
+//#define FILE_NAME "AudioSDTest.ac3"    
 
 //------------------------------------- ---CONFIG Parameters-----------------------------------------------//
 
-void audio_play_flash_ac3(u8* filename){
+void audio_play_flash_ac3(){
 	int InputParaNum = 0,char_index = 0;
 	char InputParas[50][20];
 	char INStr[50*20]= "a52dec -o sport -c -r -a";
@@ -40,8 +40,8 @@ void audio_play_flash_ac3(u8* filename){
 void example_audio_ac3_thread(void* param)
 {
 	printf("Audio codec ac3 demo begin......\n");
-	char wav[16] = FILE_NAME;
-	audio_play_flash_ac3(wav);
+	//char wav[16] = FILE_NAME;
+	audio_play_flash_ac3();
 exit:
 	vTaskDelete(NULL);
 }

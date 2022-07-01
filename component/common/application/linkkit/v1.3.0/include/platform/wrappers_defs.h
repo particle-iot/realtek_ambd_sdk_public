@@ -40,19 +40,32 @@ extern "C"
 #include "iot_import.h"
 #include "iot_export.h"
 #include "rtl8721d_ota.h"
+#include "dct.h"
+
 
 /****************************************************************************/
 
 extern int ota_file_size;
 /****************************************************************************/
 
-#define CONFIG_FW_INFO          (0x102000 - 0x1000) // 4KB flash space for firmware version
-#define CONFIG_DEVICE_INFO		(0x102000 - 0x2000)	// 4KB flash space for device key&&secret
+#define CONFIG_FW_INFO          (0x100200 - 0x0100) // 4KB flash space for firmware version
+#define CONFIG_DEVICE_INFO		(0x100200 - 0x0200)	// 4KB flash space for device key&&secret
 
 #define USE_DEMO_6 0
 
 #define PLATFORM_WAIT_INFINITE (~0)
 #define MID_STRLEN_MAX         (64)
+/*******************************************************************************/
+#define KV_BEGIN_ADDR           0x101000    /*!< DCT begin address of flash, ex: 0x100000 = 1M */
+#define KV_MODULE_NUM               1           /*!< max number of module */
+#define KV_VARIABLE_NAME_SIZE       64         /*!< max size of the variable name */
+#define KV_VARIABLE_VALUE_SIZE_L     4           /*!< size of the variable value length */
+#define KV_VARIABLE_VALUE_SIZE_V     64           /*!< size of the variable value length */
+#define KV_VARIABLE_VALUE_SIZE      (KV_VARIABLE_VALUE_SIZE_L + KV_VARIABLE_VALUE_SIZE_V)
+#define KV_MODULE_NAME          "aliyun_kv_module"
+
+extern dct_handle_t aliyun_kv_handle;
+extern uint16_t        len_variable;
 
 /****************************************************************************/
 #if CONFIG_USE_MBEDTLS

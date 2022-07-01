@@ -8,8 +8,10 @@ include $(MAKE_INCLUDE_GEN)
 #*****************************************************************************#
 DIR = $(BASEDIR)/component/soc/realtek/amebad/bootloader
 CFGDIR = $(BASEDIR)/component/soc/realtek/amebad/fwlib/usrcfg
+RAMDIR = $(BASEDIR)/component/soc/realtek/amebad/fwlib/ram_hp
+MODULE_IFLAGS = -I$(RAMDIR)/../include/ \
 
-vpath %.c $(DIR) $(CFGDIR)
+vpath %.c $(DIR) $(CFGDIR) $(RAMDIR)
 
 #*****************************************************************************#
 #                               Source FILE LIST                              #

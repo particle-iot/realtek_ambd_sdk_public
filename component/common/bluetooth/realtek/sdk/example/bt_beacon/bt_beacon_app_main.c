@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_BEACON) && CONFIG_BT_BEACON
 #include "platform_stdlib.h"
 #include <os_sched.h>
 #include <string.h>
@@ -31,8 +33,6 @@
 #include "wifi_constants.h"
 #include "wifi_conf.h"
 #include "rtk_coex.h"
-#include "FreeRTOS.h"
-#include "task.h"
 
 /** @defgroup  BEACON_MAIN Beacon Main
     * @brief Main file to initialize hardware and BT stack and start task scheduling
@@ -132,11 +132,10 @@ static const uint8_t alt_beacon_adv_data[] =
  * NOTE: This function shall be called before @ref bte_init is invoked.
  * @return void
  */
-extern void gap_config_hci_task_secure_context(uint32_t size);
 static void bt_stack_config_init(void)
 {
     gap_config_max_le_link_num(0);
-    gap_config_hci_task_secure_context (280);
+    gap_config_max_le_paired_device(0);
 }
 
 /**
@@ -242,7 +241,7 @@ int bt_beacon_app_init(int type)
 
 	/*Wait WIFI init complete*/
 	while(!(wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		os_delay(1000);
 	}
 
 	//judge BLE Beacon is already on
@@ -261,7 +260,7 @@ int bt_beacon_app_init(int type)
 
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	}while(new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
 
@@ -294,5 +293,5 @@ void bt_beacon_app_deinit(void)
 }
 
 /** @} */ /* End of group BEACON_MAIN */
-
+#endif
 

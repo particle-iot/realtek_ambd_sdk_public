@@ -1,4 +1,5 @@
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include "app_msg.h"
 #include "trace_app.h"
@@ -11,7 +12,6 @@
 #include "ble_throughput_user_cmd.h"
 #include "user_cmd_parse.h"
 
-
 #include "os_sched.h"
 #include <os_mem.h>
 #include <ble_throughput_test_case.h>
@@ -21,7 +21,7 @@
 #include <ble_throughput_vendor_tp_client.h>
 #include <ble_throughput_vendor_tp_config.h>
 
-#include "osdep_service.h"
+#include "os_timer.h"
 #include "os_msg.h"
 
 extern void *ble_throughput_evt_queue_handle;
@@ -30,34 +30,12 @@ extern void *ble_throughput_io_queue_handle;
 typedef void(*P_FUN_TC_RESULT_CB)(uint16_t case_id, uint16_t result, void *p_cb_data);
 P_FUN_TC_RESULT_CB p_tc_result_cb = NULL;
 
-typedef struct
-{
-    uint8_t initial_value;
-    uint32_t total_test_count;
-    uint8_t remote_bd[6];
-    uint32_t total_notify_rx_count;
-    uint32_t begin_time;
-    uint32_t end_time;
-    uint32_t elapsed_time;
-    uint32_t data_rate;
-} TC_206_SUT_MGR;
-
 TC_206_SUT_MGR *p_tc_206_sut_mgr = NULL;
+TC_206_SUT_MGR tc_206_sut_mgr;
 TTP_PERFER_PARAM g_206_sut_prefer_param;
 
-typedef struct
-{
-    uint8_t initial_value;
-    uint32_t total_test_count;
-    uint8_t remote_bd[6];
-    uint32_t count_remain;
-    uint32_t begin_time;
-    uint32_t end_time;
-    uint32_t elapsed_time;
-    uint32_t data_rate;
-} TC_207_SUT_MGR;
-
 TC_207_SUT_MGR *p_tc_207_sut_mgr = NULL;
+TC_207_SUT_MGR tc_207_sut_mgr;
 TTP_PERFER_PARAM g_207_sut_prefer_param;
 
 void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_data)
@@ -292,7 +270,7 @@ void ble_throughput_206_sut_start(uint8_t remote_bd[6])
 
     if (NULL == p_tc_206_sut_mgr)
     {
-        p_tc_206_sut_mgr = (TC_206_SUT_MGR *)os_mem_zalloc(RAM_TYPE_DATA_ON, sizeof(TC_206_SUT_MGR));
+        p_tc_206_sut_mgr = &tc_206_sut_mgr;
     }
     else
     {
@@ -492,7 +470,7 @@ void ble_throughput_207_sut_start(uint8_t remote_bd[6])
 
     if (NULL == p_tc_207_sut_mgr)
     {
-        p_tc_207_sut_mgr = (TC_207_SUT_MGR *)os_mem_zalloc(RAM_TYPE_DATA_ON, sizeof(TC_207_SUT_MGR));
+        p_tc_207_sut_mgr = &tc_207_sut_mgr;
     }
     else
     {
@@ -568,7 +546,7 @@ void ble_throughput_207_sut_start_send_write_command(uint8_t conn_id)
     }
 }
 
-_timer ble_throughput_207_timer;
+void *ble_throughput_207_timer = NULL;
 void ble_throughput_207_timer_handler_func(void *context)
 {
 	uint8_t event = EVENT_IO_TO_APP;
@@ -583,6 +561,7 @@ void ble_throughput_207_timer_handler_func(void *context)
 			data_uart_print("ble throughput 207 timer handler func send event fail");
 		}
 	}
+	os_timer_delete(&ble_throughput_207_timer);	
 }
 
 void ble_throughput_207_sut_tx_data_complete(uint8_t credits)
@@ -618,8 +597,8 @@ void ble_throughput_207_sut_tx_data_complete(uint8_t credits)
                     (p_tc_207_sut_mgr->elapsed_time);
                 APP_PRINT_ERROR1("[207 SUT]:end time = %dms",
                                  p_tc_207_sut_mgr->end_time);
-				rtw_init_timer(&ble_throughput_207_timer, NULL, &ble_throughput_207_timer_handler_func, NULL, "207_timer");
-				rtw_set_timer(&ble_throughput_207_timer, 5000);
+				os_timer_create(&ble_throughput_207_timer, "ble_throughput_207_timer", 1, 5000, false, ble_throughput_207_timer_handler_func);
+				os_timer_start(&ble_throughput_207_timer);
             }
             break;
         }
@@ -774,4 +753,4 @@ void ble_throughput_207_sut_dump_result(void)
         data_uart_print("Not running\r\n");
     }
 }
-
+#endif

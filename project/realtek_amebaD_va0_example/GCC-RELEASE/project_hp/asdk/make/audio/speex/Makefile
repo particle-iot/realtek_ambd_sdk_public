@@ -42,6 +42,7 @@ OBJS = $(notdir $(CSRC:.c=.o))
 #all: CORE_TARGETS
 all: CORE_TARGETS COPY_RAM_OBJS
 	$(AR) rvs lib_speex.a $(OBJS)
+	$(FROMELF) --strip-debug lib_speex.a
 	$(MOVE) -f lib_speex.a $(ROOTDIR)/lib/application
 #*****************************************************************************#
 #              GENERATE OBJECT FILE 

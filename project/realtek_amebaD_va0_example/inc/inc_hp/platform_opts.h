@@ -50,13 +50,19 @@
 /**
 * For common flash usage  
 */
-#define AP_SETTING_SECTOR		0x000FE000
-#define UART_SETTING_SECTOR		0x000FC000
-#define SPI_SETTING_SECTOR		0x000FC000
-#if defined(CONFIG_BAIDU_DUER) && CONFIG_BAIDU_DUER
-#define FAST_RECONNECT_DATA 	0x1FF000
+#if (defined(CONFIG_BAIDU_DUER) && CONFIG_BAIDU_DUER) || (defined(CONFIG_BT_MESH_PROVISIONER) && CONFIG_BT_MESH_PROVISIONER)	\
+	|| (defined(CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) && CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE)	\
+	|| (defined(CONFIG_BT_MESH_DEVICE) && CONFIG_BT_MESH_DEVICE)	\
+	|| (defined(CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE) && CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE)
+#define UART_SETTING_SECTOR		0x001FA000
+#define AP_SETTING_SECTOR		0x001FB000
+#define FTL_PHY_PAGE_START_ADDR	0x001FC000
+#define FAST_RECONNECT_DATA 	0x001FF000
 #else
-#define FAST_RECONNECT_DATA 	0x105000
+#define UART_SETTING_SECTOR		0x000FC000
+#define AP_SETTING_SECTOR		0x000FE000
+#define FTL_PHY_PAGE_START_ADDR	0x00102000
+#define FAST_RECONNECT_DATA 	0x00105000
 #endif
 #define CONFIG_ENABLE_RDP		0
 
@@ -89,7 +95,9 @@
 /* For WPS and P2P */
 #define CONFIG_ENABLE_WPS		1
 #define CONFIG_ENABLE_P2P		0//on/off p2p cmd in log_service or interactive mode
-#define CONFIG_ENABLE_WPS_DISCOVERY	0
+#if CONFIG_ENABLE_WPS
+#define CONFIG_ENABLE_WPS_DISCOVERY	1
+#endif
 #if CONFIG_ENABLE_P2P
 #define CONFIG_ENABLE_WPS_AP		1
 #undef CONFIG_WIFI_IND_USE_THREAD
@@ -128,6 +136,9 @@
 #endif
 
 #define CONFIG_JOINLINK    0
+
+/*For MIMO pkt decode*/
+#define CONFIG_UNSUPPORT_PLCPHDR_RPT	0
 
 #define CONFIG_EXAMPLE_CM_BACKTRACE 0
 
@@ -299,6 +310,12 @@
 /*For wifi roaming plus example*/
 #define CONFIG_EXAMPLE_WIFI_ROAMING_PLUS		0
 
+/* For tickless wifi roaming examples */
+#define CONFIG_EXAMPLE_TICKLESS_WIFI_ROAMING 	0
+
+/*For wifi connection priority example*/
+#define CONFIG_EXAMPLE_CONN_PRI_COND			0
+
 /* For dct example */
 #define CONFIG_EXAMPLE_DCT			0
 
@@ -374,6 +391,11 @@
 #define FATFS_DISK_SD	1
 #endif
 
+#define CONFIG_EXAMPLE_AUDIO_OPUS 0
+#if CONFIG_EXAMPLE_AUDIO_OPUS
+#define FATFS_DISK_SD	1
+#endif
+
 /* For UART Module AT command example */
 #define CONFIG_EXAMPLE_UART_ATCMD	0
 #if CONFIG_EXAMPLE_UART_ATCMD
@@ -446,12 +468,14 @@
 #define CONFIG_ENABLE_PEAP	0
 #define CONFIG_ENABLE_TLS	0
 #define CONFIG_ENABLE_TTLS	0
+#define CONFIG_ENABLE_FAST	0
 
 // optional feature: whether to verify the cert of radius server
 #define ENABLE_EAP_SSL_VERIFY_SERVER	0
 
-#if CONFIG_ENABLE_PEAP || CONFIG_ENABLE_TLS || CONFIG_ENABLE_TTLS
+#if CONFIG_ENABLE_PEAP || CONFIG_ENABLE_TLS || CONFIG_ENABLE_TTLS || CONFIG_ENABLE_FAST
 #define CONFIG_ENABLE_EAP
+#undef CONFIG_EXAMPLE_WLAN_FAST_CONNECT
 #define CONFIG_EXAMPLE_WLAN_FAST_CONNECT 0
 #endif
 
@@ -570,12 +594,26 @@ in lwip_opt.h for support uart adapter*/
 //#define CONFIG_EXAMPLE_COMPETITIVE_HEADPHONES_DONGLE	1
 #endif
 
+#if defined(CONFIG_USBD_HID)
+#define CONFIG_EXAMPLE_USBD_HID         1
+#endif
+
 #if defined(CONFIG_USBD_MSC)
 #define CONFIG_EXAMPLE_USBD_MSC         1
 #endif
 
 #if defined(CONFIG_USBD_CDC_ACM)
+#if defined(CONFIG_USBD_CDC_ACM_TP)
+#define CONFIG_EXAMPLE_USBD_CDC_ACM_TP     1
+#elif defined(CONFIG_USBD_CDC_ACM_RP)
+#define CONFIG_EXAMPLE_USBD_CDC_ACM_RP     1
+#elif defined(CONFIG_USBD_CDC_ACM_TP_NEW)
+#define CONFIG_EXAMPLE_USBD_CDC_ACM_TP_NEW     1
+#elif defined(CONFIG_USBD_CDC_ACM_RP_NEW)
+#define CONFIG_EXAMPLE_USBD_CDC_ACM_RP_NEW     1
+#else
 #define CONFIG_EXAMPLE_USBD_CDC_ACM     1
+#endif
 #endif
 
 #if defined(CONFIG_USBD_VENDOR)
@@ -597,8 +635,32 @@ in lwip_opt.h for support uart adapter*/
 #endif
 #endif
 
+#if defined(CONFIG_USBH_UVC)
+#define CONFIG_VIDEO_APPLICATION        1
+#define CONFIG_EXAMPLE_USBH_UVC         1
+#if CONFIG_EXAMPLE_USBH_UVC
+#define CONFIG_FATFS_EN                 0
+#if CONFIG_FATFS_EN
+// fatfs version
+#define FATFS_R_10C
+// fatfs disk interface
+#define FATFS_DISK_USB                  0
+#define FATFS_DISK_SD                   1
+#define FATFS_DISK_FLASH 	            0
+#endif
+#endif
+#endif
+
 #if defined(CONFIG_USBH_VENDOR)
 #define CONFIG_EXAMPLE_USBH_VENDOR      1
+#endif
+
+#if defined(CONFIG_USBH_CDC_ACM)
+#if defined(CONFIG_USBH_CDC_ACM_VERIFY)
+#define CONFIG_EXAMPLE_USBH_CDC_ACM_VERIFY 1
+#else
+#define CONFIG_EXAMPLE_USBH_CDC_ACM      1
+#endif
 #endif
 
 //#define CONFIG_EXAMPLE_COMPETITIVE_HEADPHONES		1
@@ -608,6 +670,16 @@ in lwip_opt.h for support uart adapter*/
 #define CONFIG_FAST_DHCP 1
 #else
 #define CONFIG_FAST_DHCP 0
+#endif
+
+/* For wlan repeater example */
+#define CONFIG_EXAMPLE_WLAN_REPEATER    0
+#if CONFIG_EXAMPLE_WLAN_REPEATER
+#define CONFIG_BRIDGE                   1
+#undef CONFIG_EXAMPLE_WLAN_FAST_CONNECT
+#define CONFIG_EXAMPLE_WLAN_FAST_CONNECT 1
+#else
+#define CONFIG_BRIDGE                   0
 #endif
 
 #endif

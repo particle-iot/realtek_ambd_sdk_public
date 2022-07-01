@@ -9,7 +9,7 @@ set km0_dir=Debug\Exe\km0_image
 echo input1=%1 >tmp.txt
 echo input2=%2 >>tmp.txt
 
-del %km0_dir%\km0_application.map %km0_dir%\km0_application.asm %km0_dir%\km0_application.dbg.axf
+del %km0_dir%\km0_application.map %km0_dir%\km0_application.asm %km0_dir%\km0_application.dbg.axf > NULL 2>&1
 cmd /c "%tooldir%\nm Debug/Exe/km0_image/km0_application.axf | %tooldir%\sort > Debug/Exe/km0_image/km0_application.map"
 cmd /c "%tooldir%\objdump -d Debug/Exe/km0_image/km0_application.axf > Debug/Exe/km0_image/km0_application.asm"
 

@@ -105,7 +105,7 @@ call security_config.cmd
 
 if %SBOOT_ENABLE% equ 1 (
 	:: ECC sign
-	%tooldir%\EncTool.exe sboot %km4_dir%\km4_boot_all.bin %km4_dir%\km4_boot_all-sb.bin key_pair.txt %SBOOT_SEED%
+	%tooldir%\EncTool.exe sboot %km4_dir%\km4_boot_all.bin %km4_dir%\km4_boot_all-sb.bin key_pair.txt %SBOOT_SEED% 1
 	del %km4_dir%\km4_boot_all.bin
 	rename %km4_dir%\km4_boot_all-sb.bin km4_boot_all.bin
 )

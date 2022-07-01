@@ -408,6 +408,9 @@ void SOCPS_SleepPG_RAM(VOID)
 	/*for break power-off condition to reinit spic*/
 	RCC_PeriphClockCmd(APBPeriph_FLASH, APBPeriph_FLASH_CLOCK_XTAL, ENABLE);
 
+	/* invalidate spic auto write */
+	FLASH_Invalidate_Auto_Write();
+
 	FLASH_Init(flash_init_para.FLASH_cur_bitmode);
 
 	Cache_Enable(ENABLE);

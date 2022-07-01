@@ -1,3 +1,5 @@
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include "check_endian.h"
 #include "stdint.h"
 
@@ -43,4 +45,4 @@ unsigned short ntohs(unsigned short n)
     return checkCPUendian() ? n : BigLittleSwap16(n);
 }
 
-
+#endif

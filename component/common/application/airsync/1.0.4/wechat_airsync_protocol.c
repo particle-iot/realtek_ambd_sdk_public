@@ -10,7 +10,8 @@
 * @version   v0.1
 * *********************************************************************************************************
 */
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include "app_msg.h"
 #include "wechat_airsync_protocol.h"
 #include "airsync_ble_service.h"
@@ -22,10 +23,7 @@
 #include "check_endian.h"
 #include "string.h"
 #include "os_mem.h"
-#include <platform_opts.h>
-#if defined(CONFIG_PLATFORM_8710C)
-#include <platform_opts_bt.h>
-#endif
+
 #include "bt_config_wifi.h"
 
 #define AIRSYNC_DEBUG    0
@@ -529,3 +527,4 @@ void airsync_send_data_event(uint8_t Event)
     }
 }
 
+#endif

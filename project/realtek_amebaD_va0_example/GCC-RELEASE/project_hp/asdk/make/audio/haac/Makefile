@@ -56,6 +56,7 @@ OBJS = $(notdir $(CSRC:.c=.o))
 # Define the Rules to build the core targets
 all: CORE_TARGETS COPY_RAM_OBJS
 	$(AR) rvs lib_haac.a $(OBJS)
+	$(FROMELF) --strip-debug lib_haac.a
 	$(MOVE) -f lib_haac.a $(ROOTDIR)/lib/application
 
 #*****************************************************************************#

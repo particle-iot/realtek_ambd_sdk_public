@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_SCATTERNET) && CONFIG_BT_SCATTERNET
 #include <os_msg.h>
 #include <os_task.h>
 #include <gap.h>
@@ -132,14 +134,14 @@ void ble_scatternet_app_main_task(void *p_param)
 
 void ble_scatternet_app_task_deinit(void)
 {
+	if (ble_scatternet_app_task_handle) {
+		os_task_delete(ble_scatternet_app_task_handle);
+	}
 	if (ble_scatternet_io_queue_handle) {
 		os_msg_queue_delete(ble_scatternet_io_queue_handle);
 	}
 	if (ble_scatternet_evt_queue_handle) {
 		os_msg_queue_delete(ble_scatternet_evt_queue_handle);
-	}
-	if (ble_scatternet_app_task_handle) {
-		os_task_delete(ble_scatternet_app_task_handle);
 	}
 	ble_scatternet_io_queue_handle = NULL;
 	ble_scatternet_evt_queue_handle = NULL;
@@ -158,5 +160,5 @@ void ble_scatternet_app_task_deinit(void)
 
 
 /** @} */ /* End of group CENTRAL_CLIENT_APP_TASK */
-
+#endif
 

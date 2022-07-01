@@ -105,7 +105,7 @@ static void example_coap_thread(void *para){
   int socket = coap_sock_open();
   
   //send CoAP message
-  coap_send(SERVER_HOST, SERVER_PORT, socket, coap_res_ptr);
+  coap_sendto(SERVER_HOST, SERVER_PORT, socket, coap_res_ptr);
   
   coap_free(coap_res_ptr);
   

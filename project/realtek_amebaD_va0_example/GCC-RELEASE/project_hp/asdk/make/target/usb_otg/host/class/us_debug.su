@@ -1,3 +1,0 @@
-us_debug.c:10:6:usb_stor_show_scsi_cmnd	0	static
-us_debug.c:114:1:scsi_sense_key_string	0	static
-us_debug.c:120:6:usb_stor_show_sense	0	static

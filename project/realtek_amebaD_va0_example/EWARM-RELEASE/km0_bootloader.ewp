@@ -878,7 +878,7 @@
                 </option>
                 <option>
                     <name>IlinkProgramEntryLabel</name>
-                    <state>Reset_Handler</state>
+                    <state>BOOT_FLASH_Image1</state>
                 </option>
                 <option>
                     <name>DoFill</name>

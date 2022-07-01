@@ -17,6 +17,7 @@
  *                              Header Files
  *============================================================================*/
 #include <platform_opts_bt.h>
+#if defined(CONFIG_BT_SCATTERNET) && CONFIG_BT_SCATTERNET
 #if	defined (CONFIG_BT_USER_COMMAND) && (CONFIG_BT_USER_COMMAND)
 #include <string.h>
 #include <trace_app.h>
@@ -120,4 +121,5 @@ const T_USER_CMD_TABLE_ENTRY ble_scatternet_user_cmd_table[] =
 };
 /** @} */ /* End of group SCATTERNET_CMD */
 
+#endif
 #endif

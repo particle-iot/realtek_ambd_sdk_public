@@ -26,8 +26,8 @@ extern phal_sdio_host_adapter_t psdioh_adapter;
 #define READ_SIZE 		2048
 #define MP4_NAME		 "OTA_ALL.bin"
 
-FATFS 	fs_sd;
-FIL     m_file;
+static FATFS 	fs_sd;
+static FIL     m_file;
 FILINFO fno = {0};
 char path[64];
 

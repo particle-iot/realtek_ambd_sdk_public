@@ -2730,3 +2730,9 @@ int mp3_decode(mp3_decoder_t *dec, void *buf, int bytes, signed short *out, mp3_
     }
     return s->frame_size;
 }
+
+
+void mp3_reset(mp3_decoder_t *dec) {
+	memset((void*)dec, 0x00, sizeof(mp3_context_t));
+}
+

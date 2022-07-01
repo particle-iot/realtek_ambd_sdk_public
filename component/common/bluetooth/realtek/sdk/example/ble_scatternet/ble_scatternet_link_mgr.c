@@ -15,6 +15,11 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if ((defined(CONFIG_BT_SCATTERNET) && CONFIG_BT_SCATTERNET) || \
+	(defined(CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) && CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) || \
+	(defined(CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE) && CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE))
+
 #include <ble_scatternet_link_mgr.h>
 #include <trace_app.h>
 #include <string.h>
@@ -131,4 +136,4 @@ uint32_t ble_scatternet_app_load_static_random_address(T_APP_STATIC_RANDOM_ADDR 
 #endif
 /** @} */
 /** @} */
-
+#endif

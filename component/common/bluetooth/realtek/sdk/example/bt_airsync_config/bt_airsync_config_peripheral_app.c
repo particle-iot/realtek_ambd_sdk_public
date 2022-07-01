@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include <stdio.h>
 #include <trace_app.h>
 #include <string.h>
@@ -121,6 +123,12 @@ void airsync_handle_io_message(T_IO_MSG *p_wristband_msg)
     case IO_MSG_WAS_ENABLE_CCCD:
         {
             airsync_send_data_event(AIRSYNC_AUTH_EVENT);
+        }
+        break;
+    case IO_MSG_WAS_TX_VALUE:
+        {
+            T_BT_AIRSYNC_CONFIG_TX_DATA *tx_data = p_wristband_msg->u.buf;
+            airsync_send_data(tx_data->buf, tx_data->length);
         }
         break;
     default:
@@ -604,3 +612,4 @@ T_APP_RESULT bt_airsync_config_app_profile_callback(T_SERVER_ID service_id, void
 
 /** @} */ /* End of group PERIPH_SEVER_CALLBACK */
 /** @} */ /* End of group PERIPH_APP */
+#endif

@@ -10,9 +10,10 @@ This example show how to use this decoder.
 Configuration:
 1. [platform_opts.h]
 	#define CONFIG_EXAMPLE_AUDIO_HELIX_MP3    1
-2. In Cygwin terminal, change to the directory “/project/realtek_amebaD_cm4_gcc_verification”, 
-   type “make menuconfig”, and enable audio related configurations (MENUCONFIG FOR CHIP CONFIG -> Audio Config -> Enable Audio).
-   
+
+2. In Cygwin terminal, change to the directory ”project/realtek_amebaD_va0_example/GCC-RELEASE/project_hp”, 
+	type ”make menuconfig”, and enable audio related configurations (MENUCONFIG FOR CHIP CONFIG -> Audio Config -> Enable Audio).
+
 3. example_audio_helix_mp3.c
 	#define AUDIO_SOURCE_BINARY_ARRAY (1)
 	#define ADUIO_SOURCE_HTTP_FILE    (0)
@@ -23,7 +24,7 @@ Configuration:
 	You can use some http file server tool ( Ex. HFS: http://www.rejetto.com/hfs/ )
 	Fill address, port, and file name, then you can run this example.
 
-4. In IAR, you need to include lib_hmp3.a under "km4_application/lib" and .c file in this folder under "km4_application/utilities/example".
+4. In IAR, you need to include lib_hmp3.a under "km4_application/lib" and example_audio_helix_mp3.c file in this folder under "km4_application/utilities/example".
 
 [Supported List]
 	Supported :

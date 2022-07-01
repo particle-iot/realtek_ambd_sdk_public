@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_BEACON) && CONFIG_BT_BEACON
 #include "platform_stdlib.h"
 #include <trace_app.h>
 #include <string.h>
@@ -24,8 +26,6 @@
 #include <gap_msg.h>
 #include <app_msg.h>
 #include "bt_beacon_app.h"
-
-
 
 /** @defgroup  PERIPH_APP Peripheral Application
     * @brief This file handles BLE peripheral application routines.
@@ -166,3 +166,4 @@ T_APP_RESULT bt_beacon_app_gap_callback(uint8_t cb_type, void *p_cb_data)
 }
 /** @} */ /* End of group PERIPH_GAP_CALLBACK */
 /** @} */ /* End of group PERIPH_APP */
+#endif

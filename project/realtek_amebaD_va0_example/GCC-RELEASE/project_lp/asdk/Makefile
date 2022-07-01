@@ -173,6 +173,10 @@ linker_image2:
 	$(UTILITYDIR)/pad.sh $(IMAGE_TARGET_FOLDER)/km0_image2_all.bin
 
 	$(UTILITYDIR)/image_tool/imagetool.sh $(IMAGE_TARGET_FOLDER)/km0_image2_all.bin $(KM4_BUILDDIR)/asdk/image
+	
+	#@if [ -f $(IMAGE_TARGET_FOLDER)/km0_km4_image2.bin ]; then \
+		#$(OTAPREPENDTOOL) $(IMAGE_TARGET_FOLDER)/km0_km4_image2.bin $(KM4_BUILDDIR)/asdk/image; \
+	#fi
 
 	@echo "========== Image manipulating end =========="
 
@@ -222,7 +226,8 @@ linker_loader:
 #*****************************************************************************#
 
 menuconfig:
-	cp $(CONFIGDIR)/config.in $(CONFIGDIR)/config.in.old -f
+
+	cp -f $(CONFIGDIR)/config.in $(CONFIGDIR)/config.in.old
 ifeq ($(COMPILEOS_CYGWIN),Cygwin)
 	@cp $(LXDIALOG_CYGWIN_STATIC) $(SCRIPTSDIR)/lxdialog/lxdialog.exe
 else
@@ -453,9 +458,11 @@ endif
 #              COPY flashloader into flashdownload folder                     #
 #*****************************************************************************#
 copy_flashloader:
-	$(COPY) $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf -f
-	$(COPY) $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin -f
+
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin
 
 copy_imgtool_flashloader:
-	$(COPY) $(IMAGE_TARGET_FOLDER)/target_loader.axf $(TARGETDIR)/imgtool_floader/image/target_FPGA.axf -f
-	$(COPY) $(IMAGE_TARGET_FOLDER)/ram_1.bin $(TARGETDIR)/imgtool_floader/image/imgtool_flashloader_amebad.bin -f
+
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(TARGETDIR)/imgtool_floader/image/target_FPGA.axf
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(TARGETDIR)/imgtool_floader/image/imgtool_flashloader_amebad.bin

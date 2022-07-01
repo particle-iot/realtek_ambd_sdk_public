@@ -15,6 +15,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <ble_throughput_link_mgr.h>
 #include <trace_app.h>
 #include <string.h>
@@ -23,10 +25,6 @@
 /*============================================================================*
  *                              Constants
  *============================================================================*/
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
-/** @brief  Define start offset of the falsh to save static random address. */
-#define APP_STATIC_RANDOM_ADDR_OFFSET 0
-#endif
 
 /*============================================================================*
  *                              Variables
@@ -95,43 +93,4 @@ void link_mgr_clear_device_list(void)
     dev_list_count = 0;
 }
 /** @} */
-/** @addtogroup  SCATTERNET_APP
-    * @{
-    */
-/** @defgroup  SCATTERNET_RANDOM Static Random Address Storage
-    * @brief Use @ref F_BT_LE_USE_STATIC_RANDOM_ADDR to open
-    * @{
-    */
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
-/**
- * @brief   Save static random address information into flash.
- * @param[in] p_info the buffer for saving data
- * @retval 0 Save success.
- * @retval other Failed.
- */
-uint32_t app_save_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_addr)
-{
-    APP_PRINT_INFO0("app_save_static_random_address");
-    return ftl_save(p_addr, APP_STATIC_RANDOM_ADDR_OFFSET, sizeof(T_APP_STATIC_RANDOM_ADDR));
-}
-/**
-  * @brief  load static random address information from storage
-  * @param[out]  p_info the buffer for loading data
-  * @retval 0 Load success.
-  * @retval other Failed.
-  */
-uint32_t app_load_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_addr)
-{
-    uint32_t result;
-    result = ftl_load(p_addr, APP_STATIC_RANDOM_ADDR_OFFSET,
-                      sizeof(T_APP_STATIC_RANDOM_ADDR));
-    APP_PRINT_INFO1("app_load_static_random_address: result 0x%x", result);
-    if (result)
-    {
-        memset(p_addr, 0, sizeof(T_APP_STATIC_RANDOM_ADDR));
-    }
-    return result;
-}
 #endif
-/** @} */
-/** @} */

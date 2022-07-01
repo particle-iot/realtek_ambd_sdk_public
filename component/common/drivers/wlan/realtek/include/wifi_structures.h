@@ -137,7 +137,7 @@ typedef struct rtw_wifi_setting {
 	unsigned char 		ssid[33];
 	unsigned char		channel;
 	rtw_security_t		security_type;
-	unsigned char 		password[65];
+	unsigned char 		password[RTW_MAX_PSK_LEN+1];
 	unsigned char		key_idx;
 }rtw_wifi_setting_t;
 #if defined(__IAR_SYSTEMS_ICC__) || defined(__GNUC__) || defined(__CC_ARM) || (defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
@@ -152,7 +152,7 @@ typedef struct rtw_wifi_config {
 	unsigned char 		ssid[32];
 	unsigned char		ssid_len;
 	unsigned char		security_type;
-	unsigned char		password[65];
+	unsigned char		password[RTW_MAX_PSK_LEN+1];
 	unsigned char		password_len;
 	unsigned char		channel;
 } rtw_wifi_config_t;
@@ -225,17 +225,20 @@ typedef struct ieee80211_frame_info{
 
 #if defined(CONFIG_UNSUPPORT_PLCPHDR_RPT) && CONFIG_UNSUPPORT_PLCPHDR_RPT
 typedef struct rtw_rx_info {
-	uint16_t length;	//length without FCS
-	uint8_t filter;		// 2: 2T rate pkt; 3: LDPC pkt
-	signed char rssi;	//-128~-1
+	unsigned short length;	// length without FCS
+	unsigned char filter;		// 1: HT-20 2T and not LDPC pkt; 2: HT-40 2T and not LDPC pkt; 3: LDPC pkt
+	signed char rssi;	// -128~-1
+	unsigned short channel;	// channel which this pkt in
+	unsigned char agg:1;		// aggregation pkt or not. If an AMPDU contains only one MPDU then above 'length' is the antual pkt length without FCS, buuut if it contains multiple MPDUs then above 'length' is useless because it cannot tell how many MPDUs are contained and how long is each MPDU.
+	unsigned char mcs:7;		// mcs index
 }rtw_rx_info_t;
+
 
 struct rtw_plcp_info {
 	struct rtw_plcp_info *prev;
 	struct rtw_plcp_info *next;
-	uint16_t length;	//length without FCS
-	uint8_t filter;		// 1: HT-20 pkt; 2: HT-40 and not LDPC pkt; 3: LDPC pkt
-	signed char rssi;	//-128~-1
+	rtw_rx_info_t rtw_plcp_info;
+
 };
 
 struct rtw_rx_buffer {

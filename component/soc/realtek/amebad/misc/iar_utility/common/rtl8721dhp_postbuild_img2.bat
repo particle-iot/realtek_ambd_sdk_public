@@ -6,7 +6,7 @@ set build_type=%4
 set km4_dir=Debug\Exe\km4_image
 set km0_dir=Debug\Exe\km0_image
 
-del %km4_dir%\km4_application.map %km4_dir%\km4_application.asm %km4_dir%\km4_application.dbg.axf
+del %km4_dir%\km4_application.map %km4_dir%\km4_application.asm %km4_dir%\km4_application.dbg.axf > NULL 2>&1
 cmd /c "%tooldir%\nm Debug/Exe/km4_image/km4_application.axf | %tooldir%\sort > Debug/Exe/km4_image/km4_application.map"
 cmd /c "%tooldir%\objdump -d Debug/Exe/km4_image/km4_application.axf > Debug/Exe/km4_image/km4_application.asm"
 

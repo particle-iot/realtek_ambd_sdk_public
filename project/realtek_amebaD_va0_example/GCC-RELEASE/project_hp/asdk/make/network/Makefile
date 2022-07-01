@@ -40,4 +40,5 @@ clean:
 	make -C rtsp clean
 	make -C http2 clean
 	make -C eap clean
+	make -C libcoap clean
 

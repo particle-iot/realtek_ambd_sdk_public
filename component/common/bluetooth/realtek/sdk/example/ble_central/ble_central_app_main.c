@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_CENTRAL) && CONFIG_BT_CENTRAL
 #include <os_sched.h>
 #include <string.h>
 #include <ble_central_app_task.h>
@@ -32,12 +34,11 @@
 #include "trace_uart.h"
 #include <bte.h>
 #include "wifi_constants.h"
-#include "FreeRTOS.h"
 #include <wifi/wifi_conf.h>
-#include "task.h"
 #include "rtk_coex.h"
 #include <stdio.h>
 #include <gap_adv.h>
+
 extern bool bt_trace_uninit(void);
 
 /** @defgroup  CENTRAL_CLIENT_DEMO_MAIN Central Client Main
@@ -66,6 +67,7 @@ extern bool bt_trace_uninit(void);
 void ble_central_bt_stack_config_init(void)
 {
     gap_config_max_le_link_num(BLE_CENTRAL_APP_MAX_LINKS);
+    gap_config_max_le_paired_device(BLE_CENTRAL_APP_MAX_LINKS);
 }
 
 /**
@@ -153,16 +155,13 @@ void ble_central_app_le_gap_init(void)
 	le_scan_set_param(GAP_PARAM_SCAN_LOCAL_ADDR_TYPE, sizeof(local_bd_type), &local_bd_type);
 #endif
 #if F_BT_LE_5_0_SET_PHY_SUPPORT
-	uint8_t  phys_prefer = GAP_PHYS_PREFER_ALL;
-	uint8_t  tx_phys_prefer = GAP_PHYS_PREFER_1M_BIT | GAP_PHYS_PREFER_2M_BIT |
-							  GAP_PHYS_PREFER_CODED_BIT;
-	uint8_t  rx_phys_prefer = GAP_PHYS_PREFER_1M_BIT | GAP_PHYS_PREFER_2M_BIT |
-							  GAP_PHYS_PREFER_CODED_BIT;
+	uint8_t phys_prefer = GAP_PHYS_PREFER_ALL;
+	uint8_t tx_phys_prefer = GAP_PHYS_PREFER_1M_BIT | GAP_PHYS_PREFER_2M_BIT;
+	uint8_t rx_phys_prefer = GAP_PHYS_PREFER_1M_BIT | GAP_PHYS_PREFER_2M_BIT;
 	le_set_gap_param(GAP_PARAM_DEFAULT_PHYS_PREFER, sizeof(phys_prefer), &phys_prefer);
 	le_set_gap_param(GAP_PARAM_DEFAULT_TX_PHYS_PREFER, sizeof(tx_phys_prefer), &tx_phys_prefer);
 	le_set_gap_param(GAP_PARAM_DEFAULT_RX_PHYS_PREFER, sizeof(rx_phys_prefer), &rx_phys_prefer);
 #endif
-
 }
 
 /**
@@ -212,7 +211,7 @@ int ble_central_app_init(void)
 
 	/*Wait WIFI init complete*/
 	while(!(wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		os_delay(1000);
 	}
 
 	//judge BLE central is already on
@@ -229,7 +228,7 @@ int ble_central_app_init(void)
 
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	}while(new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
 
@@ -257,4 +256,5 @@ void ble_central_app_deinit(void)
 	}
 #endif
 }
+#endif
 /** @} */ /* End of group CENTRAL_CLIENT_DEMO_MAIN */

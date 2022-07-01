@@ -103,6 +103,34 @@ T_GAP_CAUSE le_set_conn_tx_power(uint8_t conn_id, bool reset, uint8_t tx_power)
     }
 }
 #endif
+
+#if BT_VENDOR_CMD_SLAVE_LATENCY_SUPPORT
+T_GAP_CAUSE le_disable_slave_latency(uint8_t conn_id, bool disable)
+{
+    uint16_t conn_handle;
+
+    if (le_get_conn_param(GAP_PARAM_CONN_HANDLE, &conn_handle, conn_id) == GAP_CAUSE_SUCCESS) {
+        uint8_t param[4];
+        param[0] = HCI_EXT_SUB_DISABLE_LATENCY;
+        param[1] = conn_handle & 0xFF;
+        param[2] = (conn_handle >> 8) & 0xFF;
+
+        if (disable) {
+            param[3] = 0;
+        } else {
+            param[3] = 1;
+        }
+
+        if (gap_vendor_cmd_req(HCI_LE_VENDOR_EXTENSION_FEATURE, 4, param) == GAP_CAUSE_SUCCESS) {
+            return GAP_CAUSE_SUCCESS;
+        }
+        return GAP_CAUSE_SEND_REQ_FAILED;
+    } else {
+        return GAP_CAUSE_NON_CONN;
+    }
+}
+#endif
+
 /**
  * @brief Callback for gap common module to notify app
  * @param[in] cb_type callback msy type @ref GAP_COMMON_MSG_TYPE.
@@ -141,16 +169,16 @@ void app_gap_vendor_callback(uint8_t cb_type, void *p_cb_data)
     case GAP_MSG_VENDOR_EVT_INFO:
         {
 		//format: subcode + status + payload(for wifi)
-            uint16_t subcode;
+            uint8_t subcode;
             uint8_t *p = cb_data.p_gap_vendor_evt_info->param;
-            LE_STREAM_TO_UINT16(subcode, p);
+            LE_STREAM_TO_UINT8(subcode, p);
             APP_PRINT_INFO1("GAP_MSG_VENDOR_EVT_INFO: param_len %d",
                             cb_data.p_gap_vendor_evt_info->param_len);
 
             switch(subcode)
             {
                 case HCI_VENDOR_PTA_AUTO_REPORT_EVENT:
-                    bt_coex_handle_specific_evt(p,cb_data.p_gap_vendor_evt_info->param_len - 2);
+                    bt_coex_handle_specific_evt(p + 1,cb_data.p_gap_vendor_evt_info->param_len - 2);
                     break;
                 default:
                     break;
