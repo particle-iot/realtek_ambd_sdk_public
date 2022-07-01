@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
- 
+
 #ifndef __BASIC_TYPES_H__
 #define __BASIC_TYPES_H__
 
@@ -206,8 +206,7 @@ typedef	    __kernel_ssize_t	SSIZE_T;
 #define _PACKED_       __packed
 #define _LONG_CALL_
 #define _WEAK          __weak
-#define _OPTIMIZE_NONE_           _Pragma( STRINGIFY(optimize=none))
-#define _OPTIMIZE_O3_			_Pragma( STRINGIFY(optimize=speed high))
+#define _OPTIMIZE_NONE_           _Pragma( STRINGIFY(optimize=none)) 
 #define UNUSED_WARN_DIS
 #else
 #define SECTION(_name) __attribute__ ((__section__(_name)))
@@ -216,7 +215,6 @@ typedef	    __kernel_ssize_t	SSIZE_T;
 #define _LONG_CALL_     __attribute__ ((long_call))
 #define _WEAK           __attribute__ ((weak))
 #define _OPTIMIZE_NONE_           __attribute__ ((optimize("O0")))
-#define _OPTIMIZE_O3_           __attribute__ ((optimize("O3")))
 #define UNUSED_WARN_DIS	__attribute__((unused))
 #endif
 
