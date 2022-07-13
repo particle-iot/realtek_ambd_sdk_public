@@ -29,7 +29,7 @@ void flash_init_userdef(void);
 *	0x1FFF: 57MHz
 *	0x0FFF: 50MHz
 */
-const u16 Flash_Speed = 0xFFFF;
+const u16 Flash_Speed = 0x1FFF;
 
 /**
 * @brif Indicate the flash read I/O mode. It can be one of the following value:
