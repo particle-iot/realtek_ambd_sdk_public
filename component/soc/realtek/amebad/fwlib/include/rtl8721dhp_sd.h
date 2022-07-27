@@ -72,9 +72,9 @@
   * @endverbatim
   */
 
-#define  SD      		0
-#define  EMMC   		1
-#define  SDIO 		    SD
+#define  RTL_SD     0
+#define  EMMC       1
+#define  SDIO       (RTL_SD)
 
 /* Exported constants --------------------------------------------------------*/
 
