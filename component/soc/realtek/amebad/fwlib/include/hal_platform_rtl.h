@@ -21,8 +21,8 @@
 #define ROMVERSION_SUB		3 /* ROM sub version */
 #define ROMINFORMATION		(ROMVERSION)
 
-#define HAL_READ32(base, addr)				rtk_le32_to_cpu(*((volatile u32*)(base + addr)))    
-#define HAL_WRITE32(base, addr, value32)		((*((volatile u32*)(base + addr))) = rtk_cpu_to_le32(value32))
+#define HAL_READ32(base, addr)				rtk_le32_to_cpu(*((volatile uint32_t*)(base + addr)))    
+#define HAL_WRITE32(base, addr, value32)		((*((volatile uint32_t*)(base + addr))) = rtk_cpu_to_le32(value32))
 #define HAL_READ16(base, addr)				rtk_le16_to_cpu(*((volatile u16*)(base + addr)))        
 #define HAL_WRITE16(base, addr, value)		((*((volatile u16*)(base + addr))) = rtk_cpu_to_le16(value)) 
 #define HAL_READ8(base, addr)				(*((volatile u8*)(base + addr)))            
@@ -337,14 +337,14 @@
  * @brief AMEBAD_IDAU Register Declaration
  *****************************************************************************/
 typedef struct {
-	__IO u32 IDAU_BARx;		/*!< ,	Address offset: 0x00 */
-	__IO u32 IDAU_LARx;		/*!< ,	Address offset: 0x04 */
+	__IO uint32_t IDAU_BARx;		/*!< ,	Address offset: 0x00 */
+	__IO uint32_t IDAU_LARx;		/*!< ,	Address offset: 0x04 */
 } IDAU_EntryTypeDef;
 
 typedef struct {
 	IDAU_EntryTypeDef ENTRY[8]; /*!< ,	Address offset: 0x00 ~ 0x3C*/
-	__IO u32 IDAU_CTRL;		/*!< ,	Address offset: 0x40 */
-	__IO u32 IDAU_LOCK;		/*!< ,	Address offset: 0x44 */
+	__IO uint32_t IDAU_CTRL;		/*!< ,	Address offset: 0x40 */
+	__IO uint32_t IDAU_LOCK;		/*!< ,	Address offset: 0x44 */
 } IDAU_TypeDef;
 /** @} */
 
@@ -354,7 +354,7 @@ typedef struct {
  * @brief AMEBAD_WDG Register Declaration
  *****************************************************************************/
 typedef struct {
-	__IO u32 VENDOR;		/*!< WDG VENDOR register,	Address offset: 0x00 */
+	__IO uint32_t VENDOR;		/*!< WDG VENDOR register,	Address offset: 0x00 */
 } WDG_TypeDef;
 /** @} */
 
@@ -364,33 +364,33 @@ typedef struct {
  * @brief AMEBAD_UART Register Declaration
  *****************************************************************************/
 typedef struct {
-	__IO u32 DLL;				/*!< UART Divisor Latch register(not used in Amebaz),	Address offset: 0x00*/
-	__IO u32 DLH_INTCR;			/*!< UART interrupt enable register,              			Address offset: 0x04*/
-	__IO u32 INTID;				/*!< UART interrupt identification register,              	Address offset: 0x08*/
-	__IO u32 LCR;				/*!< UART line control register,              				Address offset: 0x0C*/
-	__IO u32 MCR;				/*!< UART modem control register,              			Address offset: 0x10*/
-	__I u32 LSR;					/*!< UART line status register,              				Address offset: 0x14*/
-	__I u32 MDSR;				/*!< UART modem status register,              			Address offset: 0x18*/
-	__IO u32 SPR;				/*!< UART scratch pad register,              				Address offset: 0x1C*/
-	__IO u32 STSR;				/*!< UART STS register,              					Address offset: 0x20*/
-	__IO u32 RB_THR;			/*!< UART receive buffer/transmitter holding register,	Address offset: 0x24*/
-	__IO u32 MISCR;				/*!< UART MISC control register,              			Address offset: 0x28*/
-	__IO u32 TXPLSR;				/*!< UART IrDA SIR TX Pulse Width Control register,	Address offset: 0x2C*/
+	__IO uint32_t DLL;				/*!< UART Divisor Latch register(not used in Amebaz),	Address offset: 0x00*/
+	__IO uint32_t DLH_INTCR;			/*!< UART interrupt enable register,              			Address offset: 0x04*/
+	__IO uint32_t INTID;				/*!< UART interrupt identification register,              	Address offset: 0x08*/
+	__IO uint32_t LCR;				/*!< UART line control register,              				Address offset: 0x0C*/
+	__IO uint32_t MCR;				/*!< UART modem control register,              			Address offset: 0x10*/
+	__I uint32_t LSR;					/*!< UART line status register,              				Address offset: 0x14*/
+	__I uint32_t MDSR;				/*!< UART modem status register,              			Address offset: 0x18*/
+	__IO uint32_t SPR;				/*!< UART scratch pad register,              				Address offset: 0x1C*/
+	__IO uint32_t STSR;				/*!< UART STS register,              					Address offset: 0x20*/
+	__IO uint32_t RB_THR;			/*!< UART receive buffer/transmitter holding register,	Address offset: 0x24*/
+	__IO uint32_t MISCR;				/*!< UART MISC control register,              			Address offset: 0x28*/
+	__IO uint32_t TXPLSR;				/*!< UART IrDA SIR TX Pulse Width Control register,	Address offset: 0x2C*/
 	
-	__IO u32 RXPLSR;			/*!< UART IrDA SIR RX Pulse Width Control register,	Address offset: 0x30*/
-	__IO u32 BAUDMONR;			/*!< UART baud monitor register,              			Address offset: 0x34*/
-	__IO u32 RSVD2;				/*!< UART reserved field,              					Address offset: 0x38*/
-	__IO u32 DBG_UART;			/*!< UART debug register,              					Address offset: 0x3C*/
+	__IO uint32_t RXPLSR;			/*!< UART IrDA SIR RX Pulse Width Control register,	Address offset: 0x30*/
+	__IO uint32_t BAUDMONR;			/*!< UART baud monitor register,              			Address offset: 0x34*/
+	__IO uint32_t RSVD2;				/*!< UART reserved field,              					Address offset: 0x38*/
+	__IO uint32_t DBG_UART;			/*!< UART debug register,              					Address offset: 0x3C*/
 
 	/* AmebaZ add for power save */
-	__IO u32 RX_PATH;			/*!< UART rx path control register,              			Address offset: 0x40*/
-	__IO u32 MON_BAUD_CTRL;	/*!< UART monitor baud rate control register,              	Address offset: 0x44*/
-	__IO u32 MON_BAUD_STS;		/*!< UART monitor baud rate status register,              	Address offset: 0x48*/
-	__IO u32 MON_CYC_NUM;		/*!< UART monitor cycle number register,              		Address offset: 0x4c*/
-	__IO u32 RX_BYTE_CNT;		/*!< UART rx byte counter register,              			Address offset: 0x50*/
+	__IO uint32_t RX_PATH;			/*!< UART rx path control register,              			Address offset: 0x40*/
+	__IO uint32_t MON_BAUD_CTRL;	/*!< UART monitor baud rate control register,              	Address offset: 0x44*/
+	__IO uint32_t MON_BAUD_STS;		/*!< UART monitor baud rate status register,              	Address offset: 0x48*/
+	__IO uint32_t MON_CYC_NUM;		/*!< UART monitor cycle number register,              		Address offset: 0x4c*/
+	__IO uint32_t RX_BYTE_CNT;		/*!< UART rx byte counter register,              			Address offset: 0x50*/
 
 	/* AmebaZ change */
-	__IO u32 FCR;				/*!< UART FIFO Control register,              			Address offset: 0x54*/
+	__IO uint32_t FCR;				/*!< UART FIFO Control register,              			Address offset: 0x54*/
 } UART_TypeDef;
 /** @} */
 
@@ -495,95 +495,95 @@ typedef struct
 
 typedef struct {
 	/*GLOBAL*/
-	__IO u32 USI_MODE_CTRL;			/*!< USI mode control register,		Address offset: 0x00*/
-	__IO u32 SW_RESET;				/*!< USI software reset register,   	Address offset: 0x04*/
+	__IO uint32_t USI_MODE_CTRL;			/*!< USI mode control register,		Address offset: 0x00*/
+	__IO uint32_t SW_RESET;				/*!< USI software reset register,   	Address offset: 0x04*/
 	
-	__IO u32 RSVD0[2];				/*!< reserved space, 2 Dwords*/
+	__IO uint32_t RSVD0[2];				/*!< reserved space, 2 Dwords*/
 	/*DMA*/
-	__IO u32 DMA_ENABLE;				/*!< USI DMA enable register,         	Address offset: 0x10*/
-	__IO u32 DMA_REQ_SIZE;			/*!< USI DMA request size register,	Address offset: 0x14*/
+	__IO uint32_t DMA_ENABLE;				/*!< USI DMA enable register,         	Address offset: 0x10*/
+	__IO uint32_t DMA_REQ_SIZE;			/*!< USI DMA request size register,	Address offset: 0x14*/
 	
-	__IO u32 RSVD1[2];				/*!< reserved space, 2 Dwords*/	
+	__IO uint32_t RSVD1[2];				/*!< reserved space, 2 Dwords*/	
 
 	/*TX FIFO*/
-	__IO u32 TX_FIFO_WRITE;			/*!< USI write TX FIFO register,       	Address offset: 0X20*/
-	__IO u32 TX_FIFO_CTRL;			/*!< USI TX FIFO control register,    	Address offset: 0X24*/	
-	__I    u32 TX_FIFO_STATUS;			/*!< USI TX FIFO status register,     	Address offset: 0X28*/
+	__IO uint32_t TX_FIFO_WRITE;			/*!< USI write TX FIFO register,       	Address offset: 0X20*/
+	__IO uint32_t TX_FIFO_CTRL;			/*!< USI TX FIFO control register,    	Address offset: 0X24*/	
+	__I    uint32_t TX_FIFO_STATUS;			/*!< USI TX FIFO status register,     	Address offset: 0X28*/
 	
-	__IO u32 RSVD2[1];				/*!< reserved space, 1 Dwords*/
+	__IO uint32_t RSVD2[1];				/*!< reserved space, 1 Dwords*/
 	
 	/*RX FIFO*/
-	__IO  u32 RX_FIFO_READ;			/*!< USI RX FIFO read register,         	Address offset: 0X30*/
-	__IO  u32 RX_FIFO_CTRL;			/*!< USI RX FIFO control register,     	Address offset: 0X34*/
-	__I    u32 RX_FIFO_STATUS;		/*!< USI RX FIFO status register,      	Address offset: 0X38*/
-	__IO	 u32 RX_FIFO_RD_CNT;		/*!< USI RX FIFO read cnt register,  	 Address offset: 0X3C*/
+	__IO  uint32_t RX_FIFO_READ;			/*!< USI RX FIFO read register,         	Address offset: 0X30*/
+	__IO  uint32_t RX_FIFO_CTRL;			/*!< USI RX FIFO control register,     	Address offset: 0X34*/
+	__I    uint32_t RX_FIFO_STATUS;		/*!< USI RX FIFO status register,      	Address offset: 0X38*/
+	__IO	 uint32_t RX_FIFO_RD_CNT;		/*!< USI RX FIFO read cnt register,  	 Address offset: 0X3C*/
 
 	/*INTERRUPT*/
-	__IO	 u32 INTERRUPT_ENABLE;		/*!< USI interrupt enable register,    	Address offset: 0X40*/
-	__I	 u32 INTERRUPT_STATUS;		/*!< USI interrupt status register,     	Address offset: 0X44*/
-	__I	 u32 RAW_INTERRUPT_STATUS;	/*!< USI interrupt raw status register, 	Address offset: 0X48*/
-	__I	 u32 I2C_TX_ABRT_SOURCE;	/*!< USI I2C abort source register,       	Address offset: 0X4C*/
-	__IO	 u32 INTERRUPT_ALL_CLR;		/*!< USI clear all interrupt register,      	Address offset: 0X50*/
-	__IO	 u32 INTERRUPT_STATUS_CLR;	/*!< USI clear interrupt register,          	Address offset: 0X54*/
+	__IO	 uint32_t INTERRUPT_ENABLE;		/*!< USI interrupt enable register,    	Address offset: 0X40*/
+	__I	 uint32_t INTERRUPT_STATUS;		/*!< USI interrupt status register,     	Address offset: 0X44*/
+	__I	 uint32_t RAW_INTERRUPT_STATUS;	/*!< USI interrupt raw status register, 	Address offset: 0X48*/
+	__I	 uint32_t I2C_TX_ABRT_SOURCE;	/*!< USI I2C abort source register,       	Address offset: 0X4C*/
+	__IO	 uint32_t INTERRUPT_ALL_CLR;		/*!< USI clear all interrupt register,      	Address offset: 0X50*/
+	__IO	 uint32_t INTERRUPT_STATUS_CLR;	/*!< USI clear interrupt register,          	Address offset: 0X54*/
 
-	__IO u32 RSVD3[2];				/*!< reserved space, 2 Dwords*/	
+	__IO uint32_t RSVD3[2];				/*!< reserved space, 2 Dwords*/	
 
 	/*DEBUG*/
-	__IO	 u32 DEBUG_SEL;				/*!< USI debug select register,              Address offset: 0X60*/
-	__I	 u32 DEBUG_PORT;			/*!< USI debug port register,              	Address offset: 0X64*/
-	__IO	 u32 ECO_USE0;				/*!< USI ECO register,              		Address offset: 0X68*/
-	__IO	 u32 ECO_USE1;				/*!< USI ECO register,              		Address offset: 0X6C*/
-	__IO	 u32 USI_COMP_VERSION;		/*!< USI version number register,         	Address offset: 0X70*/
+	__IO	 uint32_t DEBUG_SEL;				/*!< USI debug select register,              Address offset: 0X60*/
+	__I	 uint32_t DEBUG_PORT;			/*!< USI debug port register,              	Address offset: 0X64*/
+	__IO	 uint32_t ECO_USE0;				/*!< USI ECO register,              		Address offset: 0X68*/
+	__IO	 uint32_t ECO_USE1;				/*!< USI ECO register,              		Address offset: 0X6C*/
+	__IO	 uint32_t USI_COMP_VERSION;		/*!< USI version number register,         	Address offset: 0X70*/
 	
-	__IO u32 RSVD4[35];				/*!< reserved space, 35 Dwords*/	
+	__IO uint32_t RSVD4[35];				/*!< reserved space, 35 Dwords*/	
 
 	/*UART*/
-	__IO	 u32 UART_CTRL;					/*!< USI UART control register,              				Address offset: 0X100*/
-	__IO	 u32 UART_IRDA_CTRL;				/*!< USI UART IRDA control register,      			Address offset: 0X104*/
-	__IO	 u32 UART_IRDA_TX_PULSE_WD;	/*!< USI UART IRDA TX pulse configure register,  		Address offset: 0X108*/
-	__IO	 u32 UART_IRDA_RX_PULSE_WD;	/*!< USI UART IRDA RX pulse configure register,  		Address offset: 0X10C*/
-	__IO	 u32 UART_TX_FRACTION_BAUD;	/*!< USI UART TX path fraction baud rate configure register,  Address offset: 0X110*/
-	__IO	 u32 UART_RX_BAUD_OSC;			/*!< USI UART RX baudrate configure for OSC clock, 	Address offset: 0X114*/	
-	__IO	 u32 UART_RX_BAUD_XTAL;			/*!< USI UART RX baudrate configure for XTAL clock,     Address offset: 0X118*/	
-	__IO	 u32 UART_RX_FRACTION_BAUD_CTRL;   /*!< USI UART RX fraction baud rate configure register,      	Address offset: 0X11C*/	
-	__IO	 u32 UART_BAUD_MON_CTRL;		/*!< USI UART baud rate monitor control register,   	Address offset: 0X120*/
-	__IO	 u32 UART_BAUD_MON_STATUS0;	/*!< USI UART baud rate monitor status register0,    	Address offset: 0X124*/
-	__IO	 u32 UART_BAUD_MON_STATUS1;	/*!< USI UART baud rate monitor status register1,     	Address offset: 0X128*/
-	__IO	 u32 UART_TOGGLE_MON;			/*!< USI UART toggle monitor register,      			Address offset: 0X12C*/
-	__IO	 u32 UART_FLOW_CTRL;			/*!< USI UART flow control register,      				Address offset: 0X130*/
-	__IO	 u32 UART_RXFIFO_TO_TH;			/*!< USI UART RX FIFO timeout threshold,			Address offset: 0X134*/	
-	__IO	 u32 UART_RXDMA_FLOW_CTRL;		/*!< USI UART RX DMA flow control,				Address offset: 0X138*/	
+	__IO	 uint32_t UART_CTRL;					/*!< USI UART control register,              				Address offset: 0X100*/
+	__IO	 uint32_t UART_IRDA_CTRL;				/*!< USI UART IRDA control register,      			Address offset: 0X104*/
+	__IO	 uint32_t UART_IRDA_TX_PULSE_WD;	/*!< USI UART IRDA TX pulse configure register,  		Address offset: 0X108*/
+	__IO	 uint32_t UART_IRDA_RX_PULSE_WD;	/*!< USI UART IRDA RX pulse configure register,  		Address offset: 0X10C*/
+	__IO	 uint32_t UART_TX_FRACTION_BAUD;	/*!< USI UART TX path fraction baud rate configure register,  Address offset: 0X110*/
+	__IO	 uint32_t UART_RX_BAUD_OSC;			/*!< USI UART RX baudrate configure for OSC clock, 	Address offset: 0X114*/	
+	__IO	 uint32_t UART_RX_BAUD_XTAL;			/*!< USI UART RX baudrate configure for XTAL clock,     Address offset: 0X118*/	
+	__IO	 uint32_t UART_RX_FRACTION_BAUD_CTRL;   /*!< USI UART RX fraction baud rate configure register,      	Address offset: 0X11C*/	
+	__IO	 uint32_t UART_BAUD_MON_CTRL;		/*!< USI UART baud rate monitor control register,   	Address offset: 0X120*/
+	__IO	 uint32_t UART_BAUD_MON_STATUS0;	/*!< USI UART baud rate monitor status register0,    	Address offset: 0X124*/
+	__IO	 uint32_t UART_BAUD_MON_STATUS1;	/*!< USI UART baud rate monitor status register1,     	Address offset: 0X128*/
+	__IO	 uint32_t UART_TOGGLE_MON;			/*!< USI UART toggle monitor register,      			Address offset: 0X12C*/
+	__IO	 uint32_t UART_FLOW_CTRL;			/*!< USI UART flow control register,      				Address offset: 0X130*/
+	__IO	 uint32_t UART_RXFIFO_TO_TH;			/*!< USI UART RX FIFO timeout threshold,			Address offset: 0X134*/	
+	__IO	 uint32_t UART_RXDMA_FLOW_CTRL;		/*!< USI UART RX DMA flow control,				Address offset: 0X138*/	
 
-	__IO u32 RSVD5[49];				/*!< reserved space, 49 Dwords*/
+	__IO uint32_t RSVD5[49];				/*!< reserved space, 49 Dwords*/
 
 	/*SPI*/
-	__IO	 u32 SPI_CTRL;				/*!< USI SPI control register,      			Address offset: 0X200*/
-	__IO	 u32 SPI_TRANS_EN;			/*!< USI SPI transmission enable register,   	Address offset: 0X204*/
-	__I	 u32 SPI_TRANS_STATUS;		/*!< USI SPI transmission status register,    	Address offset: 0X208*/
+	__IO	 uint32_t SPI_CTRL;				/*!< USI SPI control register,      			Address offset: 0X200*/
+	__IO	 uint32_t SPI_TRANS_EN;			/*!< USI SPI transmission enable register,   	Address offset: 0X204*/
+	__I	 uint32_t SPI_TRANS_STATUS;		/*!< USI SPI transmission status register,    	Address offset: 0X208*/
 	
-	__IO u32 RSVD6[61];				/*!< reserved space, 61 Dwords*/
+	__IO uint32_t RSVD6[61];				/*!< reserved space, 61 Dwords*/
 
 	/*I2C*/
-	__IO	 u32 I2C_CTRL;				/*!< USI I2C control register,      Address offset: 0X300*/	
-	__IO	 u32 I2C_SS_SCL_CNT;			/*!< USI I2C standard speed clock SCL low/high count register,    	Address offset: 0x304 */
-	__IO	 u32 I2C_FS_SCL_CNT;			/*!< USI I2C fast speed clock SCL low/high count register,              	Address offset: 0x308 */
-	__IO	 u32 I2C_HS_SCL_CNT;		/*!< USI I2C high speed clock SCL low/high count register,              	Address offset: 0x30C */
-	__IO	 u32 I2C_SDA_TIMING;			/*!< USI I2C SDA timing configure register,        	Address offset: 0x310*/
-	__IO	 u32 I2C_DIG_FILTER;			/*!< USI I2C filter register,              			Address offset: 0x314*/
-	__IO	 u32 I2C_SLV_ACK_CTRL;		/*!< USI I2C slave ACK control register,              	Address offset: 0x318*/
-	__IO	 u32 I2C_ENABLE;				/*!< USI I2C enable register,              			Address offset: 0x31C*/
-	__IO	 u32 I2C_TAR;				/*!< USI I2C target address register,              	Address offset: 0x320*/
-	__IO	 u32 I2C_DMA_CMD;			/*!< USI I2C DMA command register,              	Address offset: 0x324*/
-	__I	 u32 I2C_STATUS;				/*!< USI I2C status register,              			Address offset: 0x328*/
-	__IO u32 RSVD7[1];				/*!< reserved space, 1 Dwords*/
-	__IO	 u32 I2C_ANA_FILTER1;		/*!< USI I2C filter register 1,              	Address offset: 0x330*/
-	__IO	 u32 I2C_ANA_FILTER2;		/*!< USI I2C filter register 2,              	Address offset: 0x334*/
-	__IO	 u32 I2C_ANA_FILTER3;		/*!< USI I2C filter register 3,              	Address offset: 0x338*/
-	__IO	 u32 I2C_ANA_FILTER4;		/*!< USI I2C filter register 4,              	Address offset: 0x33C*/
-	__IO	 u32 I2C_ANA_FILTER5;		/*!< USI I2C filter register 5,              	Address offset: 0x340*/
-	__IO	 u32 I2C_ANA_FILTER6;		/*!< USI I2C filter register 6,              	Address offset: 0x344*/
-	__IO	 u32 I2C_ANA_FILTER7;		/*!< USI I2C filter register 7,              	Address offset: 0x348*/
-	__IO	 u32 I2C_ANA_FILTER8;		/*!< USI I2C filter register 8,      		Address offset: 0x34C*/
+	__IO	 uint32_t I2C_CTRL;				/*!< USI I2C control register,      Address offset: 0X300*/	
+	__IO	 uint32_t I2C_SS_SCL_CNT;			/*!< USI I2C standard speed clock SCL low/high count register,    	Address offset: 0x304 */
+	__IO	 uint32_t I2C_FS_SCL_CNT;			/*!< USI I2C fast speed clock SCL low/high count register,              	Address offset: 0x308 */
+	__IO	 uint32_t I2C_HS_SCL_CNT;		/*!< USI I2C high speed clock SCL low/high count register,              	Address offset: 0x30C */
+	__IO	 uint32_t I2C_SDA_TIMING;			/*!< USI I2C SDA timing configure register,        	Address offset: 0x310*/
+	__IO	 uint32_t I2C_DIG_FILTER;			/*!< USI I2C filter register,              			Address offset: 0x314*/
+	__IO	 uint32_t I2C_SLV_ACK_CTRL;		/*!< USI I2C slave ACK control register,              	Address offset: 0x318*/
+	__IO	 uint32_t I2C_ENABLE;				/*!< USI I2C enable register,              			Address offset: 0x31C*/
+	__IO	 uint32_t I2C_TAR;				/*!< USI I2C target address register,              	Address offset: 0x320*/
+	__IO	 uint32_t I2C_DMA_CMD;			/*!< USI I2C DMA command register,              	Address offset: 0x324*/
+	__I	 uint32_t I2C_STATUS;				/*!< USI I2C status register,              			Address offset: 0x328*/
+	__IO uint32_t RSVD7[1];				/*!< reserved space, 1 Dwords*/
+	__IO	 uint32_t I2C_ANA_FILTER1;		/*!< USI I2C filter register 1,              	Address offset: 0x330*/
+	__IO	 uint32_t I2C_ANA_FILTER2;		/*!< USI I2C filter register 2,              	Address offset: 0x334*/
+	__IO	 uint32_t I2C_ANA_FILTER3;		/*!< USI I2C filter register 3,              	Address offset: 0x338*/
+	__IO	 uint32_t I2C_ANA_FILTER4;		/*!< USI I2C filter register 4,              	Address offset: 0x33C*/
+	__IO	 uint32_t I2C_ANA_FILTER5;		/*!< USI I2C filter register 5,              	Address offset: 0x340*/
+	__IO	 uint32_t I2C_ANA_FILTER6;		/*!< USI I2C filter register 6,              	Address offset: 0x344*/
+	__IO	 uint32_t I2C_ANA_FILTER7;		/*!< USI I2C filter register 7,              	Address offset: 0x348*/
+	__IO	 uint32_t I2C_ANA_FILTER8;		/*!< USI I2C filter register 8,      		Address offset: 0x34C*/
 } USI_TypeDef;
 /** @} */
 
@@ -594,50 +594,50 @@ typedef struct {
  *****************************************************************************/
 typedef struct {
 	/*global control*/
-	__IO u32 LCDC_CTRL;				/*!< LCDC control register,	Address offset: 0x00*/
-	__IO u32 LCDC_PLANE_SIZE;		/*!< LCDC plane size configure register,              	Address offset: 0x04*/
-	__IO u32 LCDC_UNDFLW_CFG;		/*!< LCDC DMA FIFO underflow configure register  	Address offset: 0x08*/
-	__IO u32 LCDC_DMA_MODE_CFG;	/*!< LCDC DMA mode configure register        		Address offset: 0x0C*/
-	__IO u32 LCDC_CLK_DIV;			/*!< LCDC DCLK clock divider		        		Address offset: 0x10*/
+	__IO uint32_t LCDC_CTRL;				/*!< LCDC control register,	Address offset: 0x00*/
+	__IO uint32_t LCDC_PLANE_SIZE;		/*!< LCDC plane size configure register,              	Address offset: 0x04*/
+	__IO uint32_t LCDC_UNDFLW_CFG;		/*!< LCDC DMA FIFO underflow configure register  	Address offset: 0x08*/
+	__IO uint32_t LCDC_DMA_MODE_CFG;	/*!< LCDC DMA mode configure register        		Address offset: 0x0C*/
+	__IO uint32_t LCDC_CLK_DIV;			/*!< LCDC DCLK clock divider		        		Address offset: 0x10*/
 
-	__IO u32 RSVD0[3];				/*!< reserved space, 2 Dwords*/
+	__IO uint32_t RSVD0[3];				/*!< reserved space, 2 Dwords*/
 
 	/*Interrupt and status*/
-	__IO u32 LCDC_IRQ_EN;			/*!< LCDC interrupt enable register       		Address offset: 0x20*/
-	__IO u32 LCDC_IRQ_STATUS;		/*!< LCDC interrupt status after mask and interrupt clear register  Address offset: 0x24*/
-	__I u32 LCDC_IRQ_RAW;			/*!< LCDC RAW interrupt status  Address offset: 0x28*/
-	__IO u32 LCDC_LINE_INT_POS;		/*!< LCDC line interrupt position	Address offset: 0x2C*/
-	__I u32 LCDC_CUR_POS_STATUS;	/*!< LCDC current position status register	Address offset: 0x30*/
-	__I u32 LCDC_STATUS;			/*!< LCDC DMA FIFO underflow interrupt count register	Address offset: 0x34*/
+	__IO uint32_t LCDC_IRQ_EN;			/*!< LCDC interrupt enable register       		Address offset: 0x20*/
+	__IO uint32_t LCDC_IRQ_STATUS;		/*!< LCDC interrupt status after mask and interrupt clear register  Address offset: 0x24*/
+	__I uint32_t LCDC_IRQ_RAW;			/*!< LCDC RAW interrupt status  Address offset: 0x28*/
+	__IO uint32_t LCDC_LINE_INT_POS;		/*!< LCDC line interrupt position	Address offset: 0x2C*/
+	__I uint32_t LCDC_CUR_POS_STATUS;	/*!< LCDC current position status register	Address offset: 0x30*/
+	__I uint32_t LCDC_STATUS;			/*!< LCDC DMA FIFO underflow interrupt count register	Address offset: 0x34*/
 
-	__IO u32 RSVD1[2];				/*!< reserved space, 2 Dwords*/
+	__IO uint32_t RSVD1[2];				/*!< reserved space, 2 Dwords*/
 	
 	/*RGB control*/
-	__IO u32 LCDC_RGB_CFG;			/*!< LCDC RGB configuration register       		Address offset: 0x40*/	
-	__IO u32 LCDC_RGB_VSYNC_CFG;	/*!< LCDC RGB vertical synchronization configuration  register       		Address offset: 0x44*/
-	__IO u32 LCDC_RGB_HSYNC_CFG;	/*!< LCDC RGB horizontal synchronization configuration  register       		Address offset: 0x48*/
-	__IO u32 LCDC_RGB_SYNC_STATUS;	/*!< LCDC RGB synchronization status  register       		Address offset: 0x4C*/
+	__IO uint32_t LCDC_RGB_CFG;			/*!< LCDC RGB configuration register       		Address offset: 0x40*/	
+	__IO uint32_t LCDC_RGB_VSYNC_CFG;	/*!< LCDC RGB vertical synchronization configuration  register       		Address offset: 0x44*/
+	__IO uint32_t LCDC_RGB_HSYNC_CFG;	/*!< LCDC RGB horizontal synchronization configuration  register       		Address offset: 0x48*/
+	__IO uint32_t LCDC_RGB_SYNC_STATUS;	/*!< LCDC RGB synchronization status  register       		Address offset: 0x4C*/
 
-	__IO u32 RSVD2[4];				/*!< reserved space, 4 Dwords*/
+	__IO uint32_t RSVD2[4];				/*!< reserved space, 4 Dwords*/
 
 	/*MCU control*/
-	__IO u32 LCDC_MCU_CFG;			/*!< LCDC MCU I/F configuration register       		Address offset: 0x60*/
-	__IO u32 LCDC_MCU_VSYNC_CFG;	/*!< LCDC MCU I/F vertical synchronization configuration  register       		Address offset: 0x64*/
-	__IO u32 LCDC_MCU_TIMING_CFG;	/*!< LCDC  MCU I/F timing configuration  register       		Address offset: 0x68*/
-	__IO u32 LCDC_MCU_IO_DATA;		/*!< LCDC  MCU I/F write/read data register       		Address offset: 0x6C*/
-	__IO u32 LCDC_MCU_IO_TO_CFG;	/*!< LCDC  MCU I/F IO write/read timeout configuration register       		Address offset: 0x70*/
+	__IO uint32_t LCDC_MCU_CFG;			/*!< LCDC MCU I/F configuration register       		Address offset: 0x60*/
+	__IO uint32_t LCDC_MCU_VSYNC_CFG;	/*!< LCDC MCU I/F vertical synchronization configuration  register       		Address offset: 0x64*/
+	__IO uint32_t LCDC_MCU_TIMING_CFG;	/*!< LCDC  MCU I/F timing configuration  register       		Address offset: 0x68*/
+	__IO uint32_t LCDC_MCU_IO_DATA;		/*!< LCDC  MCU I/F write/read data register       		Address offset: 0x6C*/
+	__IO uint32_t LCDC_MCU_IO_TO_CFG;	/*!< LCDC  MCU I/F IO write/read timeout configuration register       		Address offset: 0x70*/
 
-	__IO u32 RSVD3[3];				/*!< reserved space, 3 Dwords*/
+	__IO uint32_t RSVD3[3];				/*!< reserved space, 3 Dwords*/
 
 	/*LED control*/
-	__IO u32 LCDC_LED_CFG;			/*!< LCDC LED I/F configuration register       		Address offset: 0x80*/
-	__IO u32 LCDC_LED_TIMING;		/*!< LCDC LED I/F timing configuration register    	Address offset: 0x84*/
+	__IO uint32_t LCDC_LED_CFG;			/*!< LCDC LED I/F configuration register       		Address offset: 0x80*/
+	__IO uint32_t LCDC_LED_TIMING;		/*!< LCDC LED I/F timing configuration register    	Address offset: 0x84*/
 
-	__IO u32 LCDC_LED_IDLE;			/*!< LCDC LED I/F timing idle configuration register    	Address offset: 0x88*/
-	__IO u32 RSVD4[1];				/*!< reserved space, 1 Dwords*/
+	__IO uint32_t LCDC_LED_IDLE;			/*!< LCDC LED I/F timing idle configuration register    	Address offset: 0x88*/
+	__IO uint32_t RSVD4[1];				/*!< reserved space, 1 Dwords*/
 
 	/*Image control*/
-	__IO u32 LCDC_IMG_BASE_ADDR;	/*!< LCDC Image base address register    			Address offset: 0x90*/
+	__IO uint32_t LCDC_IMG_BASE_ADDR;	/*!< LCDC Image base address register    			Address offset: 0x90*/
 } LCDC_TypeDef;
 /** @} */
 
@@ -703,18 +703,18 @@ typedef struct
  *****************************************************************************/
 typedef struct /*!< IR Structure */
 {
-	__IO u32 IR_CLK_DIV; 			/*!< IR clock DIV register,              	Address offset: 0x00 */
-	__IO u32 IR_TX_CONFIG; 			/*!< IR TX config register,              	Address offset: 0x04 */
-	__I   u32 IR_TX_SR; 				/*!< IR TX status register,              	Address offset: 0x08 */
-	__IO u32 IR_TX_COMPE_DIV;		/*!< IR TX compensation register,	Address offset: 0x0c */
-	__IO u32 IR_TX_INT_CLR;			/*!< IR TX interrupt clear register,	Address offset: 0x10 */
-	__O  u32 IR_TX_FIFO;				/*!< IR TX FIFO register,              	Address offset: 0x14 */
-	__IO u32 IR_RX_CONFIG;			/*!< IR RX config register,              	Address offset: 0x18 */
-	__I   u32 IR_RX_SR;				/*!< IR RX status register,              	Address offset: 0x1c */
-	__IO u32 IR_RX_INT_CLR;			/*!< IR RX interrupt clear register,	Address offset: 0x20 */
-	__IO u32 IR_RX_CNT_INT_SEL;		/*!< IR RX counter threshold register,	Address offset: 0x24 */
-	__I   u32 IR_RX_FIFO;				/*!< IR RX FIFO register			Address offset: 0x28 */
-	__I   u32 IR_VERSION;				/*!< IR HW version register,              Address offset: 0x2c */
+	__IO uint32_t IR_CLK_DIV; 			/*!< IR clock DIV register,              	Address offset: 0x00 */
+	__IO uint32_t IR_TX_CONFIG; 			/*!< IR TX config register,              	Address offset: 0x04 */
+	__I   uint32_t IR_TX_SR; 				/*!< IR TX status register,              	Address offset: 0x08 */
+	__IO uint32_t IR_TX_COMPE_DIV;		/*!< IR TX compensation register,	Address offset: 0x0c */
+	__IO uint32_t IR_TX_INT_CLR;			/*!< IR TX interrupt clear register,	Address offset: 0x10 */
+	__O  uint32_t IR_TX_FIFO;				/*!< IR TX FIFO register,              	Address offset: 0x14 */
+	__IO uint32_t IR_RX_CONFIG;			/*!< IR RX config register,              	Address offset: 0x18 */
+	__I   uint32_t IR_RX_SR;				/*!< IR RX status register,              	Address offset: 0x1c */
+	__IO uint32_t IR_RX_INT_CLR;			/*!< IR RX interrupt clear register,	Address offset: 0x20 */
+	__IO uint32_t IR_RX_CNT_INT_SEL;		/*!< IR RX counter threshold register,	Address offset: 0x24 */
+	__I   uint32_t IR_RX_FIFO;				/*!< IR RX FIFO register			Address offset: 0x28 */
+	__I   uint32_t IR_VERSION;				/*!< IR HW version register,              Address offset: 0x2c */
 } IR_TypeDef;
 /** @} */
 
@@ -1228,7 +1228,7 @@ typedef struct
 	__IO uint32_t CSR;				/*!< PSRAM Control Status register,		Address offset: 0x00C */
 	__IO uint32_t DRR;				/*!< PSRAM Device Refresh/Power-Up register,		Address offset: 0x010 */
 
-	__IO u32 RSVD0[4];				/*!< reserved space, 4 Dwords*/	
+	__IO uint32_t RSVD0[4];				/*!< reserved space, 4 Dwords*/	
 
 	__IO uint32_t CMD_DPIN_NDGE;	/*!< PSRAM Device Cmd/Addr Pin register(Negative Edge),		Address offset: 0x024 */
 	__IO uint32_t CMD_DPIN;		/*!< PSRAM Device Cmd/Addr Pin register(Positive Edge),		Address offset: 0x028 */
@@ -1237,17 +1237,17 @@ typedef struct
 	__IO uint32_t MR0;			/*!< PSRAM Device CR0 register,		Address offset: 0x034 */
 	__IO uint32_t MR1;			/*!< PSRAM Device CR1 register,		Address offset: 0x038 */
 
-	__IO u32 RSVD1[9];				/*!< reserved space, 9 Dwords*/	
+	__IO uint32_t RSVD1[9];				/*!< reserved space, 9 Dwords*/	
 
 	__IO uint32_t DPDRI;			/*!< PSRAM DPIN Data Index register,		Address offset: 0x060 */
 	__IO uint32_t DPDR;			/*!< PSRAM DPIN Data register,		Address offset: 0x064 */
 
-	__IO u32 RSVD2[35];				/*!< reserved space, 35 Dwords*/	
+	__IO uint32_t RSVD2[35];				/*!< reserved space, 35 Dwords*/	
 
 	__IO uint32_t PCTL_SVN_ID;	/*!< PSRAM_LPC_CTRL Version Numbers register,		Address offset: 0x0F4 */
 	__IO uint32_t PCTL_IDR;		/*!< PSRAM_LPC_CTRL Identification register,		Address offset: 0x0F8 */
 
-	__IO u32 RSVD3[193];				/*!< reserved space, 193 Dwords*/	
+	__IO uint32_t RSVD3[193];				/*!< reserved space, 193 Dwords*/	
 
 	__IO uint32_t USER0_INDEX;	/*!< PSRAM User Extended Index register,		Address offset: 0x400 */
 	__IO uint32_t USER0_DATA;		/*!< PSRAM User Extended Data register,		Address offset: 0x404 */
