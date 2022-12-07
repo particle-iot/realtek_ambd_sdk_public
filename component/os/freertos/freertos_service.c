@@ -14,6 +14,10 @@
 #include "rtl8710c_freertos_pmu.h"
 #endif
 
+__weak void system_isr_task_queue_free_memory(u8 *ptrToFree) {
+	// Do nothing, rely on system-part to implement
+}
+
 /********************* os depended utilities ********************/
 
 #ifndef USE_MUTEX_FOR_SPINLOCK
@@ -97,21 +101,14 @@ void _freertos_mfree(u8 *pbuf, u32 sz)
 	/* To avoid gcc warnings */
 	( void ) sz;
 
-	int reset_base_pri = 0;
-
-	int base_pri = __get_BASEPRI();
-
 	if (__get_BASEPRI() != 0) {
 		// XXX: we are under a critical section, this is not supposed to happen but the SDK does it anyway
-		portENABLE_INTERRUPTS();
-		reset_base_pri = 1;
+		// Defer freeing of memory to the SystemISRTaskQueue to be processed outside of this critical section
+		system_isr_task_queue_free_memory(pbuf);
+		return;
 	}
 	
 	vPortFree(pbuf);
-
-	if (reset_base_pri) {
-		portDISABLE_INTERRUPTS();
-	}
 }
 
 static void _freertos_memcpy(void* dst, void* src, u32 sz)
