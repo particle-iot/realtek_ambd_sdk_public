@@ -15,7 +15,11 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "usbd.h"
+#if defined(CONFIG_RTL8721D)
 #include "rtl8721dhp_sd.h"
+#elif defined(CONFIG_AMEBAD2)
+#include "ameba_sd.h"
+#endif
 
 /* Exported defines ----------------------------------------------------------*/
 
@@ -27,8 +31,8 @@
 #define USBD_MSC_PID                                 0x8730U
 #define USBD_MSC_CONFIG_DESC_SIZE                    32U
 #define USBD_MSC_LANGID_STRING                       0x0409U
-#define USBD_MSC_MFG_STRING_DESC_SIZE                9U
-#define USBD_MSC_PRODUCT_STRING_DESC_SIZE            18U
+#define USBD_MSC_MFG_STRING_DESC_SIZE                16U
+#define USBD_MSC_PRODUCT_STRING_DESC_SIZE            34U
 #define USBD_MSC_SN_STRING_DESC_SIZE                 26U
 #define USBD_MSC_SELF_POWERED						1U
 
@@ -122,12 +126,13 @@ typedef struct {
 } us_sense_typedef;
 
 typedef struct {
+	u8 phase_error;
 	u8 is_open;
 	u8 ro;
 	u8 intf;
 	u8 bot_state;
 	u8 bot_status;
-	u16 data_length;
+	u32 data_length;
 	u8 *data;
 	us_sense_typedef scsi_sense [SENSE_LIST_DEEPTH];
 	u8 scsi_sense_head;
@@ -145,6 +150,5 @@ typedef struct {
 
 int usbd_msc_init(void);
 void usbd_msc_deinit(void);
-void  usbd_msc_send_csw(usb_dev_t *dev, u8 status);
 
 #endif // USBD_MSC_H

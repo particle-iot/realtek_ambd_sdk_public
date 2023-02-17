@@ -15,10 +15,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 
+#include "usbd.h"
 #include "usbd_msc.h"
-#include "usbd_pcd.h"
 #include "usbd_scsi.h"
-#include "usbd_core.h"
 
 /* Private defines -----------------------------------------------------------*/
 
@@ -31,7 +30,8 @@
 static u8 usbd_msc_set_config(usb_dev_t *dev, u8 config);
 static u8 usbd_msc_clear_config(usb_dev_t *dev, u8 config);
 static u8 usbd_msc_setup(usb_dev_t *dev, usb_setup_req_t *req);
-static u8 *usbd_msc_get_descriptor(usbd_desc_type_t desc, usbd_speed_type_t speed, u16 *len);
+static u8 usbd_msc_clear_feature(usb_dev_t *dev, usb_setup_req_t *req);
+static u8 *usbd_msc_get_descriptor(usb_setup_req_t *req, usb_speed_type_t speed, u16 *len);
 static u8 usbd_msc_handle_ep_data_in(usb_dev_t *dev, u8 ep_num);
 static u8 usbd_msc_handle_ep_data_out(usb_dev_t *dev, u8 ep_num, u16 len);
 
@@ -56,102 +56,90 @@ static u8 usbd_msc_dev_desc[USB_LEN_DEV_DESC] USB_DMA_ALIGNED = {
 	USBD_IDX_MFC_STR,                               /* iManufacturer */
 	USBD_IDX_PRODUCT_STR,                           /* iProduct */
 	USBD_IDX_SERIAL_STR,                            /* iSerialNumber */
-	USBD_MAX_NUM_CONFIGURATION                      /* bNumConfigurations */
+	0x01                                            /* bNumConfigurations */
 };  /* usbd_msc_dev_desc */
 
 /* USB Standard String Descriptor 0 */
 static u8 usbd_msc_lang_id_desc[USB_LEN_LANGID_STR_DESC] USB_DMA_ALIGNED = {
 	USB_LEN_LANGID_STR_DESC,                        /* bLength */
 	USB_DESC_TYPE_STRING,                           /* bDescriptorType */
-	USB_LOW_BYTE(USBD_MSC_LANGID_STRING),            /* wLANGID */
+	USB_LOW_BYTE(USBD_MSC_LANGID_STRING),           /* wLANGID */
 	USB_HIGH_BYTE(USBD_MSC_LANGID_STRING),
 };  /* usbd_msc_lang_id_desc */
 
 /* USB Standard Manufacture String Descriptor */
 static u8 usbd_msc_mfg_string_desc[USBD_MSC_MFG_STRING_DESC_SIZE] USB_DMA_ALIGNED = {
-	USBD_MSC_MFG_STRING_DESC_SIZE,                   /* bLength */
+	USBD_MSC_MFG_STRING_DESC_SIZE,                  /* bLength */
 	USB_DESC_TYPE_STRING,                           /* bDescriptorType */
-	'R',                                            /* bString */
-	'e',
-	'a',
-	'l',
-	't',
-	'e',
-	'k'
+	'R', 0,                                         /* bString */
+	'e', 0,
+	'a', 0,
+	'l', 0,
+	't', 0,
+	'e', 0,
+	'k', 0
 };  /* usbd_msc_mfg_string_desc */
 
 /* USB Standard Product String Descriptor for high-speed mode */
 static u8 usbd_msc_hs_product_string_desc[USBD_MSC_PRODUCT_STRING_DESC_SIZE] USB_DMA_ALIGNED = {
 	USBD_MSC_PRODUCT_STRING_DESC_SIZE,               /* bLength */
-	USB_DESC_TYPE_STRING,                           /* bDescriptorType */
-	'R',                                            /* bString */
-	'e',
-	'a',
-	'l',
-	't',
-	'e',
-	'k',
-	' ',
-	'V',
-	'C',
-	'P',
-	' ',
-	'(',
-	'H',
-	'S',
-	')',
+	USB_DESC_TYPE_STRING,                            /* bDescriptorType */
+	'R', 0,                                          /* bString */
+	'e', 0,
+	'a', 0,
+	'l', 0,
+	't', 0,
+	'e', 0,
+	'k', 0,
+	' ', 0,
+	'M', 0,
+	'S', 0,
+	'C', 0,
+	' ', 0,
+	'(', 0,
+	'H', 0,
+	'S', 0,
+	')', 0
 };  /* usbd_msc_hs_product_string_desc */
 
 /* USB Standard Product String Descriptor for high-speed mode */
 static u8 usbd_msc_fs_product_string_desc[USBD_MSC_PRODUCT_STRING_DESC_SIZE] USB_DMA_ALIGNED = {
 	USBD_MSC_PRODUCT_STRING_DESC_SIZE,               /* bLength */
-	USB_DESC_TYPE_STRING,                           /* bDescriptorType */
-	'R',                                            /* bString */
-	'e',
-	'a',
-	'l',
-	't',
-	'e',
-	'k',
-	' ',
-	'V',
-	'C',
-	'P',
-	' ',
-	'(',
-	'F',
-	'S',
-	')',
+	USB_DESC_TYPE_STRING,                            /* bDescriptorType */
+	'R', 0,                                          /* bString */
+	'e', 0,
+	'a', 0,
+	'l', 0,
+	't', 0,
+	'e', 0,
+	'k', 0,
+	' ', 0,
+	'M', 0,
+	'S', 0,
+	'C', 0,
+	' ', 0,
+	'(', 0,
+	'F', 0,
+	'S', 0,
+	')', 0
 };  /* usbd_msc_fs_product_string_desc */
 
 /* USB Standard SN String Descriptor, ASCII only */
 static u8 usbd_msc_sn_string_desc[USBD_MSC_SN_STRING_DESC_SIZE] USB_DMA_ALIGNED = {
 	USBD_MSC_SN_STRING_DESC_SIZE,                    /* bLength */
-	USB_DESC_TYPE_STRING,                           /* bDescriptorType */
-	'1',                                            /* bString */
-	'\0',
-	'2',
-	'\0',
-	'3',
-	'\0',
-	'4',
-	'\0',
-	'5',
-	'\0',
-	'6',
-	'\0',
-	'7',
-	'\0',
-	'8',
-	'\0',
-	'9',
-	'\0',
-	'0',
-	'\0',
-	'A',
-	'\0',
-	'B',
-	'\0'
+	USB_DESC_TYPE_STRING,                            /* bDescriptorType */
+	'1', 0,                                          /* bString */
+	'2', 0,
+	'3', 0,
+	'4', 0,
+	'5', 0,
+	'6', 0,
+	'7', 0,
+	'8', 0,
+	'9', 0,
+	'0', 0,
+	'A', 0,
+	'B', 0
 };  /* usbd_msc_sn_string_desc */
 
 /* USB Standard Device Qualifier Descriptor */
@@ -315,6 +303,7 @@ usbd_class_driver_t usbd_msc_driver = {
 	.set_config = usbd_msc_set_config,
 	.clear_config = usbd_msc_clear_config,
 	.setup = usbd_msc_setup,
+	.clear_feature = usbd_msc_clear_feature,
 	.ep_data_in = usbd_msc_handle_ep_data_in,
 	.ep_data_out = usbd_msc_handle_ep_data_out,
 };
@@ -378,12 +367,13 @@ static SD_RESULT RAM_WriteBlocks(u32 sector, const u8 *data, u32 count)
 /**
 * @brief  Send the Command Status Wrapper
 * @param  dev: device instance
-* @param  status : CSW status
+* @param  status: CSW status
 * @retval None
 */
 void  usbd_msc_send_csw(usb_dev_t *dev, u8 status)
 {
 	usbd_msc_dev_t *cdev = &usbd_msc_dev;
+	u16 ep_mps;
 
 	cdev->csw.Signature = USBD_MSC_CS_SIGN;
 	cdev->csw.Status = status;
@@ -391,6 +381,11 @@ void  usbd_msc_send_csw(usb_dev_t *dev, u8 status)
 
 	usbd_ep_transmit(dev, USBD_MSC_BULK_IN_EP, (u8 *)&cdev->csw, USBD_MSC_CS_WRAP_LEN);
 
+	if (cdev->bot_status == USBD_MSC_STATUS_RECOVERY) {
+		usbd_ep_deinit(dev, USBD_MSC_BULK_OUT_EP);
+		ep_mps = (dev->dev_speed == USB_SPEED_HIGH) ? USBD_MSC_HS_MAX_PACKET_SIZE : USBD_MSC_FS_MAX_PACKET_SIZE;
+		usbd_ep_init(dev, USBD_MSC_BULK_OUT_EP, USB_CH_EP_TYPE_BULK, ep_mps);
+	}
 	/* Prepare EP to Receive next Cmd */
 	usbd_ep_receive(dev, USBD_MSC_BULK_OUT_EP, (u8 *)&cdev->cbw, USBD_MSC_CB_WRAP_LEN);
 }
@@ -398,9 +393,8 @@ void  usbd_msc_send_csw(usb_dev_t *dev, u8 status)
 /**
 * @brief  Abort the current transfer
 * @param  dev: device instance
-* @retval status
+* @retval Status
 */
-
 static void usbd_msc_abort(usb_dev_t *dev)
 {
 	usbd_msc_dev_t *cdev = &usbd_msc_dev;
@@ -408,10 +402,10 @@ static void usbd_msc_abort(usb_dev_t *dev)
 	if ((cdev->cbw.Flags == 0U) &&
 		(cdev->cbw.DataTransferLength != 0U) &&
 		(cdev->bot_status == USBD_MSC_STATUS_NORMAL)) {
-		usbd_pcd_ep_set_stall(dev->pcd, USBD_MSC_BULK_OUT_EP);
+		usbd_ep_set_stall(dev, USBD_MSC_BULK_OUT_EP);
 	}
 
-	usbd_pcd_ep_set_stall(dev->pcd, USBD_MSC_BULK_IN_EP);
+	usbd_ep_set_stall(dev, USBD_MSC_BULK_IN_EP);
 
 	if (cdev->bot_status == USBD_MSC_STATUS_ERROR) {
 		usbd_ep_receive(dev, USBD_MSC_BULK_OUT_EP, (u8 *)&cdev->cbw, USBD_MSC_CB_WRAP_LEN);
@@ -422,7 +416,7 @@ static void usbd_msc_abort(usb_dev_t *dev)
   * @brief  Set MSC class configuration
   * @param  dev: USB device instance
   * @param  config: USB configuration index
-  * @retval status
+  * @retval Status
   */
 static u8 usbd_msc_set_config(usb_dev_t *dev, u8 config)
 {
@@ -435,12 +429,20 @@ static u8 usbd_msc_set_config(usb_dev_t *dev, u8 config)
 	cdev->dev = dev;
 
 	/* Init BULK IN EP */
-	ep_mps = (dev->dev_speed == USBD_SPEED_HIGH) ? USBD_MSC_HS_MAX_PACKET_SIZE : USBD_MSC_FS_MAX_PACKET_SIZE;
-	usbd_ep_init(dev, USBD_MSC_BULK_IN_EP, USBD_EP_TYPE_BULK, ep_mps);
+	ep_mps = (dev->dev_speed == USB_SPEED_HIGH) ? USBD_MSC_HS_MAX_PACKET_SIZE : USBD_MSC_FS_MAX_PACKET_SIZE;
+	usbd_ep_init(dev, USBD_MSC_BULK_IN_EP, USB_CH_EP_TYPE_BULK, ep_mps);
 
 	/* Init BULK OUT EP */
-	ep_mps = (dev->dev_speed == USBD_SPEED_HIGH) ? USBD_MSC_HS_MAX_PACKET_SIZE : USBD_MSC_FS_MAX_PACKET_SIZE;
-	usbd_ep_init(dev, USBD_MSC_BULK_OUT_EP, USBD_EP_TYPE_BULK, ep_mps);
+	ep_mps = (dev->dev_speed == USB_SPEED_HIGH) ? USBD_MSC_HS_MAX_PACKET_SIZE : USBD_MSC_FS_MAX_PACKET_SIZE;
+	usbd_ep_init(dev, USBD_MSC_BULK_OUT_EP, USB_CH_EP_TYPE_BULK, ep_mps);
+
+	cdev->bot_state = USBD_MSC_IDLE;
+	cdev->bot_status = USBD_MSC_STATUS_NORMAL;
+	cdev->scsi_sense_tail = 0U;
+	cdev->scsi_sense_head = 0U;
+	cdev->is_open = 1;
+	cdev->ro = 0;
+	cdev->phase_error = 0;
 
 	/* Prepare to receive next BULK OUT packet */
 	usbd_ep_receive(dev, USBD_MSC_BULK_OUT_EP, (u8 *)&cdev->cbw, USBD_MSC_CB_WRAP_LEN);
@@ -452,11 +454,12 @@ static u8 usbd_msc_set_config(usb_dev_t *dev, u8 config)
   * @brief  Clear MSC configuration
   * @param  dev: USB device instance
   * @param  config: USB configuration index
-  * @retval status
+  * @retval Status
   */
 static u8 usbd_msc_clear_config(usb_dev_t *dev, u8 config)
 {
 	u8 ret = 0U;
+	usbd_msc_dev_t *cdev = &usbd_msc_dev;
 
 	UNUSED(config);
 
@@ -466,6 +469,10 @@ static u8 usbd_msc_clear_config(usb_dev_t *dev, u8 config)
 	/* DeInit BULK OUT EP */
 	usbd_ep_deinit(dev, USBD_MSC_BULK_OUT_EP);
 
+	cdev->bot_state  = USBD_MSC_IDLE;
+	cdev->is_open = 0;
+	cdev->phase_error = 0;
+
 	return ret;
 }
 
@@ -473,13 +480,12 @@ static u8 usbd_msc_clear_config(usb_dev_t *dev, u8 config)
   * @brief  Handle MSC specific CTRL requests
   * @param  dev: USB device instance
   * @param  req: USB CTRL requests
-  * @retval status
+  * @retval Status
   */
 static u8 usbd_msc_setup(usb_dev_t *dev, usb_setup_req_t *req)
 {
 	usbd_msc_dev_t *cdev = &usbd_msc_dev;
 	u8 ret = HAL_OK;
-	u16 ep_mps;
 
 	DBG_PRINTF(MODULE_USB_CLASS,
 			   LEVEL_TRACE,
@@ -499,7 +505,7 @@ static u8 usbd_msc_setup(usb_dev_t *dev, usb_setup_req_t *req)
 				dev->ctrl_buf[0] = 0U;
 				usbd_ep0_transmit(dev, dev->ctrl_buf, 1U);
 			} else {
-				usbd_core_ep0_error(dev);
+				usbd_ep0_set_stall(dev);
 				ret = HAL_ERR_HW;
 			}
 			break;
@@ -512,80 +518,20 @@ static u8 usbd_msc_setup(usb_dev_t *dev, usb_setup_req_t *req)
 				/* Prepare to receive BOT cmd */
 				usbd_ep_receive(dev, USBD_MSC_BULK_OUT_EP, (u8 *)&cdev->cbw, USBD_MSC_CB_WRAP_LEN);
 			} else {
-				usbd_core_ep0_error(dev);
+				usbd_ep0_set_stall(dev);
 				ret = HAL_ERR_HW;
 			}
 			break;
 
 		default:
-			usbd_core_ep0_error(dev);
-			ret = HAL_ERR_HW;
-			break;
-		}
-		break;
-	/* Interface & Endpoint request */
-	case USB_REQ_TYPE_STANDARD:
-		switch (req->bRequest) {
-		case USB_REQ_GET_STATUS:
-			if (dev->dev_state == USBD_STATE_CONFIGURED) {
-				dev->ctrl_buf[0] = 0U;
-				dev->ctrl_buf[1] = 0U;
-				usbd_ep0_transmit(dev, dev->ctrl_buf, 2U);
-			} else {
-				usbd_core_ep0_error(dev);
-				ret = HAL_ERR_HW;
-			}
-			break;
-
-		case USB_REQ_GET_INTERFACE:
-			if (dev->dev_state == USBD_STATE_CONFIGURED) {
-				usbd_ep0_transmit(dev, (u8 *)&cdev->intf, 1U);
-			} else {
-				usbd_core_ep0_error(dev);
-				ret = HAL_ERR_HW;
-			}
-			break;
-
-		case USB_REQ_SET_INTERFACE:
-			if (dev->dev_state == USBD_STATE_CONFIGURED) {
-				cdev->intf = (u8)(req->wValue);
-			} else {
-				usbd_core_ep0_error(dev);
-				ret = HAL_ERR_HW;
-			}
-			break;
-
-		case USB_REQ_CLEAR_FEATURE:
-			/* DeInit EP */
-			usbd_ep_deinit(dev, (u8)req->wIndex);
-			if ((((u8)req->wIndex) & 0x80U) == 0x80U) {
-				ep_mps = (dev->dev_speed == USBD_SPEED_HIGH) ? USBD_MSC_HS_MAX_PACKET_SIZE : USBD_MSC_FS_MAX_PACKET_SIZE;
-				usbd_ep_init(dev, USBD_MSC_BULK_IN_EP, USBD_EP_TYPE_BULK, ep_mps);
-			} else {
-				ep_mps = (dev->dev_speed == USBD_SPEED_HIGH) ? USBD_MSC_HS_MAX_PACKET_SIZE : USBD_MSC_FS_MAX_PACKET_SIZE;
-				usbd_ep_init(dev, USBD_MSC_BULK_OUT_EP, USBD_EP_TYPE_BULK, ep_mps);
-			}
-
-			/* Handle BOT error */
-			if (cdev->bot_status == USBD_MSC_STATUS_ERROR) { /* Bad CBW Signature */
-				usbd_pcd_ep_set_stall(dev->pcd, USBD_MSC_BULK_IN_EP);
-				cdev->bot_status = USBD_MSC_STATUS_NORMAL;
-			} else if (((((u8)req->wIndex) & 0x80U) == 0x80U) && (cdev->bot_status != USBD_MSC_STATUS_RECOVERY)) {
-				usbd_msc_send_csw(dev, USBD_MSC_CSW_CMD_FAILED);
-			} else {
-				;
-			}
-			break;
-
-		default:
-			usbd_core_ep0_error(dev);
+			usbd_ep0_set_stall(dev);
 			ret = HAL_ERR_HW;
 			break;
 		}
 		break;
 
 	default:
-		usbd_core_ep0_error(dev);
+		usbd_ep0_set_stall(dev);
 		ret = HAL_ERR_HW;
 		break;
 	}
@@ -594,11 +540,33 @@ static u8 usbd_msc_setup(usb_dev_t *dev, usb_setup_req_t *req)
 }
 
 /**
-  * @brief  usbd_msc_handle_ep_data_in
-  *         Data sent on non-control IN endpoint
+  * @brief  Handle MSC specific clear feature requests
+  * @param  dev: USB device instance
+  * @param  req: USB CTRL requests
+  * @retval Status
+  */
+static u8 usbd_msc_clear_feature(usb_dev_t *dev, usb_setup_req_t *req)
+{
+	usbd_msc_dev_t *cdev = &usbd_msc_dev;
+
+	/* Handle BOT error */
+	if (cdev->bot_status == USBD_MSC_STATUS_ERROR) { /* Bad CBW Signature */
+		usbd_ep_set_stall(dev, USBD_MSC_BULK_IN_EP);
+		cdev->bot_status = USBD_MSC_STATUS_NORMAL;
+	} else if (((((u8)req->wIndex) & 0x80U) == 0x80U) && (cdev->bot_status != USBD_MSC_STATUS_RECOVERY)) {
+		usbd_msc_send_csw(dev, USBD_MSC_CSW_CMD_FAILED);
+	} else {
+		;
+	}
+
+	return HAL_OK;
+}
+
+/**
+  * @brief  Data sent on non-control IN endpoint
   * @param  dev: USB device instance
   * @param  ep_num: endpoint number
-  * @retval status
+  * @retval Status
   */
 static u8 usbd_msc_handle_ep_data_in(usb_dev_t *dev, u8 ep_num)
 {
@@ -615,7 +583,12 @@ static u8 usbd_msc_handle_ep_data_in(usb_dev_t *dev, u8 ep_num)
 
 	case USBD_MSC_SEND_DATA:
 	case USBD_MSC_LAST_DATA_IN:
-		usbd_msc_send_csw(dev, USBD_MSC_CSW_CMD_PASSED);
+		if (cdev->phase_error == 1) {
+			usbd_msc_send_csw(dev, USBD_MSC_CSW_PHASE_ERROR);
+			cdev->phase_error = 0;
+		} else {
+			usbd_msc_send_csw(dev, USBD_MSC_CSW_CMD_PASSED);
+		}
 		break;
 
 	default:
@@ -626,18 +599,16 @@ static u8 usbd_msc_handle_ep_data_in(usb_dev_t *dev, u8 ep_num)
 }
 
 /**
-  * @brief  usbd_msc_handle_ep_data_out
-  *         Data received on non-control Out endpoint
+  * @brief  Data received on non-control Out endpoint
   * @param  dev: USB device instance
   * @param  ep_num: endpoint number
-  * @retval status
+  * @retval Status
   */
 static u8 usbd_msc_handle_ep_data_out(usb_dev_t *dev, u8 ep_num, u16 len)
 {
 	usbd_msc_dev_t *cdev = &usbd_msc_dev;
 
 	UNUSED(ep_num);
-	UNUSED(len);
 
 	switch (cdev->bot_state) {
 	case USBD_MSC_IDLE:
@@ -645,7 +616,7 @@ static u8 usbd_msc_handle_ep_data_out(usb_dev_t *dev, u8 ep_num, u16 len)
 		cdev->csw.Tag = cdev->cbw.Tag;
 		cdev->csw.Residue = cdev->cbw.DataTransferLength;
 
-		if ((usbd_core_get_rx_data_size(dev, USBD_MSC_BULK_OUT_EP) != USBD_MSC_CB_WRAP_LEN) ||
+		if ((len != USBD_MSC_CB_WRAP_LEN) ||
 			(cdev->cbw.Signature != USBD_MSC_CB_SIGN) ||
 			(cdev->cbw.Lun > 1U) ||
 			(cdev->cbw.Length < 1U) || (cdev->cbw.Length > 16U)) {
@@ -654,7 +625,10 @@ static u8 usbd_msc_handle_ep_data_out(usb_dev_t *dev, u8 ep_num, u16 len)
 			usbd_msc_abort(dev);
 		} else {
 			if (usbd_scsi_process_cmd(cdev, &cdev->cbw.CDB[0]) < 0) {
-				if (cdev->bot_state == USBD_MSC_NO_DATA) {
+				if (cdev->phase_error == 1) {
+					usbd_msc_send_csw(dev, USBD_MSC_CSW_PHASE_ERROR);
+					cdev->phase_error = 0;
+				} else if (cdev->bot_state == USBD_MSC_NO_DATA) {
 					usbd_msc_send_csw(dev, USBD_MSC_CSW_CMD_FAILED);
 				} else {
 					usbd_msc_abort(dev);
@@ -696,16 +670,28 @@ static u8 usbd_msc_handle_ep_data_out(usb_dev_t *dev, u8 ep_num, u16 len)
 	return HAL_OK;
 }
 
-static u8 *usbd_msc_get_descriptor(usbd_desc_type_t desc, usbd_speed_type_t speed, u16 *len)
+/**
+  * @brief  Get descriptor callback
+  * @param  req: Setup request handle
+  * @param  speed: Device speed
+  * @param  len: Descriptor length
+  * @retval Status
+  */
+static u8 *usbd_msc_get_descriptor(usb_setup_req_t *req, usb_speed_type_t speed, u16 *len)
 {
 	u8 *buf = NULL;
-	switch (desc) {
-	case USBD_DESC_DEVICE:
+
+	switch ((req->wValue >> 8) & 0xFF) {
+
+	case USB_DESC_TYPE_DEVICE:
+		DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USB_DESC_TYPE_DEVICE\n");
 		buf = usbd_msc_dev_desc;
 		*len = sizeof(usbd_msc_dev_desc);
 		break;
-	case USBD_DESC_CONFIG:
-		if (speed == USBD_SPEED_HIGH) {
+
+	case USB_DESC_TYPE_CONFIGURATION:
+		DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USB_DESC_TYPE_CONFIGURATION\n");
+		if (speed == USB_SPEED_HIGH) {
 			buf = usbd_msc_hs_config_desc;
 			*len = sizeof(usbd_msc_hs_config_desc);
 		} else {
@@ -713,36 +699,60 @@ static u8 *usbd_msc_get_descriptor(usbd_desc_type_t desc, usbd_speed_type_t spee
 			*len = sizeof(usbd_msc_fs_config_desc);
 		}
 		break;
-	case USBD_DESC_OTHER_SPEED_CONFIG:
-		/* speed == USBD_SPEED_HIGH */
-		buf = usbd_msc_other_speed_config_desc;
-		*len = sizeof(usbd_msc_other_speed_config_desc);
-		break;
-	case USBD_DESC_DEVICE_QUALIFIER:
-		/* speed == USBD_SPEED_HIGH */
-		buf = usbd_msc_device_qualifier_desc;
-		*len = sizeof(usbd_msc_device_qualifier_desc);
-		break;
-	case USBD_DESC_LANGID_STR:
-		buf = usbd_msc_lang_id_desc;
-		*len = sizeof(usbd_msc_lang_id_desc);
-		break;
-	case USBD_DESC_MFG_STR:
-		buf = usbd_msc_mfg_string_desc;
-		*len = USBD_MSC_MFG_STRING_DESC_SIZE;
-		break;
-	case USBD_DESC_PRODUCT_STR:
-		*len = USBD_MSC_PRODUCT_STRING_DESC_SIZE;
-		if (speed == USBD_SPEED_HIGH) {
-			buf = usbd_msc_hs_product_string_desc;
+
+	case USB_DESC_TYPE_DEVICE_QUALIFIER:
+		DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USB_DESC_TYPE_DEVICE_QUALIFIER\n");
+		if (speed == USB_SPEED_HIGH) {
+			buf = usbd_msc_device_qualifier_desc;
+			*len = sizeof(usbd_msc_device_qualifier_desc);
 		} else {
-			buf = usbd_msc_fs_product_string_desc;
+			DBG_PRINTF(MODULE_USB_CLASS, LEVEL_WARN, "Trying to get descriptor USB_DESC_TYPE_DEVICE_QUALIFIER at full speed\n");
 		}
 		break;
-	case USBD_DESC_SN_STR:
-		buf = usbd_msc_sn_string_desc;
-		*len = USBD_MSC_SN_STRING_DESC_SIZE;
+
+	case USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION:
+		DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION\n");
+		if (speed == USB_SPEED_HIGH) {
+			buf = usbd_msc_other_speed_config_desc;
+			*len = sizeof(usbd_msc_other_speed_config_desc);
+		} else {
+			DBG_PRINTF(MODULE_USB_CLASS, LEVEL_WARN, "Trying to get descriptor USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION at full speed\n");
+		}
 		break;
+
+	case USB_DESC_TYPE_STRING:
+		switch (req->wValue & 0xFF) {
+		case USBD_IDX_LANGID_STR:
+			DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USBD_IDX_LANGID_STR\n");
+			buf = usbd_msc_lang_id_desc;
+			*len = sizeof(usbd_msc_lang_id_desc);
+			break;
+		case USBD_IDX_MFC_STR:
+			DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USBD_IDX_MFC_STR\n");
+			buf = usbd_msc_mfg_string_desc;
+			*len = USBD_MSC_MFG_STRING_DESC_SIZE;
+			break;
+		case USBD_IDX_PRODUCT_STR:
+			DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USBD_IDX_PRODUCT_STR\n");
+			*len = USBD_MSC_PRODUCT_STRING_DESC_SIZE;
+			if (speed == USB_SPEED_HIGH) {
+				buf = usbd_msc_hs_product_string_desc;
+			} else {
+				buf = usbd_msc_fs_product_string_desc;
+			}
+			break;
+		case USBD_IDX_SERIAL_STR:
+			DBG_PRINTF(MODULE_USB_CLASS, LEVEL_TRACE, "Get descriptor USBD_IDX_SERIAL_STR\n");
+			buf = usbd_msc_sn_string_desc;
+			*len = USBD_MSC_SN_STRING_DESC_SIZE;
+			break;
+		/* Add customer string here */
+		default:
+			DBG_PRINTF(MODULE_USB_CLASS, LEVEL_WARN, "Get descriptor failed, invalid string index %d\n", req->wValue & 0xFF);
+			break;
+		}
+		break;
+
 	default:
 		break;
 	}
@@ -752,6 +762,10 @@ static u8 *usbd_msc_get_descriptor(usbd_desc_type_t desc, usbd_speed_type_t spee
 
 /* Exported functions --------------------------------------------------------*/
 
+/**
+  * @brief  Initialize MSC device
+  * @retval Status
+  */
 int usbd_msc_init(void)
 {
 	usbd_msc_dev_t *cdev = &usbd_msc_dev;
@@ -777,37 +791,33 @@ int usbd_msc_init(void)
 		goto data_buf_fail;
 	}
 
-	cdev->bot_state = USBD_MSC_IDLE;
-	cdev->bot_status = USBD_MSC_STATUS_NORMAL;
-	cdev->scsi_sense_tail = 0U;
-	cdev->scsi_sense_head = 0U;
+	cdev->blkbits = USBD_MSC_BLK_BITS;
+	cdev->blksize = USBD_MSC_BLK_SIZE;
 	if (cdev->disk_operation.disk_init()) {
 		DBG_PRINTF(MODULE_USB_CLASS, LEVEL_ERROR, "disk init fail\n");
 		rtw_free(cdev->data);
 		cdev->data = NULL;
 		return HAL_ERR_HW;
 	}
-	cdev->is_open = 1;
-	cdev->ro = 0;
-	cdev->blkbits = USBD_MSC_BLK_BITS;
-	cdev->blksize = USBD_MSC_BLK_SIZE;
 	usbd_register_class(&usbd_msc_driver);
 
 data_buf_fail:
 	return ret;
 }
 
+/**
+  * @brief  De-Initialize MSC device
+  * @retval Status
+  */
 void usbd_msc_deinit(void)
 {
 	usbd_msc_dev_t *cdev = &usbd_msc_dev;
 
-	cdev->bot_state  = USBD_MSC_IDLE;
 	usbd_unregister_class();
 
 	if (cdev->disk_operation.disk_deinit != NULL) {
 		cdev->disk_operation.disk_deinit();
 	}
-	cdev->is_open = 0;
 
 	if (cdev->data != NULL) {
 		rtw_free(cdev->data);

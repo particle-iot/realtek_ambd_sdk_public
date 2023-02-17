@@ -35,8 +35,8 @@ static int usbd_scsi_start_stop_unit(usbd_msc_dev_t  *cdev, u8 *params);
 static int usbd_scsi_prevent_allow(usbd_msc_dev_t  *cdev, u8 *params);
 static int usbd_scsi_mode_sense6(usbd_msc_dev_t  *cdev, u8 *params);
 static int usbd_scsi_mode_sense10(usbd_msc_dev_t  *cdev, u8 *params);
-static int usbd_scsi_write10(usbd_msc_dev_t  *cdev, u8 *params);
-static int usbd_scsi_read10(usbd_msc_dev_t  *cdev, u8 *params);
+static int usbd_scsi_write(usbd_msc_dev_t  *cdev, u8 *params);
+static int usbd_scsi_read(usbd_msc_dev_t  *cdev, u8 *params);
 static int usbd_scsi_verify10(usbd_msc_dev_t  *cdev, u8 *params);
 static int usbd_scsi_check_address_range(usbd_msc_dev_t  *cdev, u32 blk_offset, u32 blk_nbr);
 static int usbd_scsi_process_read(usbd_msc_dev_t  *cdev);
@@ -75,11 +75,7 @@ const u8 Standard_Inquiry_Data[] = {
 
 /* USB Mass storage sense 6  Data */
 const u8  Mode_Sense6_data[] = {
-	0x00,
-	0x00,
-	0x00,
-	0x00,
-	0x00,
+	0x03,
 	0x00,
 	0x00,
 	0x00
@@ -100,77 +96,86 @@ const u8  Mode_Sense10_data[] = {
 /* Private functions ---------------------------------------------------------*/
 
 /**
-* @brief  usbd_scsi_process_cmd
-*         Process SCSI commands
-* @param  cdev: device instance
-* @param  params: Command parameters
-* @retval status
+* @brief  Process SCSI commands
+* @param  cdev: Device instance
+* @param  cmd: Command parameters
+* @retval Status
 */
-int usbd_scsi_process_cmd(usbd_msc_dev_t  *cdev, u8 *cmd)
+int usbd_scsi_process_cmd(usbd_msc_dev_t *cdev, u8 *cmd)
 {
+	int ret = 0;
+
 	switch (cmd[0]) {
 	case SCSI_TEST_UNIT_READY:
-		usbd_scsi_test_unit_ready(cdev, cmd);
+		ret = usbd_scsi_test_unit_ready(cdev, cmd);
 		break;
 
 	case SCSI_REQUEST_SENSE:
-		usbd_scsi_request_sense(cdev, cmd);
+		ret = usbd_scsi_request_sense(cdev, cmd);
 		break;
 	case SCSI_INQUIRY:
-		usbd_scsi_inquiry(cdev, cmd);
+		ret = usbd_scsi_inquiry(cdev, cmd);
 		break;
 
 	case SCSI_START_STOP_UNIT:
-		usbd_scsi_start_stop_unit(cdev, cmd);
+		ret = usbd_scsi_start_stop_unit(cdev, cmd);
 		break;
 
 	case SCSI_ALLOW_MEDIUM_REMOVAL:
-		usbd_scsi_prevent_allow(cdev, cmd);
+		ret = usbd_scsi_prevent_allow(cdev, cmd);
 		break;
 
 	case SCSI_MODE_SENSE6:
-		usbd_scsi_mode_sense6(cdev, cmd);
+		ret = usbd_scsi_mode_sense6(cdev, cmd);
 		break;
 
 	case SCSI_MODE_SENSE10:
-		usbd_scsi_mode_sense10(cdev, cmd);
+		ret = usbd_scsi_mode_sense10(cdev, cmd);
 		break;
 
 	case SCSI_READ_FORMAT_CAPACITIES:
-		usbd_scsi_read_format_capacity(cdev, cmd);
+		ret = usbd_scsi_read_format_capacity(cdev, cmd);
 		break;
 
 	case SCSI_READ_CAPACITY10:
-		usbd_scsi_read_capacity10(cdev, cmd);
+		ret = usbd_scsi_read_capacity10(cdev, cmd);
 		break;
 
+	case SCSI_READ12:
 	case SCSI_READ10:
-		usbd_scsi_read10(cdev, cmd);
+		ret = usbd_scsi_read(cdev, cmd);
 		break;
 
+	case SCSI_WRITE12:
 	case SCSI_WRITE10:
-		usbd_scsi_write10(cdev, cmd);
+		ret = usbd_scsi_write(cdev, cmd);
+		break;
+
+	case SCSI_MODE_SELECT6:
+	case SCSI_MODE_SELECT10:
+		cdev->data_length = 0U;
+		ret = 0;
 		break;
 
 	case SCSI_VERIFY10:
-		usbd_scsi_verify10(cdev, cmd);
+		ret = usbd_scsi_verify10(cdev, cmd);
 		break;
 
 	default:
 		usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_CDB);
 		return -1;
 	}
-	return 0;
+	return ret;
 }
 
 
 /**
-* @brief  usbd_scsi_test_unit_ready
-*         Process SCSI Test Unit Ready Command
+* @brief  Process SCSI Test Unit Ready Command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_test_unit_ready(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_test_unit_ready(usbd_msc_dev_t *cdev, u8 *params)
 {
 	UNUSED(params);
 
@@ -193,12 +198,12 @@ static int usbd_scsi_test_unit_ready(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_inquiry
-*         Process Inquiry command
+* @brief  Process Inquiry command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int  usbd_scsi_inquiry(usbd_msc_dev_t  *cdev, u8 *params)
+static int  usbd_scsi_inquiry(usbd_msc_dev_t *cdev, u8 *params)
 {
 	if (params[1] & 0x01U) { /*Evpd is set*/
 		cdev->data_length = PAGE00_INQUIRY_DATA_LEN;
@@ -212,12 +217,12 @@ static int  usbd_scsi_inquiry(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_read_capacity10
-*         Process Read Capacity 10 command
+* @brief  Process Read Capacity 10 command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_read_capacity10(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_read_capacity10(usbd_msc_dev_t *cdev, u8 *params)
 {
 	UNUSED(params);
 
@@ -245,12 +250,12 @@ static int usbd_scsi_read_capacity10(usbd_msc_dev_t  *cdev, u8 *params)
 	}
 }
 /**
-* @brief  usbd_scsi_read_format_capacity
-*         Process Read Format Capacity command
+* @brief  Process Read Format Capacity command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_read_format_capacity(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_read_format_capacity(usbd_msc_dev_t *cdev, u8 *params)
 {
 	UNUSED(params);
 
@@ -281,12 +286,12 @@ static int usbd_scsi_read_format_capacity(usbd_msc_dev_t  *cdev, u8 *params)
 	}
 }
 /**
-* @brief  usbd_scsi_mode_sense6
-*         Process Mode Sense6 command
+* @brief  Process Mode Sense6 command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_mode_sense6(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_mode_sense6(usbd_msc_dev_t *cdev, u8 *params)
 {
 	UNUSED(params);
 
@@ -297,12 +302,12 @@ static int usbd_scsi_mode_sense6(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_mode_sense10
-*         Process Mode Sense10 command
+* @brief  Process Mode Sense10 command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_mode_sense10(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_mode_sense10(usbd_msc_dev_t *cdev, u8 *params)
 {
 	UNUSED(params);
 
@@ -313,13 +318,12 @@ static int usbd_scsi_mode_sense10(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_request_sense
-*         Process Request Sense command
+* @brief  Process Request Sense command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-
-static int usbd_scsi_request_sense(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_request_sense(usbd_msc_dev_t *cdev, u8 *params)
 {
 	UNUSED(params);
 
@@ -344,14 +348,14 @@ static int usbd_scsi_request_sense(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_sense_code
-*         Load the last error code in the error list
+* @brief  Load the last error code in the error list
+* @param  cdev: Device instance
 * @param  sKey: Sense Key
 * @param  ASC: Additional Sense Key
 * @retval none
 
 */
-void usbd_scsi_sense_code(usbd_msc_dev_t  *cdev, u8 sKey, u8 ASC)
+void usbd_scsi_sense_code(usbd_msc_dev_t *cdev, u8 sKey, u8 ASC)
 {
 	cdev->scsi_sense[cdev->scsi_sense_tail].Skey  = sKey;
 	cdev->scsi_sense[cdev->scsi_sense_tail].w.ASC = ASC << 8;
@@ -361,12 +365,12 @@ void usbd_scsi_sense_code(usbd_msc_dev_t  *cdev, u8 sKey, u8 ASC)
 	}
 }
 /**
-* @brief  usbd_scsi_start_stop_unit
-*         Process Start Stop Unit command
+* @brief  Process Start Stop Unit command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_start_stop_unit(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_start_stop_unit(usbd_msc_dev_t *cdev, u8 *params)
 {
 	int     loej, start;
 
@@ -397,12 +401,12 @@ static int usbd_scsi_start_stop_unit(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_start_stop_unit
-*         Process Start Stop Unit command
+* @brief  Process Start Stop Unit command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_prevent_allow(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_prevent_allow(usbd_msc_dev_t *cdev, u8 *params)
 {
 	UNUSED(params);
 
@@ -412,14 +416,21 @@ static int usbd_scsi_prevent_allow(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_read10
-*         Process Read10 command
+* @brief  Process Read10/12 command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_read10(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_read(usbd_msc_dev_t *cdev, u8 *params)
 {
 	if (cdev->bot_state == USBD_MSC_IDLE) { /* Idle */
+		/* case 2 */
+		if ((cdev->cbw.DataTransferLength) == 0) {
+			usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_CDB);
+			cdev->phase_error = 1;
+			return -1;
+		}
+
 		/* case 10 : Ho <> Di */
 		if ((cdev->cbw.Flags & 0x80U) != 0x80U) {
 			usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_CDB);
@@ -433,19 +444,23 @@ static int usbd_scsi_read10(usbd_msc_dev_t  *cdev, u8 *params)
 
 		cdev->lba = ((u32)params[2] << 24) | ((u32)params[3] << 16) | ((u32)params[4] << 8) | (u32)params[5];
 
-		cdev->blklen = ((u32)params[7] << 8) | (u32)params[8];
+		if (params[0] == SCSI_READ10) {
+			cdev->blklen = ((u32)params[7] << 8) | (u32)params[8];
+		} else if (params[0] == SCSI_READ12) {
+			cdev->blklen = ((u32)params[6] << 24) | ((u32)params[7] << 16) | ((u32)params[8] << 8) | (u32)params[9];
+		}
 
 		if (usbd_scsi_check_address_range(cdev, cdev->lba, cdev->blklen) < 0) {
 			return -1; /* error */
 		}
 
-		cdev->bot_state = USBD_MSC_DATA_IN;
-
-		/* cases 4,5 : Hi <> Dn */
-		if (cdev->cbw.DataTransferLength != (cdev->blklen * cdev->blksize)) {
+		/* case 4 : Hi > Dn */
+		if (cdev->blklen == 0 || (cdev->cbw.DataTransferLength > (cdev->blklen * cdev->blksize))) {
 			usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_CDB);
 			return -1;
 		}
+
+		cdev->bot_state = USBD_MSC_DATA_IN;
 	}
 	cdev->data_length = USBD_MSC_BUFLEN;
 
@@ -453,17 +468,23 @@ static int usbd_scsi_read10(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_write10
-*         Process Write10 command
+* @brief  Process Write10/12 command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-
-static int usbd_scsi_write10(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_write(usbd_msc_dev_t *cdev, u8 *params)
 {
 	u32 len;
 
 	if (cdev->bot_state == USBD_MSC_IDLE) { /* Idle */
+		/* case 3 : Hn < Do */
+		if (cdev->cbw.DataTransferLength == 0) {
+			usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_CDB);
+			cdev->phase_error = 1;
+			return -1;
+		}
+
 		/* case 8 : Hi <> Do */
 		if ((cdev->cbw.Flags & 0x80U) == 0x80U) {
 			usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_CDB);
@@ -484,7 +505,11 @@ static int usbd_scsi_write10(usbd_msc_dev_t  *cdev, u8 *params)
 
 		cdev->lba = ((u32)params[2] << 24) | ((u32)params[3] << 16) | ((u32)params[4] << 8) | (u32)params[5];
 
-		cdev->blklen = ((u32)params[7] << 8) | (u32)params[8];
+		if (params[0] == SCSI_WRITE10) {
+			cdev->blklen = ((u32)params[7] << 8) | (u32)params[8];
+		} else if (params[0] == SCSI_WRITE12) {
+			cdev->blklen = ((u32)params[6] << 24) | ((u32)params[7] << 16) | ((u32)params[8] << 8) | (u32)params[9];
+		}
 
 		/* check if LBA address is in the right range */
 		if (usbd_scsi_check_address_range(cdev, cdev->lba, cdev->blklen) < 0) {
@@ -493,7 +518,7 @@ static int usbd_scsi_write10(usbd_msc_dev_t  *cdev, u8 *params)
 
 		len = cdev->blklen * cdev->blksize;
 
-		/* cases 3,11,13 : Hn,Ho <> D0 */
+		/* case 11,13 : Ho <> Do */
 		if (cdev->cbw.DataTransferLength != len) {
 			usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_CDB);
 			return -1;
@@ -512,13 +537,12 @@ static int usbd_scsi_write10(usbd_msc_dev_t  *cdev, u8 *params)
 
 
 /**
-* @brief  usbd_scsi_verify10
-*         Process Verify10 command
+* @brief  Process Verify10 command
+* @param  cdev: Device instance
 * @param  params: Command parameters
-* @retval status
+* @retval Status
 */
-
-static int usbd_scsi_verify10(usbd_msc_dev_t  *cdev, u8 *params)
+static int usbd_scsi_verify10(usbd_msc_dev_t *cdev, u8 *params)
 {
 	if ((params[1] & 0x02U) == 0x02U) {
 		usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, INVALID_FIELED_IN_COMMAND);
@@ -533,13 +557,13 @@ static int usbd_scsi_verify10(usbd_msc_dev_t  *cdev, u8 *params)
 }
 
 /**
-* @brief  usbd_scsi_check_address_range
-*         Check address range
+* @brief  Check address range
+* @param  cdev: Device instance
 * @param  blk_offset: first block address
 * @param  blk_nbr: number of block to be processed
-* @retval status
+* @retval Status
 */
-static int usbd_scsi_check_address_range(usbd_msc_dev_t  *cdev, u32 blk_offset, u32 blk_nbr)
+static int usbd_scsi_check_address_range(usbd_msc_dev_t *cdev, u32 blk_offset, u32 blk_nbr)
 {
 	if ((blk_offset + blk_nbr) > cdev->num_sectors) {
 		usbd_scsi_sense_code(cdev, ILLEGAL_REQUEST, ADDRESS_OUT_OF_RANGE);
@@ -549,13 +573,19 @@ static int usbd_scsi_check_address_range(usbd_msc_dev_t  *cdev, u32 blk_offset, 
 }
 
 /**
-* @brief  usbd_scsi_process_read
-*         Handle Read Process
-* @retval status
+* @brief  Handle Read Process
+* @param  cdev: Device instance
+* @retval Status
 */
-static int usbd_scsi_process_read(usbd_msc_dev_t  *cdev)
+static int usbd_scsi_process_read(usbd_msc_dev_t *cdev)
 {
 	u32 len = cdev->blklen * cdev->blksize;
+
+	if (cdev->cbw.DataTransferLength < len) {
+		cdev->phase_error = 1;
+		len = cdev->cbw.DataTransferLength;
+		cdev->blklen = (len >> cdev->blkbits);
+	}
 
 	len = MIN(len, USBD_MSC_BUFLEN);
 
@@ -579,12 +609,11 @@ static int usbd_scsi_process_read(usbd_msc_dev_t  *cdev)
 }
 
 /**
-* @brief  usbd_scsi_process_write
-*         Handle Write Process
-* @retval status
+* @brief  Handle Write Process
+* @param  cdev: Device instance
+* @retval Status
 */
-
-static int usbd_scsi_process_write(usbd_msc_dev_t  *cdev)
+static int usbd_scsi_process_write(usbd_msc_dev_t *cdev)
 {
 	u32 len = cdev->blklen * cdev->blksize;
 

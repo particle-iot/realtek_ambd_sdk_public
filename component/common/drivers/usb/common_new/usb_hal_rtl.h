@@ -35,21 +35,6 @@
 
 /* Exported types ------------------------------------------------------------*/
 
-/* USB OTG speed */
-typedef enum {
-	USB_OTG_SPEED_HIGH         = 0U,
-	USB_OTG_SPEED_HIGH_IN_FULL = 1U,
-	USB_OTG_SPEED_LOW          = 2U,
-	USB_OTG_SPEED_FULL         = 3U
-} usb_otg_speed_t;
-
-/* USB OTG mode */
-typedef enum {
-	USB_OTG_MODE_DEVICE        = 0U,
-	USB_OTG_MODE_HOST          = 1U,
-	USB_OTG_MODE_DRD           = 2U
-} usb_otg_mode_t;
-
 /* Unaligned 32 bit type for DFIFO usage */
 typedef struct {
 	u32 data __PACKED;

@@ -29,8 +29,26 @@
 // and reset USB stack to avoid memory leak, only for example.
 #define CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS  1
 
-#define CDC_ACM_TX_BUF_SIZE			1024U
-#define CDC_ACM_RX_BUF_SIZE			1024U
+// USB speed
+#ifdef CONFIG_USB_FS
+#define CONFIG_CDC_ACM_SPEED					USB_SPEED_FULL
+#else
+#define CONFIG_CDC_ACM_SPEED					USB_SPEED_HIGH
+#endif
+
+// Echo asynchronously, for transfer size larger than packet size. While fpr
+// transfer size less than packet size, the synchronous way is preferred.
+#define CONFIG_USBD_CDC_ACM_ASYNC_XFER			0
+
+// Asynchronous transfer size
+#define CONFIG_CDC_ACM_ASYNC_XFER_SIZE			4096U
+
+// Do not change the settings unless indeed necessary
+#if (CONFIG_CDC_ACM_SPEED == USB_SPEED_HIGH)
+#define CDC_ACM_TX_XFER_SIZE					CDC_ACM_HS_BULK_IN_PACKET_SIZE
+#else
+#define CDC_ACM_TX_XFER_SIZE					CDC_ACM_FS_BULK_IN_PACKET_SIZE
+#endif
 
 /* Private types -------------------------------------------------------------*/
 
@@ -57,23 +75,34 @@ static usbd_cdc_acm_line_coding_t cdc_acm_line_coding;
 static u16 cdc_acm_ctrl_line_state;
 
 static usbd_config_t cdc_acm_cfg = {
-	.speed = USBD_SPEED_HIGH,
+	.speed = CONFIG_CDC_ACM_SPEED,
 	.max_ep_num = 4U,
+#ifdef CONFIG_USB_FS
+	.rx_fifo_size = 480U,
+	.nptx_fifo_size = 32U,
+#else
 	.rx_fifo_size = 512U,
 	.nptx_fifo_size = 256U,
+#endif
 	.ptx_fifo_size = 64U,
-	.intr_use_ptx_fifo = TRUE,
 	.dma_enable = FALSE,
 	.self_powered = CDC_ACM_SELF_POWERED,
 	.isr_priority = 4U,
 };
+
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+static u8 cdc_acm_async_xfer_buf[CONFIG_CDC_ACM_ASYNC_XFER_SIZE];
+static u16 cdc_acm_async_xfer_buf_pos = 0;
+static volatile int cdc_acm_async_xfer_busy = 0;
+static _sema cdc_acm_async_xfer_sema;
+#endif
 
 /* Private functions ---------------------------------------------------------*/
 
 /**
   * @brief  Initializes the CDC media layer
   * @param  None
-  * @retval status
+  * @retval Status
   */
 static u8 cdc_acm_cb_init(void)
 {
@@ -84,17 +113,25 @@ static u8 cdc_acm_cb_init(void)
 	lc->parity_type = 0x00;
 	lc->data_type = 0x08;
 
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+	cdc_acm_async_xfer_buf_pos = 0;
+	cdc_acm_async_xfer_busy = 0;
+#endif
+
 	return HAL_OK;
 }
 
 /**
   * @brief  DeInitializes the CDC media layer
   * @param  None
-  * @retval status
+  * @retval Status
   */
 static u8 cdc_acm_cb_deinit(void)
 {
-	/* Do nothing */
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+	cdc_acm_async_xfer_buf_pos = 0;
+	cdc_acm_async_xfer_busy = 0;
+#endif
 	return HAL_OK;
 }
 
@@ -102,12 +139,34 @@ static u8 cdc_acm_cb_deinit(void)
   * @brief  Data received over USB OUT endpoint are sent over CDC interface through this function.
   * @param  Buf: RX buffer
   * @param  Len: RX data length (in bytes)
-  * @retval status
+  * @retval Status
   */
 static u8 cdc_acm_cb_receive(u8 *buf, u32 len)
 {
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+	u8 ret = HAL_OK;
+	if (0 == cdc_acm_async_xfer_busy) {
+		if ((cdc_acm_async_xfer_buf_pos + len) > CONFIG_CDC_ACM_ASYNC_XFER_SIZE) {
+			len = CONFIG_CDC_ACM_ASYNC_XFER_SIZE - cdc_acm_async_xfer_buf_pos;  // extra data discarded
+		}
+
+		rtw_memcpy((void *)((u32)cdc_acm_async_xfer_buf + cdc_acm_async_xfer_buf_pos), buf, len);
+		cdc_acm_async_xfer_buf_pos += len;
+		if (cdc_acm_async_xfer_buf_pos >= CONFIG_CDC_ACM_ASYNC_XFER_SIZE) {
+			cdc_acm_async_xfer_buf_pos = 0;
+			rtw_up_sema(&cdc_acm_async_xfer_sema);
+		}
+	} else {
+		printf("\n[CDC] Busy, discarded %d bytes\n", len);
+		ret = HAL_BUSY;
+	}
+
+	usbd_cdc_acm_receive();
+	return ret;
+#else
 	usbd_cdc_acm_transmit(buf, len);
 	return usbd_cdc_acm_receive();
+#endif
 }
 
 /**
@@ -115,7 +174,7 @@ static u8 cdc_acm_cb_receive(u8 *buf, u32 len)
   * @param  cmd: Command code
   * @param  buf: Buffer containing command data (request parameters)
   * @param  len: Number of data to be sent (in bytes)
-  * @retval status
+  * @retval Status
   */
 static u8 cdc_acm_cb_setup(u8 cmd, u8 *pbuf, u16 len, u16 value)
 {
@@ -168,10 +227,16 @@ static u8 cdc_acm_cb_setup(u8 cmd, u8 *pbuf, u16 len, u16 value)
 				D1:	RTS, 0 - Deactivate, 1 - Activate
 				D0:	DTR, 0 - Not Present, 1 - Present
 		*/
-		if ((value & 0x02) && (cdc_acm_ctrl_line_state != value)) {
+		if (cdc_acm_ctrl_line_state != value) {
 			cdc_acm_ctrl_line_state = value;
-			printf("\nUSBD VCOM port activated\n");
+			if (value & 0x02) {
+				printf("\n[CDC] VCOM port activated/deactivated\n");
+#if CONFIG_CDC_ACM_NOTIFY
+				usbd_cdc_acm_notify_serial_state(CDC_ACM_CTRL_DSR | CDC_ACM_CTRL_DCD);
+#endif
+			}
 		}
+
 		break;
 
 	case CDC_SEND_BREAK:
@@ -196,34 +261,34 @@ static void cdc_acm_check_usb_status_thread(void *param)
 
 	for (;;) {
 		rtw_mdelay_os(100);
-		usb_status = usbd_get_attach_status();
+		usb_status = usbd_get_status();
 		if (old_usb_status != usb_status) {
 			old_usb_status = usb_status;
 			if (usb_status == USBD_ATTACH_STATUS_DETACHED) {
-				printf("\nUSB DETACHED\n");
+				printf("\n[CDC] USB DETACHED\n");
 				usbd_cdc_acm_deinit();
 				ret = usbd_deinit();
 				if (ret != 0) {
-					printf("\nFail to de-init USBD driver\n");
+					printf("\n[CDC] Fail to de-init USBD driver\n");
 					break;
 				}
 				rtw_mdelay_os(100);
-				printf("\nFree heap size: 0x%x\n", rtw_getFreeHeapSize());
+				printf("\n[CDC] Free heap size: 0x%lx\n", rtw_getFreeHeapSize());
 				ret = usbd_init(&cdc_acm_cfg);
 				if (ret != 0) {
-					printf("\nFail to re-init USBD driver\n");
+					printf("\n[CDC] Fail to re-init USBD driver\n");
 					break;
 				}
-				ret = usbd_cdc_acm_init(CDC_ACM_RX_BUF_SIZE, CDC_ACM_TX_BUF_SIZE, &cdc_acm_cb);
+				ret = usbd_cdc_acm_init(CONFIG_CDC_ACM_SPEED, &cdc_acm_cb);
 				if (ret != 0) {
-					printf("\nFail to re-init USB CDC ACM class\n");
+					printf("\n[CDC] Fail to re-init CDC ACM class\n");
 					usbd_deinit();
 					break;
 				}
 			} else if (usb_status == USBD_ATTACH_STATUS_ATTACHED) {
-				printf("\nUSB ATTACHED\n");
+				printf("\n[CDC] USB ATTACHED\n");
 			} else {
-				printf("\nUSB INIT\n");
+				printf("\n[CDC] USB INIT\n");
 			}
 		}
 	}
@@ -232,43 +297,119 @@ static void cdc_acm_check_usb_status_thread(void *param)
 }
 #endif // CONFIG_USDB_MSC_CHECK_USB_STATUS
 
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+static void cdc_acm_xfer_thread(void *param)
+{
+	u8 ret;
+	u8 *xfer_buf;
+	u32 xfer_len;
+
+	for (;;) {
+		if (rtw_down_sema(&cdc_acm_async_xfer_sema)) {
+			xfer_len = CONFIG_CDC_ACM_ASYNC_XFER_SIZE;
+			xfer_buf = cdc_acm_async_xfer_buf;
+			cdc_acm_async_xfer_busy = 1;
+			printf("\n[CDC] Start transfer %d bytes\n", CONFIG_CDC_ACM_ASYNC_XFER_SIZE);
+			while (xfer_len > 0) {
+				if (xfer_len > CDC_ACM_TX_XFER_SIZE) {
+					ret = usbd_cdc_acm_transmit(xfer_buf, CDC_ACM_TX_XFER_SIZE);
+					if (ret == HAL_OK) {
+						xfer_len -= CDC_ACM_TX_XFER_SIZE;
+						xfer_buf += CDC_ACM_TX_XFER_SIZE;
+					} else { // HAL_BUSY
+						printf("\n[CDC] Busy to transmit data, retry[1]\n");
+						rtw_udelay_os(200);
+					}
+				} else {
+					ret = usbd_cdc_acm_transmit(xfer_buf, xfer_len);
+					if (ret == HAL_OK) {
+						xfer_len = 0;
+						cdc_acm_async_xfer_busy = 0;
+						printf("\n[CDC] Transmit done\n");
+						break;
+					} else { // HAL_BUSY
+						printf("\n[CDC] Busy to transmit data, retry[2]\n");
+						rtw_udelay_os(200);
+					}
+				}
+			}
+		}
+	}
+}
+#endif
+
 static void example_usbd_cdc_acm_thread(void *param)
 {
 	int ret = 0;
 #if CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS
-	struct task_struct task;
+	struct task_struct check_task;
+#endif
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+	struct task_struct xfer_task;
 #endif
 
 	UNUSED(param);
 
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+	rtw_init_sema(&cdc_acm_async_xfer_sema, 0);
+#endif
+
 	ret = usbd_init(&cdc_acm_cfg);
 	if (ret != HAL_OK) {
-		printf("\nFail to init USB device driver\n");
-		goto example_usbd_cdc_acm_thread_fail;
+		printf("\n[CDC] Fail to init USB device driver\n");
+		goto exit_usbd_init_fail;
 	}
 
-	ret = usbd_cdc_acm_init(CDC_ACM_RX_BUF_SIZE, CDC_ACM_TX_BUF_SIZE, &cdc_acm_cb);
+	ret = usbd_cdc_acm_init(CONFIG_CDC_ACM_SPEED, &cdc_acm_cb);
 	if (ret != HAL_OK) {
-		printf("\nFail to init USB CDC ACM class\n");
-		usbd_deinit();
-		goto example_usbd_cdc_acm_thread_fail;
+		printf("\n[CDC] Fail to init CDC ACM class\n");
+		goto exit_usbd_cdc_acm_init_fail;
 	}
 
 #if CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS
-	ret = rtw_create_task(&task, "cdc_check_usb_status_thread", 512, tskIDLE_PRIORITY + 2, cdc_acm_check_usb_status_thread, NULL);
+	ret = rtw_create_task(&check_task, "cdc_check_usb_status_thread", 512, tskIDLE_PRIORITY + 2, cdc_acm_check_usb_status_thread, NULL);
 	if (ret != pdPASS) {
-		printf("\nFail to create USBD CDC ACM status check thread\n");
-		usbd_cdc_acm_deinit();
-		usbd_deinit();
-		goto example_usbd_cdc_acm_thread_fail;
+		printf("\n[CDC] Fail to create CDC ACM status check thread\n");
+		goto exit_create_check_task_fail;
 	}
-#endif // CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS
+#endif
+
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+	// The priority of transfer thread shall be lower than USB isr priority
+	ret = rtw_create_task(&xfer_task, "cdc_acm_xfer_thread", 512, tskIDLE_PRIORITY + 2, cdc_acm_xfer_thread, NULL);
+	if (ret != pdPASS) {
+		printf("\n[CDC] Fail to create CDC ACM transfer thread\n");
+		goto exit_create_xfer_task_fail;
+	}
+#endif
 
 	rtw_mdelay_os(100);
 
-	printf("\nUSBD CDC ACM demo started\n");
+	printf("\n[CDC] CDC ACM demo started\n");
 
-example_usbd_cdc_acm_thread_fail:
+	rtw_thread_exit();
+
+	return;
+
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+exit_create_xfer_task_fail:
+#if CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS
+	rtw_delete_task(&check_task);
+#endif
+#endif
+
+#if CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS
+exit_create_check_task_fail:
+	usbd_cdc_acm_deinit();
+#endif
+
+exit_usbd_cdc_acm_init_fail:
+	usbd_deinit();
+
+exit_usbd_init_fail:
+#if CONFIG_USBD_CDC_ACM_ASYNC_XFER
+	rtw_free_sema(&cdc_acm_async_xfer_sema);
+#endif
 
 	rtw_thread_exit();
 }
@@ -285,7 +426,7 @@ void example_usbd_cdc_acm(void)
 
 	ret = rtw_create_task(&task, "example_usbd_cdc_acm_thread", 1024, tskIDLE_PRIORITY + 5, example_usbd_cdc_acm_thread, NULL);
 	if (ret != pdPASS) {
-		printf("\nFail to create USBD CDC ACM thread\n");
+		printf("\n[CDC] Fail to create CDC ACM thread\n");
 	}
 }
 

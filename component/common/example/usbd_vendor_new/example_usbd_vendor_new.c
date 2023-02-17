@@ -28,7 +28,6 @@
 // This configuration is used to enable a thread to check hotplug event
 // and reset USB stack to avoid memory leak, only for example.
 #define CONFIG_USBD_VENDOR_CHECK_USB_STATUS  1
-_sema VendorTranSema;
 
 /* Private types -------------------------------------------------------------*/
 
@@ -36,37 +35,20 @@ _sema VendorTranSema;
 
 /* Private function prototypes -----------------------------------------------*/
 
-static void vendor_cb_transfer(void);
-
 /* Private variables ---------------------------------------------------------*/
 
-static usbd_vendor_cb_t vendor_cb = {
-	vendor_cb_transfer,
-};
-
 static usbd_config_t vendor_cfg = {
-	.speed = USBD_SPEED_HIGH,
+	.speed = USB_SPEED_HIGH,
 	.max_ep_num = 5U,
 	.rx_fifo_size = 512U,
 	.nptx_fifo_size = 256U,
 	.ptx_fifo_size = 248U,
-	.intr_use_ptx_fifo = TRUE,
 	.dma_enable = FALSE,
 	.self_powered = USBD_VENDOR_SELF_POWERED,
 	.isr_priority = 4U,
 };
 
 /* Private functions ---------------------------------------------------------*/
-
-/**
-  * @brief  Indicate it can send data
-  * @param  None
-  * @retval status
-  */
-static void vendor_cb_transfer(void)
-{
-	rtw_up_sema(&VendorTranSema);
-}
 
 #if CONFIG_USBD_VENDOR_CHECK_USB_STATUS
 static void vendor_check_usb_status_thread(void *param)
@@ -79,7 +61,7 @@ static void vendor_check_usb_status_thread(void *param)
 
 	for (;;) {
 		rtw_mdelay_os(100);
-		usb_status = usbd_get_attach_status();
+		usb_status = usbd_get_status();
 		if (old_usb_status != usb_status) {
 			old_usb_status = usb_status;
 			if (usb_status == USBD_ATTACH_STATUS_DETACHED) {
@@ -97,7 +79,7 @@ static void vendor_check_usb_status_thread(void *param)
 					printf("\nFail to re-init USBD driver\n");
 					break;
 				}
-				ret = usbd_vendor_init(&vendor_cb);
+				ret = usbd_vendor_init();
 				if (ret != 0) {
 					printf("\nFail to re-init USBD VENDOR class\n");
 					usbd_deinit();
@@ -115,20 +97,6 @@ static void vendor_check_usb_status_thread(void *param)
 }
 #endif // CONFIG_USBD_VENDOR_CHECK_USB_STATUS
 
-#if CONFIG_USBD_VENDOR_ISO_IN_TEST
-static void vendor_iso_in_send_thread(void *param)
-{
-	UNUSED(param);
-	
-	while(1) {
-		rtw_down_sema(&VendorTranSema);
-		usbd_vendor_send_data(USBD_VENDOR_IN_BUF_SIZE);
-	}
-
-	rtw_thread_exit();
-}
-#endif
-
 static void example_usbd_vendor_thread(void *param)
 {
 	int ret = 0;
@@ -144,7 +112,7 @@ static void example_usbd_vendor_thread(void *param)
 		goto example_usbd_vendor_thread_fail;
 	}
 
-	ret = usbd_vendor_init(&vendor_cb);
+	ret = usbd_vendor_init();
 	if (ret != HAL_OK) {
 		printf("\nFail to init USB vendor class\n");
 		usbd_deinit();
@@ -161,21 +129,9 @@ static void example_usbd_vendor_thread(void *param)
 	}
 #endif // CONFIG_USBD_VENDOR_CHECK_USB_STATUS
 
-	rtw_init_sema(&VendorTranSema, 0);
-
 	rtw_mdelay_os(100);
 
 	printf("\nUSB device vendor demo started...\n");
-
-#if CONFIG_USBD_VENDOR_ISO_IN_TEST
-	ret = rtw_create_task(&task, "vendor_iso_in_send_thread", 512, tskIDLE_PRIORITY + 2, vendor_iso_in_send_thread, NULL);
-	if (ret != pdPASS) {
-		printf("\nFail to create usbd vendor iso in send thread\n");
-		rtw_free_sema(&VendorTranSema);
-		usbd_vendor_deinit();
-		usbd_deinit();
-	}
-#endif
 
 example_usbd_vendor_thread_fail:
 

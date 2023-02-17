@@ -27,6 +27,12 @@ Setup Guide
         In order to run this application successfully, the hardware setup should be confirm before moving on.
         1. Connect Ameba to USB host end with a micro USB cable. Ameba DEV board has designed a micro USB
            connector on board.
+		   Specially for Win7 host, please manually install the CDC ACM driver RtkUsbCdcAcmSetup.INF,
+		   and before the installation, please modify the PID/VID information in this INF file as required:
+			[DeviceList]
+			%DESCRIPTION%=DriverInstall, USB\VID_0BDA&PID_8730
+			 [DeviceList.NTamd64] 
+			%DESCRIPTION%=DriverInstall, USB\VID_0BDA&PID_8730
         2. For GCC environmnet, type command "make menuconfig" and choose CONFIG USB => Enable USB => USB OTG Type => 
            USB_OTG_DEVICE_MODE_NEW and then choose USB Device Type => USB_DEVICE_CDC_ACM,
            which will auto-generate following lines in platform_autoconf.h:

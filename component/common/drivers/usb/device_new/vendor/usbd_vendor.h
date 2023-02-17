@@ -20,8 +20,8 @@
 
 /*  Vendor Test parameters */
 #define CONFIG_USBD_VENDOR_ISO_IN_TEST          0
-#define CONFIG_USBD_VENDOR_ISO_OUT_TEST         1
-#define CONFIG_USBD_VENDOR_BULK_INOUT_TEST      0
+#define CONFIG_USBD_VENDOR_ISO_OUT_TEST         0
+#define CONFIG_USBD_VENDOR_BULK_INOUT_TEST      1
 #define USBD_VENDOR_OUT_BUF_SIZE                       512U   /* out buffer size */
 #define USBD_VENDOR_IN_BUF_SIZE                       512U   /* in buffer size */
 #define USBD_VENDOR_ISO_OUT_XFER_CNT                  100
@@ -31,8 +31,8 @@
 #define USBD_VENDOR_PID                                 0x8730U
 #define USBD_VENDOR_CONFIG_DESC_SIZE                    69U
 #define USBD_VENDOR_LANGID_STRING                       0x0409U
-#define USBD_VENDOR_MFG_STRING_DESC_SIZE                9U
-#define USBD_VENDOR_PRODUCT_STRING_DESC_SIZE            18U
+#define USBD_VENDOR_MFG_STRING_DESC_SIZE                16U
+#define USBD_VENDOR_PRODUCT_STRING_DESC_SIZE            40U
 #define USBD_VENDOR_SN_STRING_DESC_SIZE                 26U
 #define USBD_VENDOR_SELF_POWERED						1U
 
@@ -55,13 +55,8 @@
 /* Exported types ------------------------------------------------------------*/
 
 typedef struct {
-	void(* transfer)(void);
-} usbd_vendor_cb_t;
-
-typedef struct {
 	u8 *out_buf;
 	u8 *in_buf;
-	usbd_vendor_cb_t *cb;
 	usb_dev_t *dev;
 } usbd_vendor_dev_t;
 
@@ -71,7 +66,7 @@ typedef struct {
 
 /* Exported functions --------------------------------------------------------*/
 
-u8 usbd_vendor_init(usbd_vendor_cb_t *cb);
+u8 usbd_vendor_init(void);
 u8 usbd_vendor_deinit(void);
 void usbd_vendor_send_data(u16 len);
 

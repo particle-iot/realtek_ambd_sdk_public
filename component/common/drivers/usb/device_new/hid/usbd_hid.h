@@ -42,13 +42,14 @@
 #define HID_PID                                 0x4042U
 #define HID_CONFIG_DESC_SIZ						34U
 #define HID_LANGID_STRING                       0x0409U
-#define HID_MFG_STRING_DESC_SIZE                9U
-#define HID_PRODUCT_STRING_DESC_SIZE            18U
-#define HID_SN_STRING_DESC_SIZE                 12U
+#define HID_MFG_STRING_DESC_SIZE                16U
+#define HID_PRODUCT_STRING_DESC_SIZE            34U
+#define HID_SN_STRING_DESC_SIZE                 26U
 #define HID_SELF_POWERED						1U
 
 
 /*wValue of HID report request*/
+#define HID_DESC 			0x21
 #define HID_REPORT_DESC 	0x22
 
 // String index
@@ -75,15 +76,16 @@
 
 typedef struct {
 	void(* init)(void);
- 	void(* deinit)(void);
-	void(*transmit_complete)(void);
+	void(* deinit)(void);
+	void(* setup)(void);
+	void(* transmit_complete)(void);
 } usbd_hid_usr_cb_t;
 
 
 struct usb_hid_device_t {
 	u32 intr_in_state;
 	u8 *intr_in_buf;
-	
+
 	u32 Protocol;
 	u32 IdleState;
 	u32 AltSetting;

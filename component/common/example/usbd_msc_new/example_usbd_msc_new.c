@@ -28,12 +28,11 @@
 /* Private variables ---------------------------------------------------------*/
 
 static usbd_config_t msc_cfg = {
-	.speed = USBD_SPEED_HIGH,
+	.speed = USB_SPEED_HIGH,
 	.max_ep_num = 4U,
 	.rx_fifo_size = 512U,
 	.nptx_fifo_size = 256U,
 	.ptx_fifo_size = 64U,
-	.intr_use_ptx_fifo = TRUE,
 	.dma_enable = FALSE,
 	.self_powered = USBD_MSC_SELF_POWERED,
 	.isr_priority = 4U,
@@ -55,7 +54,7 @@ static void msc_check_usb_status_thread(void *param)
 
 	for (;;) {
 		rtw_mdelay_os(100);
-		usb_status = usbd_get_attach_status();
+		usb_status = usbd_get_status();
 		if (old_usb_status != usb_status) {
 			old_usb_status = usb_status;
 			if (usb_status == USBD_ATTACH_STATUS_DETACHED) {

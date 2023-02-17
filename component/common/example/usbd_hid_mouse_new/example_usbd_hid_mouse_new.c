@@ -48,6 +48,8 @@ static void hid_send_mouse_data(struct mouse_data *data);
 
 /* Private variables ---------------------------------------------------------*/
 
+_sema connect_sema;
+
 #if CONSTANT_MOUSE_DATA
 struct mouse_data mdata[] = {
 	{0,   0,   0,  50,   0,   0},	//move the cursor 50 pixels to the right
@@ -105,12 +107,11 @@ const COMMAND_TABLE   mouse_data_cmd[] = {
 
 
 static usbd_config_t hid_cfg = {
-	.speed = USBD_SPEED_FULL,
+	.speed = USB_SPEED_FULL,
 	.max_ep_num = 4U,
 	.rx_fifo_size = 512U,
 	.nptx_fifo_size = 256U,
 	.ptx_fifo_size = 64U,
-	.intr_use_ptx_fifo = FALSE,
 	.dma_enable = FALSE,
 	.self_powered = HID_SELF_POWERED,
 	.isr_priority = 4U,
@@ -129,6 +130,11 @@ static void hid_mouse_deinit(void)
 	printf("User callback: hid mouse deinit\n");
 }
 
+static void hid_mouse_setup(void)
+{
+	rtw_up_sema(&connect_sema);
+}
+
 static void hid_transmit_complete(void)
 {
 	printf("User callback: transmit complete\n");
@@ -137,6 +143,7 @@ static void hid_transmit_complete(void)
 usbd_hid_usr_cb_t hid_usr_cb = {
 	.init = hid_mouse_init,
 	.deinit = hid_mouse_deinit,
+	.setup = hid_mouse_setup,
 	.transmit_complete = hid_transmit_complete,
 };
 
@@ -144,8 +151,10 @@ usbd_hid_usr_cb_t hid_usr_cb = {
 /*brief: send mouse data.(wrapper function usbd_hid_send_data())*/
 static void hid_send_mouse_data(struct mouse_data *data)
 {
-	u32 status;
-	char byte[4];
+	u8 byte[4];
+
+	memset(byte, 0, 4);
+
 	/* mouse protocol:
 		BYTE0 
 			|-- bit7~bit3: RSVD
@@ -157,12 +166,15 @@ static void hid_send_mouse_data(struct mouse_data *data)
 		BYTE3: wheel value, -128~127
 	*/
 	
-	if(data->left != 0)
+	if (data->left != 0) {
 		byte[0] |= MOUSE_BUTTON_LEFT;
-	if(data->right != 0)
+	}
+	if (data->right != 0) {
 		byte[0] |= MOUSE_BUTTON_RIGHT;
-	if(data->middle != 0)
+	}
+	if (data->middle != 0) {
 		byte[0] |= MOUSE_BUTTON_MIDDLE;
+	}
 		
 	byte[0] |= MOUSE_BUTTON_RESERVED;
 	byte[1] = data->x_axis;
@@ -186,7 +198,7 @@ static void hid_check_usb_status_thread(void *param)
 
 	for (;;) {
 		rtw_mdelay_os(100);
-		usb_status = usbd_get_attach_status();
+		usb_status = usbd_get_status();
 		if (old_usb_status != usb_status) {
 			old_usb_status = usb_status;
 			if (usb_status == USBD_ATTACH_STATUS_DETACHED) {
@@ -195,7 +207,7 @@ static void hid_check_usb_status_thread(void *param)
 				usbd_deinit();
 
 				rtw_mdelay_os(100);
-				printf("Free heap size:%x\n", rtw_getFreeHeapSize());
+				printf("Free heap size: 0x%lx\n", rtw_getFreeHeapSize());
 
 				ret = usbd_init(&hid_cfg);
 				if (ret != 0) {
@@ -223,22 +235,13 @@ static void hid_check_usb_status_thread(void *param)
 static void example_usbd_hid_mouse_thread(void *param)
 {
 	int ret = 0;
-	int i = 0;
+	u32 i = 0;
 
 	UNUSED(param);
 
-		//DBG_ERR_MSG_ON(MODULE_USB_OTG);
-		//DBG_WARN_MSG_ON(MODULE_USB_OTG);
-		//DBG_INFO_MSG_ON(MODULE_USB_OTG);
-		//ConfigDebug[LEVEL_TRACE] |= BIT(MODULE_USB_OTG);
-
-		//DBG_ERR_MSG_ON(MODULE_USB_CLASS);
-		//DBG_WARN_MSG_ON(MODULE_USB_CLASS);
-		//DBG_INFO_MSG_ON(MODULE_USB_CLASS);
-		//ConfigDebug[LEVEL_TRACE] |= BIT(MODULE_USB_CLASS);
-	
-
 	printf("\nUSBD HID demo start\n");
+
+	rtw_init_sema(&connect_sema, 0);
 
 	ret = usbd_init(&hid_cfg);
 	if (ret != 0) {
@@ -265,12 +268,13 @@ static void example_usbd_hid_mouse_thread(void *param)
 #endif // CONFIG_USBD_HID_CHECK_USB_STATUS
 
 #if CONSTANT_MOUSE_DATA
-	while (usbd_get_attach_status() != USBD_ATTACH_STATUS_ATTACHED) {
+	while (usbd_get_status() != USBD_ATTACH_STATUS_ATTACHED) {
 		rtw_mdelay_os(100);
 	}
 	
 	for (i = 0; i < sizeof(mdata) / sizeof(struct mouse_data); i++) {
 		rtw_mdelay_os(500);
+		rtw_down_sema(&connect_sema);
 		printf("send constant mouse data\n");
 		hid_send_mouse_data(&mdata[i]);
 	}
