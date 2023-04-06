@@ -1,6 +1,6 @@
 //----------------------------------------------------------------------------//
 //#include <flash/stm32_flash.h>
-#include "platform_opts.h"
+#include "platform_autoconf.h"
 #if !defined(CONFIG_MBED_ENABLED) && !defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)
 #include "main.h"
 #include <lwip_netconf.h>
@@ -389,6 +389,7 @@ static void wifi_handshake_done_hdl( char* buf, int buf_len, int flags, void* us
 		rtw_up_sema(&join_user_data->join_sema);
 }
 #if CONFIG_LWIP_LAYER
+#if !defined(CONFIG_MBED_ENABLED) && !defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)
 extern void dhcp_stop(struct netif *netif);
 #endif
 
@@ -2041,6 +2042,7 @@ int wifi_set_group_id(unsigned char value)
 #endif
 
 #ifdef CONFIG_PMKSA_CACHING
+extern int wext_set_pmk_cache_enable(const char *ifname, __u8 value);
 int wifi_set_pmk_cache_enable(unsigned char value)
 {
 	return wext_set_pmk_cache_enable(WLAN0_NAME, value);
