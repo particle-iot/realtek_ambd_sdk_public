@@ -92,7 +92,7 @@ u8* _freertos_zmalloc(u32 sz)
 	return pbuf;	
 }
 
-void _freertos_mfree(u8 *pbuf, u32 sz)
+__weak void _freertos_mfree(u8 *pbuf, u32 sz)
 {
 	/* To avoid gcc warnings */
 	( void ) sz;
