@@ -15,13 +15,14 @@
   */
 
 /** Add Includes here **/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include <os_msg.h>
 #include <os_task.h>
 #include "ble_throughput_app_task.h"
 #include "app_msg.h"
 #include "gap.h"
-#include "ble_throughput_user_cmd.h"
 #include "gap_msg.h"
 
 extern T_GAP_DEV_STATE ble_throughput_gap_dev_state;
@@ -51,9 +52,6 @@ void ble_throughput_app_main_task(void *p_param)
     os_msg_queue_create(&ble_throughput_evt_queue_handle, BLE_THROUGHPUT_MAX_NUMBER_OF_EVENT_MESSAGE, sizeof(unsigned char));
 
     gap_start_bt_stack(ble_throughput_evt_queue_handle, ble_throughput_io_queue_handle, BLE_THROUGHPUT_MAX_NUMBER_OF_GAP_MESSAGE);
-
-    data_uart_init(ble_throughput_evt_queue_handle, ble_throughput_io_queue_handle);
-    user_cmd_init(&user_cmd_if, "ble_throughput_test");
 
     while (true)
     {
@@ -88,24 +86,25 @@ void ble_throughput_app_task_init()
 
 void ble_throughput_app_task_deinit(void)
 {
+	if (ble_throughput_app_task_handle) {
+		os_task_delete(ble_throughput_app_task_handle);
+	}
 	if (ble_throughput_io_queue_handle) {
 		os_msg_queue_delete(ble_throughput_io_queue_handle);
 	}
 	if (ble_throughput_evt_queue_handle) {
 		os_msg_queue_delete(ble_throughput_evt_queue_handle);
 	}
-	if (ble_throughput_app_task_handle) {
-		os_task_delete(ble_throughput_app_task_handle);
-	}
 	ble_throughput_io_queue_handle = NULL;
 	ble_throughput_evt_queue_handle = NULL;
 	ble_throughput_app_task_handle = NULL;
 
 	ble_throughput_gap_dev_state.gap_init_state = 0;
+	ble_throughput_gap_dev_state.gap_adv_sub_state = 0;
 	ble_throughput_gap_dev_state.gap_adv_state = 0;
 	ble_throughput_gap_dev_state.gap_scan_state = 0;
 	ble_throughput_gap_dev_state.gap_conn_state = 0;
 
 }
-
+#endif
 

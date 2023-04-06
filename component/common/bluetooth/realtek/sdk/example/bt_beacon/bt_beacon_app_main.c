@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_BEACON) && CONFIG_BT_BEACON
 #include "platform_stdlib.h"
 #include <os_sched.h>
 #include <string.h>
@@ -31,8 +33,6 @@
 #include "wifi_constants.h"
 #include "wifi_conf.h"
 #include "rtk_coex.h"
-#include "FreeRTOS.h"
-#include "task.h"
 
 /** @defgroup  BEACON_MAIN Beacon Main
     * @brief Main file to initialize hardware and BT stack and start task scheduling
@@ -132,11 +132,10 @@ static const uint8_t alt_beacon_adv_data[] =
  * NOTE: This function shall be called before @ref bte_init is invoked.
  * @return void
  */
-extern void gap_config_hci_task_secure_context(uint32_t size);
 static void bt_stack_config_init(void)
 {
     gap_config_max_le_link_num(0);
-    gap_config_hci_task_secure_context (280);
+    gap_config_max_le_paired_device(0);
 }
 
 /**
@@ -230,11 +229,10 @@ int bt_beacon_app_main(void)
 	app_le_gap_init();
 	pwr_mgr_init();
 	task_init();
-	printf("\n\r\n\r[BT Beacon Example] %s\n\r\n\r", (beacon_type == I_BEACON)? "Apple iBeacon": (beacon_type == ALT_BEACON)? "AltBeacon":"");
+	printf("[BT Beacon] %s\r\n", (beacon_type == I_BEACON)? "Apple iBeacon": (beacon_type == ALT_BEACON)? "AltBeacon":"");
 	return 0;
 }
 
-extern void wifi_btcoex_set_bt_on(void);
 int bt_beacon_app_init(int type)
 {	
 	//int bt_stack_already_on = 0;
@@ -242,14 +240,14 @@ int bt_beacon_app_init(int type)
 
 	/*Wait WIFI init complete*/
 	while(!(wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		os_delay(1000);
 	}
 
 	//judge BLE Beacon is already on
 	le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	if (new_state.gap_init_state == GAP_INIT_STATE_STACK_READY) {
 		//bt_stack_already_on = 1;
-		printf("[BLE Beacon]BT Stack already on\n\r");
+		printf("[BLE Beacon]BT Stack already on\r\n");
 		return 0;
 	}
 	else {
@@ -261,12 +259,10 @@ int bt_beacon_app_init(int type)
 
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	}while(new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
 
-	/*Start BT WIFI coexistence*/
-	wifi_btcoex_set_bt_on();
 	return 0;
 }
 
@@ -281,18 +277,18 @@ void bt_beacon_app_deinit(void)
 	T_GAP_DEV_STATE state;
 	le_get_gap_param(GAP_PARAM_DEV_STATE , &state);
 	if (state.gap_init_state != GAP_INIT_STATE_STACK_READY) {
-		printf("BT Stack is not running\n\r");
+		printf("BT Stack is not running\r\n");
 	}
 #if F_BT_DEINIT
 	else {
 		bte_deinit();
 		bt_trace_uninit();
 		memset(&bt_beacon_gap_dev_state, 0, sizeof(T_GAP_DEV_STATE));
-		printf("BT Stack deinitalized\n\r");
+		printf("BT Stack deinitalized\r\n");
 	}
 #endif
 }
 
 /** @} */ /* End of group BEACON_MAIN */
-
+#endif
 

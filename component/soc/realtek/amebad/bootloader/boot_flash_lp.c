@@ -27,13 +27,13 @@ CPU_PWR_SEQ SYSPLL_ON_SEQ[] = {
 	{0x48000280, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			0x00000003},
 	{0x00000000, CPU_PWRSEQ_CMD_DELAY,		0x00000000,			4}, //delay 2us
 	{0x48000280, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			(0x01 << 2)},
-	{0x480002B0, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			(0x01 << 31)},
-	{0x00000000, CPU_PWRSEQ_CMD_DELAY,		0x00000000,			400}, //delay 400us
+	{0x480002B0, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			(0x01U << 31)},
+	{0x00000000, CPU_PWRSEQ_CMD_DELAY,		0x00000000,			4}, //delay 400us
 	{0x48000264, CPU_PWRSEQ_CMD_WRITE,		(0x01 << 29),			0x00000000},
 	{0x480002B0, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			(0x03 << 29)},
 	{0x48000200, CPU_PWRSEQ_CMD_WRITE,		(0x01 << 21),			0x00000000},
-	//{0x480003F4, CPU_PWRSEQ_CMD_POLLING,	(0x01 << 12),			(0x01 << 12)}, /* temp use delay because FPGA dont have this function */
-	{0x00000000, CPU_PWRSEQ_CMD_DELAY,		0x00000000,			100}, //delay 100us
+	{0x480003F4, CPU_PWRSEQ_CMD_POLLING,	(0x01 << 12),			(0x01 << 12)}, /* temp use delay because FPGA dont have this function */
+	//{0x00000000, CPU_PWRSEQ_CMD_DELAY,		0x00000000,			100}, //delay 100us
 	{0x480002B0, CPU_PWRSEQ_CMD_WRITE,		0x00000000,			(0x01 << 8)},
 
 	/* End */
@@ -82,7 +82,7 @@ FLASH_BOOT_TEXT_SECTION
 static u8 BOOT_FLASH_OTA_MMU(u8 idx, u32 vAddr, u32 pAddr, u32 *size)
 {
 	IMAGE_HEADER *Img2Hdr, *Img2DataHdr, *PsramHdr;
-	u32 ImgSize, IsMinus, Offset;
+	u32 ImgSize, IsMinus, Offset, SBheader;
 	u8 res = _TRUE;
 
 	/* Calculate mapping offset */
@@ -114,6 +114,12 @@ static u8 BOOT_FLASH_OTA_MMU(u8 idx, u32 vAddr, u32 pAddr, u32 *size)
 	if(idx == 1) {
 		PsramHdr = (IMAGE_HEADER *)(vAddr + ImgSize);
 		ImgSize += (IMAGE_HEADER_LEN + PsramHdr->image_size);
+
+		/*check if KM4 image contains secure image2 signature*/		
+		SBheader = Img2Hdr->sb_header;
+		if (SBheader != 0xFFFFFFFF) {
+			ImgSize += 0x1000;
+		} 
 	}
 
 	ImgSize = (((ImgSize -1) >> 12) + 1) << 12;  /* 4KB aligned */
@@ -230,6 +236,10 @@ u32 BOOT_FLASH_Reason_Set(void)
 		tmp_reason |= BIT_BOOT_BOD_RESET_HAPPEN;
 	} else {
 		tmp_reason &= ~BIT_BOOT_BOD_RESET_HAPPEN;
+	}	
+
+	if ((tmp_reason & BIT_BOOT_KM4SYS_RESET_HAPPEN) && (tmp_reason & BIT_BOOT_KM4WDG_RESET_HAPPEN)) {
+		tmp_reason &= ~BIT_BOOT_KM4WDG_RESET_HAPPEN;
 	}	
 
 	if (tmp_reason == 0) {
@@ -358,6 +368,21 @@ void BOOT_FLASH_DSLP_FlashInit(void)
 	FLASH_Init(RRAM->FLASH_cur_bitmode);
 }
 
+BOOT_RAM_TEXT_SECTION
+void BOOT_FLASH_Invalidate_Auto_Write(void)
+{
+	/* Auto write related bits in valid command register are all set to 0,
+		just need to invalidate write single and write enable cmd in auto mode. */
+	SPIC_TypeDef *spi_flash = SPIC;
+
+	/* Disable SPI_FLASH User Mode */
+	spi_flash->ssienr = 0;
+	
+	/* Invalidate write single and write enable cmd in auto mode */
+	spi_flash->wr_single = 0x0;
+	spi_flash->wr_enable = 0x0;
+}
+
 //3 Image 1
 FLASH_BOOT_TEXT_SECTION
 void BOOT_FLASH_Image1(void)
@@ -392,6 +417,9 @@ void BOOT_FLASH_Image1(void)
 
 	/* temp for test */
 	BOOT_FLASH_fasttimer_init();
+
+	/* invalidate spic auto write */
+	BOOT_FLASH_Invalidate_Auto_Write();
 
 	/* set dslp boot reason */
 	if (HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_AON_BOOT_REASON1) & BIT_AON_BOOT_EXIT_DSLP) {

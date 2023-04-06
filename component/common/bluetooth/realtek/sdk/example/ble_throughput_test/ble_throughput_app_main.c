@@ -15,6 +15,8 @@
   */
 
 /** Add Includes here **/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include "os_sched.h"
 #include "ble_throughput_app_task.h"
@@ -25,16 +27,14 @@
 #include <gap_config.h>
 #include <bte.h>
 #include <wifi_constants.h>
-#include "FreeRTOS.h"
-
+#include <wifi/wifi_conf.h>
+#include "rtk_coex.h"
 
 #if F_BT_LE_GATT_CLIENT_SUPPORT
 #include "profile_client.h"
 #endif
 #include "gap_msg.h"
 #include "ble_throughput_app.h"
-#include "ble_throughput_user_cmd.h"
-#include "data_uart.h"
 
 #if F_BT_LE_GAP_PERIPHERAL_SUPPORT
 #include "gap_adv.h"
@@ -128,6 +128,7 @@ static uint8_t adv_data[] =
 void ble_throughput_bt_stack_config_init(void)
 {
     gap_config_max_le_link_num(APP_MAX_LINKS);
+    gap_config_max_le_paired_device(APP_MAX_LINKS);
 }
 /**
   * @brief  Initiate GAP parameters, these params will affect the local device's behavior.
@@ -294,7 +295,7 @@ int ble_throughput_app_init(void)
 
 	/*Wait WIFI init complete*/
 	while( !wifi_is_up(RTW_STA_INTERFACE) ) {
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		os_delay(1000);
 	}
 	
 	//wifi_disable_powersave();
@@ -302,7 +303,7 @@ int ble_throughput_app_init(void)
 	le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	if (new_state.gap_init_state == GAP_INIT_STATE_STACK_READY) {
 		bt_stack_already_on = 1;
-		printf("[BLE Central]BT Stack already on\n\r");
+		printf("[BLE Throughput Test]BT Stack already on\r\n");
 		return 0;
 	}
 	else
@@ -312,12 +313,10 @@ int ble_throughput_app_init(void)
 
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	}while(new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
 
-	/*Start BT WIFI coexistence*/
-	wifi_btcoex_set_bt_on();
 	return 0;
 
 }
@@ -336,4 +335,4 @@ void ble_throughput_app_deinit(void)
 	}
 #endif
 }
-
+#endif

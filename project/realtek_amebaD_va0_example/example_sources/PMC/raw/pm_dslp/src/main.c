@@ -104,7 +104,14 @@ void main(void)
 	}
 	DSLP_Para.dlps_enable = TRUE;
 
+	asm volatile ("cpsid i" : : : "memory");
+	
 	ipc_send_message(IPC_INT_KM4_TICKLESS_INDICATION, (u32)&DSLP_Para);
+	
+	asm volatile ("wfe");
+	asm volatile ("wfe");
+
+	asm volatile ("cpsie i" : : : "memory");
 
 	vTaskStartScheduler();
 

@@ -12,12 +12,13 @@ enum { __FILE_NUM__ = 0 };
 * @version  v0.1
 *********************************************************************************************************
 */
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include "trace_app.h"
 #include "string.h"
 #include "bt_airsync_config_app_task.h"
 #include "airsync_ble_service.h"
 #include "app_msg.h"
-
 /********************************************************************************************************
 * local static variables defined here, only used in this source file.
 ********************************************************************************************************/
@@ -300,3 +301,4 @@ T_SERVER_ID airsync_add_service(void *p_func)
     return airsync_service_id;
 }
 
+#endif

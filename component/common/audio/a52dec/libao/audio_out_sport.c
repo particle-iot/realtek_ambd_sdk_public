@@ -40,7 +40,7 @@
 #include <platform/platform_stdlib.h>
 #include "rl6548.h"
 
-#if CONFIG_EXAMPLE_AUDIO_AC3
+//#if CONFIG_EXAMPLE_AUDIO_AC3
 static void sport_close (ao_instance_t * _instance);
 
 typedef struct sport_instance_s {
@@ -479,4 +479,4 @@ ao_instance_t * ao_sport_open (void)
 
 #endif
 
-#endif
+//#endif

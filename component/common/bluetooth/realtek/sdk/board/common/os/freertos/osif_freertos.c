@@ -10,6 +10,7 @@
 #include <timers.h>
 #include <queue.h>
 #include <semphr.h>
+#include <list.h>
 
 #include <osif.h>
 #include "bt_board.h"
@@ -31,6 +32,9 @@
 #include "cmsis_iar.h"
 #endif
 #endif
+
+#define CONFIG_OSIF_DEBUG        0
+
 /****************************************************************************/
 /* Check if in task context (true), or isr context (false)                  */
 /****************************************************************************/
@@ -67,8 +71,13 @@ uint32_t osif_sys_time_get(void)
 /****************************************************************************/
 bool osif_sched_start(void)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s enter\r\n", __FUNCTION__);
+#endif
     vTaskStartScheduler();
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -77,8 +86,13 @@ bool osif_sched_start(void)
 /****************************************************************************/
 bool osif_sched_stop(void)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s enter\r\n", __FUNCTION__);
+#endif
     vTaskEndScheduler();
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -87,8 +101,13 @@ bool osif_sched_stop(void)
 /****************************************************************************/
 bool osif_sched_suspend(void)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s enter\r\n", __FUNCTION__);
+#endif
     vTaskSuspendAll();
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -97,8 +116,13 @@ bool osif_sched_suspend(void)
 /****************************************************************************/
 bool osif_sched_resume(void)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s enter\r\n", __FUNCTION__);
+#endif
     xTaskResumeAll();
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -108,10 +132,16 @@ bool osif_sched_resume(void)
 bool osif_task_create(void **pp_handle, const char *p_name, void (*p_routine)(void *),
                       void *p_param, uint16_t stack_size, uint16_t priority)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x p_name %s p_routine 0x%x p_param 0x%x stack_size %d priority %d\r\n", __FUNCTION__,
+                                                    pp_handle, p_name, p_routine, p_param, stack_size, priority);
+#endif
+
     BaseType_t ret;
 
     if (pp_handle == NULL)
     {
+        printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
@@ -119,10 +149,14 @@ bool osif_task_create(void **pp_handle, const char *p_name, void (*p_routine)(vo
                       p_param, priority, (TaskHandle_t *)pp_handle);
     if (ret == pdPASS)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s *pp_handle 0x%x\r\n", __FUNCTION__, *pp_handle);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -132,8 +166,13 @@ bool osif_task_create(void **pp_handle, const char *p_name, void (*p_routine)(vo
 /****************************************************************************/
 bool osif_task_delete(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     vTaskDelete((TaskHandle_t)p_handle);
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -142,7 +181,13 @@ bool osif_task_delete(void *p_handle)
 /****************************************************************************/
 bool osif_task_suspend(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     vTaskSuspend((TaskHandle_t)p_handle);
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -151,8 +196,13 @@ bool osif_task_suspend(void *p_handle)
 /****************************************************************************/
 bool osif_task_resume(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     vTaskResume((TaskHandle_t)p_handle);
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -161,8 +211,13 @@ bool osif_task_resume(void *p_handle)
 /****************************************************************************/
 bool osif_task_yield(void)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s enter\r\n", __FUNCTION__);
+#endif
     taskYIELD();
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -171,13 +226,19 @@ bool osif_task_yield(void)
 /****************************************************************************/
 bool osif_task_handle_get(void **pp_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x\r\n", __FUNCTION__, pp_handle);
+#endif
     if (pp_handle == NULL)
     {
+        printf("%s fail!(*pp_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
     *pp_handle = (void *)xTaskGetCurrentTaskHandle();
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s *pp_handle 0x%x\r\n", __FUNCTION__, *pp_handle);
+#endif
     return true;
 }
 
@@ -186,13 +247,19 @@ bool osif_task_handle_get(void **pp_handle)
 /****************************************************************************/
 bool osif_task_priority_get(void *p_handle, uint16_t *p_priority)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x, p_priority 0x%x\r\n", __FUNCTION__, p_handle, p_priority);
+#endif
     if (p_priority == NULL)
     {
+        printf("%s fail!(p_priority == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
     *p_priority = uxTaskPriorityGet((TaskHandle_t)p_handle);
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s *p_priority 0x%x\r\n", __FUNCTION__, *p_priority);
+#endif
     return true;
 }
 
@@ -201,8 +268,13 @@ bool osif_task_priority_get(void *p_handle, uint16_t *p_priority)
 /****************************************************************************/
 bool osif_task_priority_set(void *p_handle, uint16_t priority)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x priority %d\r\n", __FUNCTION__, p_handle, priority);
+#endif
     vTaskPrioritySet((TaskHandle_t)p_handle, priority);
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -212,21 +284,31 @@ bool osif_signal_init(void)
     sig_handle = (void *)xSemaphoreCreateCounting(1, 0);
     if (sig_handle != NULL)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s sig_handle 0x%x\r\n", __FUNCTION__, sig_handle);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail! sig_handle = NULL\r\n", __FUNCTION__);
         return false;
     }
 }
 
 void osif_signal_deinit(void)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s sig_handle 0x%x\r\n", __FUNCTION__, sig_handle);
+#endif
     if (sig_handle != NULL)
     {
         vSemaphoreDelete(sig_handle);
         sig_handle = NULL;
     }
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
 }
 
 /****************************************************************************/
@@ -234,7 +316,9 @@ void osif_signal_deinit(void)
 /****************************************************************************/
 bool osif_task_signal_send(void *p_handle, uint32_t signal)
 {
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s sig_handle 0x%x\r\n", __FUNCTION__, sig_handle);
+#endif
     if (!sig_handle)
     {
         printf("osif_task_signal_send: sig_handle is null");
@@ -255,6 +339,9 @@ bool osif_task_signal_send(void *p_handle, uint32_t signal)
 
         portEND_SWITCHING_ISR(task_woken);
     }
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 
 }
@@ -264,7 +351,9 @@ bool osif_task_signal_send(void *p_handle, uint32_t signal)
 /****************************************************************************/
 bool osif_task_signal_recv(uint32_t *p_handle, uint32_t wait_ms)
 {
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s sig_handle 0x%x wait_ms 0x%x\r\n", __FUNCTION__, sig_handle, wait_ms);
+#endif
     BaseType_t ret;
     TickType_t wait_ticks;
 
@@ -298,10 +387,14 @@ bool osif_task_signal_recv(uint32_t *p_handle, uint32_t wait_ms)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -311,16 +404,23 @@ bool osif_task_signal_recv(uint32_t *p_handle, uint32_t wait_ms)
 /****************************************************************************/
 bool osif_task_signal_clear(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x...\r\n", __FUNCTION__, p_handle);
+#endif
     BaseType_t ret;
 
 extern BaseType_t xTaskNotifyStateClear( TaskHandle_t xTask );
     ret = xTaskNotifyStateClear((TaskHandle_t)p_handle);
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -339,7 +439,7 @@ uint32_t osif_lock(void)
     }
     else
     {
-		hci_board_debug("warn: unexpected isr mode\r\n");
+        printf("warn: unexpected isr mode\r\n");
         //flags = taskENTER_CRITICAL_FROM_ISR();
     }
 
@@ -358,7 +458,7 @@ void osif_unlock(uint32_t flags)
     }
     else
     {
-		hci_board_debug("warn: unexpected isr mode\r\n");
+        printf("warn: unexpected isr mode\r\n");
         //taskEXIT_CRITICAL_FROM_ISR(flags);
     }
 
@@ -369,18 +469,26 @@ void osif_unlock(uint32_t flags)
 /****************************************************************************/
 bool osif_sem_create(void **pp_handle, uint32_t init_count, uint32_t max_count)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x init_count %d max_count %d\r\n", __FUNCTION__, pp_handle, init_count, max_count);
+#endif
     if (pp_handle == NULL)
     {
+        printf("%s fail!(pp_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
     *pp_handle = (void *)xSemaphoreCreateCounting(max_count, init_count);
     if (*pp_handle != NULL)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s *pp_handle 0x%x\r\n", __FUNCTION__, *pp_handle);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail! *pp_handle = NULL\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -390,8 +498,13 @@ bool osif_sem_create(void **pp_handle, uint32_t init_count, uint32_t max_count)
 /****************************************************************************/
 bool osif_sem_delete(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     vSemaphoreDelete((QueueHandle_t)p_handle);
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -400,6 +513,9 @@ bool osif_sem_delete(void *p_handle)
 /****************************************************************************/
 bool osif_sem_take(void *p_handle, uint32_t wait_ms)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x wait_ms 0x%x\r\n", __FUNCTION__, p_handle, wait_ms);
+#endif
     BaseType_t ret;
 
     if (osif_task_context_check() == true)
@@ -428,10 +544,14 @@ bool osif_sem_take(void *p_handle, uint32_t wait_ms)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -441,6 +561,9 @@ bool osif_sem_take(void *p_handle, uint32_t wait_ms)
 /****************************************************************************/
 bool osif_sem_give(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     BaseType_t ret;
 
     if (osif_task_context_check() == true)
@@ -458,10 +581,14 @@ bool osif_sem_give(void *p_handle)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -471,18 +598,26 @@ bool osif_sem_give(void *p_handle)
 /****************************************************************************/
 bool osif_mutex_create(void **pp_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x\r\n", __FUNCTION__, pp_handle);
+#endif
     if (pp_handle == NULL)
     {
+        printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
     *pp_handle = (void *)xSemaphoreCreateRecursiveMutex();
     if (*pp_handle != NULL)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s *pp_handle 0x%x\r\n", __FUNCTION__, *pp_handle);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail! *pp_handle = NULL\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -492,14 +627,21 @@ bool osif_mutex_create(void **pp_handle)
 /****************************************************************************/
 bool osif_mutex_delete(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     if (xSemaphoreGetMutexHolder((QueueHandle_t)p_handle) == NULL)
     {
         vSemaphoreDelete((QueueHandle_t)p_handle);
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
         /* Do not delete mutex if held by a task */
+        printf("%s Do not delete mutex because it held by a task\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -509,6 +651,9 @@ bool osif_mutex_delete(void *p_handle)
 /****************************************************************************/
 bool osif_mutex_take(void *p_handle, uint32_t wait_ms)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x wait_ms 0x%x\r\n", __FUNCTION__, p_handle, wait_ms);
+#endif
     TickType_t wait_ticks;
     BaseType_t ret;
 
@@ -524,10 +669,14 @@ bool osif_mutex_take(void *p_handle, uint32_t wait_ms)
     ret = xSemaphoreTakeRecursive((QueueHandle_t)p_handle, wait_ticks);
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -537,15 +686,22 @@ bool osif_mutex_take(void *p_handle, uint32_t wait_ms)
 /****************************************************************************/
 bool osif_mutex_give(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     BaseType_t ret;
 
     ret = xSemaphoreGiveRecursive((QueueHandle_t)p_handle);
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -555,19 +711,27 @@ bool osif_mutex_give(void *p_handle)
 /****************************************************************************/
 bool osif_msg_queue_create(void **pp_handle, uint32_t msg_num, uint32_t msg_size)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x msg_num %d msg_size %d\r\n", __FUNCTION__, pp_handle, msg_num, msg_size);
+#endif
     if (pp_handle == NULL)
     {
+        printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
     *pp_handle = (void *)xQueueCreate(msg_num, msg_size);
+
     if (*pp_handle != NULL)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s *pp_handle 0x%x\r\n", __FUNCTION__, *pp_handle);
+#endif
         return true;
     }
     else
     {
-        
+        printf("%s fail! *pp_handle = NULL\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -577,12 +741,18 @@ bool osif_msg_queue_create(void **pp_handle, uint32_t msg_num, uint32_t msg_size
 /****************************************************************************/
 bool osif_msg_queue_delete(void *p_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x\r\n", __FUNCTION__, p_handle);
+#endif
     if (p_handle == NULL)
     {
+        printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
     vQueueDelete((QueueHandle_t)p_handle);
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -591,8 +761,12 @@ bool osif_msg_queue_delete(void *p_handle)
 /****************************************************************************/
 bool osif_msg_queue_peek(void *p_handle, uint32_t *p_msg_num)
 {
-    if (p_handle == NULL)
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x p_msg_num 0x%x\r\n", __FUNCTION__, p_handle, p_msg_num);
+#endif
+    if (p_handle == NULL || p_msg_num == NULL )
     {
+        printf("%s fail!(p_handle == NULL || p_msg_num == NULL)\r\n", __FUNCTION__);
         return false;
     }
     if (osif_task_context_check() == true)
@@ -603,7 +777,9 @@ bool osif_msg_queue_peek(void *p_handle, uint32_t *p_msg_num)
     {
         *p_msg_num = (uint32_t)uxQueueMessagesWaitingFromISR((QueueHandle_t)p_handle);
     }
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s *p_msg_num 0x%x\r\n", __FUNCTION__, *p_msg_num);
+#endif
     return true;
 }
 
@@ -612,10 +788,14 @@ bool osif_msg_queue_peek(void *p_handle, uint32_t *p_msg_num)
 /****************************************************************************/
 bool osif_msg_send(void *p_handle, void *p_msg, uint32_t wait_ms)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x p_msg 0x%x wait_ms 0x%x\r\n", __FUNCTION__, p_handle, p_msg, wait_ms);
+#endif
     BaseType_t ret;
 
     if (p_handle == NULL)
     {
+        printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
@@ -644,10 +824,14 @@ bool osif_msg_send(void *p_handle, void *p_msg, uint32_t wait_ms)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -657,9 +841,13 @@ bool osif_msg_send(void *p_handle, void *p_msg, uint32_t wait_ms)
 /****************************************************************************/
 bool osif_msg_recv(void *p_handle, void *p_msg, uint32_t wait_ms)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x p_msg 0x%x wait_ms 0x%x\r\n", __FUNCTION__, p_handle, p_msg, wait_ms);
+#endif
     BaseType_t ret;
     if (p_handle == NULL)
     {
+        printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
     if (osif_task_context_check() == true)
@@ -688,6 +876,9 @@ bool osif_msg_recv(void *p_handle, void *p_msg, uint32_t wait_ms)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
@@ -701,9 +892,13 @@ bool osif_msg_recv(void *p_handle, void *p_msg, uint32_t wait_ms)
 /****************************************************************************/
 bool osif_msg_peek(void *p_handle, void *p_msg, uint32_t wait_ms)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s p_handle 0x%x p_msg 0x%x wait_ms 0x%x\r\n", __FUNCTION__, p_handle, p_msg, wait_ms);
+#endif
     BaseType_t ret;
     if (p_handle == NULL)
     {
+        printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
     if (osif_task_context_check() == true)
@@ -728,10 +923,14 @@ bool osif_msg_peek(void *p_handle, void *p_msg, uint32_t wait_ms)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -762,6 +961,7 @@ void *osif_mem_aligned_alloc(RAM_TYPE ram_type, size_t size, uint8_t alignment)
     p = pvPortMalloc(size + sizeof(void *) + alignment);
     if (p == NULL)
     {
+        printf("%s fail!(p == NULL)\r\n", __FUNCTION__);
         return p;
     }
 
@@ -779,6 +979,7 @@ void osif_mem_free(void *p_block)
 {
     if (p_block == NULL)
     {
+        printf("%s fail!(p_block == NULL)\r\n", __FUNCTION__);
         return;
     }
     vPortFree(p_block);
@@ -792,6 +993,7 @@ void osif_mem_aligned_free(void *p_block)
     void *p;
     if (p_block == NULL)
     {
+        printf("%s fail!(p_block == NULL)\r\n", __FUNCTION__);
         return;
     }
     memcpy(&p, (uint8_t *)p_block - sizeof(void *), sizeof(void *));
@@ -813,13 +1015,19 @@ size_t osif_mem_peek(RAM_TYPE ram_type)
 /****************************************************************************/
 bool osif_timer_id_get(void **pp_handle, uint32_t *p_timer_id)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x p_timer_id 0x%x\r\n", __FUNCTION__, pp_handle, p_timer_id);
+#endif
     if (pp_handle == NULL || *pp_handle == NULL)
     {
+        printf("%s fail!(pp_handle == NULL || *pp_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
     *p_timer_id = (uint32_t)pvTimerGetTimerID((TimerHandle_t) * pp_handle);
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s *p_timer_id %d\r\n", __FUNCTION__, *p_timer_id);
+#endif
     return true;
 }
 
@@ -830,10 +1038,14 @@ bool osif_timer_id_get(void **pp_handle, uint32_t *p_timer_id)
 bool osif_timer_create(void **pp_handle, const char *p_timer_name, uint32_t timer_id,
                        uint32_t interval_ms, bool reload, void (*p_timer_callback)(void *))
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x p_timer_name %s timer_id %d interval_ms %d reload %d p_timer_callback 0x%x\r\n", __FUNCTION__,                                                     pp_handle, p_timer_name, timer_id, interval_ms, reload, p_timer_callback);
+#endif
     TickType_t timer_ticks;
 
     if (pp_handle == NULL || p_timer_callback == NULL)
     {
+        printf("%s fail!(pp_handle == NULL || p_timer_callback == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
@@ -843,16 +1055,23 @@ bool osif_timer_create(void **pp_handle, const char *p_timer_name, uint32_t time
     {
         *pp_handle = xTimerCreate(p_timer_name, timer_ticks, (BaseType_t)reload,
                                   (void *)timer_id, (TimerCallbackFunction_t)p_timer_callback);
+#if CONFIG_OSIF_DEBUG
+    printf("%s *pp_handle 0x%x\r\n", __FUNCTION__, *pp_handle);
+#endif
         if (*pp_handle == NULL)
         {
+            printf("%s fail!(p_handle == NULL)\r\n", __FUNCTION__);
             return false;
         }
     }
     else
     {
+        printf("%s fail!(p_handle != NULL)\r\n", __FUNCTION__);
         return false;
     }
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 
@@ -861,10 +1080,14 @@ bool osif_timer_create(void **pp_handle, const char *p_timer_name, uint32_t time
 /****************************************************************************/
 bool osif_timer_start(void **pp_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x *pp_handle 0x%x\r\n", __FUNCTION__, pp_handle, *pp_handle);
+#endif
     BaseType_t ret;
 
     if (pp_handle == NULL || *pp_handle == NULL)
     {
+        printf("%s fail!(pp_handle == NULL || *pp_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
@@ -883,10 +1106,14 @@ bool osif_timer_start(void **pp_handle)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__, ret);
         return false;
     }
 }
@@ -896,11 +1123,15 @@ bool osif_timer_start(void **pp_handle)
 /****************************************************************************/
 bool osif_timer_restart(void **pp_handle, uint32_t interval_ms)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x *pp_handle 0x%x interval_ms %d\r\n", __FUNCTION__, pp_handle, *pp_handle, interval_ms);
+#endif
     TickType_t timer_ticks;
     BaseType_t ret;
 
     if (pp_handle == NULL || *pp_handle == NULL)
     {
+        printf("%s fail!(pp_handle == NULL || *pp_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
@@ -921,10 +1152,14 @@ bool osif_timer_restart(void **pp_handle, uint32_t interval_ms)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -934,10 +1169,14 @@ bool osif_timer_restart(void **pp_handle, uint32_t interval_ms)
 /****************************************************************************/
 bool osif_timer_stop(void **pp_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x *pp_handle 0x%x\r\n", __FUNCTION__, pp_handle, *pp_handle);
+#endif
     BaseType_t ret;
 
     if (pp_handle == NULL || *pp_handle == NULL)
     {
+        printf("%s fail!(pp_handle == NULL || *pp_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
@@ -956,10 +1195,14 @@ bool osif_timer_stop(void **pp_handle)
 
     if (ret == pdTRUE)
     {
+#if CONFIG_OSIF_DEBUG
+        printf("%s exit\r\n", __FUNCTION__);
+#endif
         return true;
     }
     else
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 }
@@ -969,6 +1212,9 @@ bool osif_timer_stop(void **pp_handle)
 /****************************************************************************/
 bool osif_timer_delete(void **pp_handle)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x *pp_handle 0x%x\r\n", __FUNCTION__, pp_handle, *pp_handle);
+#endif
     if (pp_handle == NULL || *pp_handle == NULL)
     {
         return false;
@@ -976,20 +1222,72 @@ bool osif_timer_delete(void **pp_handle)
 
     if (xTimerDelete((TimerHandle_t)*pp_handle, (TickType_t)0) == pdFAIL)
     {
+        printf("%s fail!\r\n", __FUNCTION__);
         return false;
     }
 
     *pp_handle = NULL;
-
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
 /****************************************************************************/
 /* get timer state                                                          */
 /****************************************************************************/
+#if (tskKERNEL_VERSION_MAJOR >= 10) && (tskKERNEL_VERSION_MINOR >= 2) && (tskKERNEL_VERSION_BUILD >= 0)
+typedef struct tmrTimerControl { /* The old naming convention is used to prevent breaking kernel aware debuggers. */
+    const char
+	*pcTimerName;		/*<< Text name.  This is not used by the kernel, it is included simply to make debugging easier. */ /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+	ListItem_t				xTimerListItem;		/*<< Standard linked list item as used by all kernel features for event management. */
+	TickType_t				xTimerPeriodInTicks;/*<< How quickly and often the timer expires. */
+	void 					*pvTimerID;			/*<< An ID to identify the timer.  This allows the timer to be identified when the same callback is used for multiple timers. */
+	TimerCallbackFunction_t	pxCallbackFunction;	/*<< The function that will be called when the timer expires. */
+#if( configUSE_TRACE_FACILITY == 1 )
+	UBaseType_t			uxTimerNumber;		/*<< An ID assigned by trace tools such as FreeRTOS+Trace */
+#endif
+	uint8_t 				ucStatus;			/*<< Holds bits to say if the timer was statically allocated or not, and if it is active or not. */
+} Timer_t;
+
 bool osif_timer_state_get(void **pp_handle, uint32_t *p_timer_state)
 {
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x p_timer_state 0x%x\r\n", __FUNCTION__, pp_handle, p_timer_state);
+#endif
+
+    Timer_t *pxTimer = (Timer_t *) *pp_handle;
+
+    if (pp_handle == NULL || *pp_handle == NULL) {
+        printf("%s fail!(pp_handle == NULL || *pp_handle == NULL)\r\n", __FUNCTION__);
+        return false;
+    }
+
+    if (osif_task_context_check() == true) {
+
+        taskENTER_CRITICAL();
+        if (pxTimer->xTimerListItem.pvContainer == NULL) {
+            *p_timer_state = 0;
+        } else {
+            *p_timer_state = 1;
+        }
+        taskEXIT_CRITICAL();
+    } else {
+        //*p_timer_state = (uint32_t)xTimerIsTimerActiveFromISR((TimerHandle_t) * pp_handle);
+    }
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
+    return true;
+}
+#else
+bool osif_timer_state_get(void **pp_handle, uint32_t *p_timer_state)
+{
+#if CONFIG_OSIF_DEBUG
+    printf("%s pp_handle 0x%x p_timer_state 0x%x\r\n", __FUNCTION__, pp_handle, p_timer_state);
+#endif
     if (pp_handle == NULL || *pp_handle == NULL)
     {
+        printf("%s fail!(pp_handle == NULL || *pp_handle == NULL)\r\n", __FUNCTION__);
         return false;
     }
 
@@ -1001,8 +1299,12 @@ bool osif_timer_state_get(void **pp_handle, uint32_t *p_timer_state)
     {
         //*p_timer_state = (uint32_t)xTimerIsTimerActiveFromISR((TimerHandle_t) * pp_handle);
     }
+#if CONFIG_OSIF_DEBUG
+    printf("%s exit\r\n", __FUNCTION__);
+#endif
     return true;
 }
+#endif
 /****************************************************************************/
 /* Dump software timer                                                      */
 /****************************************************************************/
@@ -1018,6 +1320,6 @@ extern void rtw_create_secure_context(u32 secure_stack_size);
 void osif_create_secure_context(uint32_t size)
 {
 #if defined(configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1)
-	rtw_create_secure_context(size);
+    rtw_create_secure_context(size);
 #endif    
 }

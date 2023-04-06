@@ -53,7 +53,7 @@ typedef struct
 /** @addtogroup  SCATTERNET_RANDOM
 	* @{
 	*/
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 typedef struct
 {
 	uint8_t 	 is_exist;
@@ -81,7 +81,7 @@ extern uint8_t ble_scatternet_dev_list_count;
 bool ble_scatternet_link_mgr_add_device(uint8_t *bd_addr, uint8_t bd_type);
 void ble_scatternet_link_mgr_clear_device_list(void);
 
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 uint32_t ble_scatternet_app_save_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_addr);
 uint32_t ble_scatternet_app_load_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_addr);
 #endif

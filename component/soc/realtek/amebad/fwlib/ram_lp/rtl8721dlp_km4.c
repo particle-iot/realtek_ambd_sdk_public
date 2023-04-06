@@ -42,6 +42,7 @@ CPU_PWR_SEQ SYSPLL_OFF_SEQ[] = {
 };
 
 CPU_PWR_SEQ HSPWR_ON_SEQ[] = {
+	{0x4800021C, CPU_PWRSEQ_CMD_WRITE,		(0x011 << 0),			0x00000000}, /* reset 21c[0]&[4]for WDG reset */
 	{0x00000000, CPU_PWRSEQ_CMD_LOGE,		0x00000000,			0x00000000/* or 1 */}, /* Enable LOG or not */
 
 	/* 1. Enable SWR */ //PMC
@@ -186,6 +187,7 @@ u8 km4_sleep_type;
 u32 km4_sleep_timeout = 0xffffffff;
 u32 km4_wake_event;
 
+_OPTIMIZE_O3_
 u32 km4_status_on(void)
 {
 	u32 Temp = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_LP_KM4_CTRL);
@@ -241,6 +243,7 @@ void km4_power_gate(void)
 	pmu_release_wakelock(PMU_OS);
 }
 
+_OPTIMIZE_O3_
 void km4_power_wake(void)
 {
 	//u32 Temp = 0;
@@ -280,6 +283,7 @@ void km4_clock_gate(void)
 	pmu_release_wakelock(PMU_OS);
 }
 
+_OPTIMIZE_O3_
 void km4_clock_on(void)
 {
 	if (km4_status_on())
@@ -321,6 +325,7 @@ u32 km4_suspend(u32 type)
 	return ret;
 }
 
+_OPTIMIZE_O3_
 void km4_wake_event_update(void)
 {
 	/*the timer is used to control KM4 max sleep time*/
@@ -347,16 +352,19 @@ void km4_wake_event_update(void)
 
 }
 
+_OPTIMIZE_O3_
 void km4_set_wake_event(u32 wevt)
 {
 	km4_wake_event |= wevt;
 }
 
+_OPTIMIZE_O3_
 u32 km4_get_wake_event(void)
 {
 	return km4_wake_event ;
 }
 
+_OPTIMIZE_O3_
 void km4_resume(void)
 {
 	if (km4_status_on())
@@ -379,6 +387,7 @@ void km4_resume(void)
 		km4_wake_event = 0;
 }
 
+_OPTIMIZE_O3_
 void km4_flash_highspeed_suspend(u32 Protection)
 {
 	FLASH_ClockSwitch(BIT_SHIFT_FLASH_CLK_XTAL, Protection);
@@ -392,6 +401,7 @@ void km4_flash_highspeed_init(void)
 	flash_operation_config();
 }
 
+_OPTIMIZE_O3_
 void km4_flash_highspeed_resume(u32 Protection)
 {
 	BOOT_ROM_CM4PON((u32)SYSPLL_ON_SEQ);
@@ -408,6 +418,9 @@ void km4_tickless_ipc_int(VOID *Data, u32 IrqStatus, u32 ChanNum)
 	u32 Rtemp;
 	KM4SLEEP_ParamDef * psleep_param;
 	
+	NVIC_ClearPendingIRQ(UART_LOG_IRQ_LP);
+	/* Clear LOGUART Rx FIFO */
+	while(LOGUART_Readable()) LOGUART_GetChar(_FALSE);	
 	InterruptEn(UART_LOG_IRQ_LP, 10);
 	IPCM0_DEV->IPCx_USR[IPC_INT_CHAN_SHELL_SWITCH] = 0x00000000;
 
@@ -421,7 +434,9 @@ void km4_tickless_ipc_int(VOID *Data, u32 IrqStatus, u32 ChanNum)
 			SOCPS_AONTimer(psleep_param->sleep_time);
 			SOCPS_AONTimerCmd(ENABLE);
 		}
+		FLASH_Write_Lock();
 		SOCPS_DeepSleep_RAM();
+		FLASH_Write_Unlock();
 	}
 
 	km4_sleep_type = psleep_param->sleep_type;

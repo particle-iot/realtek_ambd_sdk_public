@@ -1,4 +1,7 @@
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
+#include <stdio.h>
 #include "app_msg.h"
 #include "trace_app.h"
 #include "gap_scan.h"
@@ -6,8 +9,6 @@
 #include "gap_msg.h"
 #include "gap_bond_le.h"
 #include "ble_throughput_app.h"
-#include "ble_throughput_user_cmd.h"
-#include "user_cmd_parse.h"
 #include "profile_server.h"
 #include "gap_adv.h"
 #include "ble_throughput_vendor_tp_service.h"
@@ -114,7 +115,7 @@ void ble_throughput_206_tp_notification_tx_conn_param_update_event(uint8_t conn_
     }
     else
     {
-        data_uart_print("[206][TX] error: Invalid conn parameter\r\n");
+        printf("[206][TX] error: Invalid conn parameter\r\n");
         le_disconnect(0);
     }
 
@@ -233,7 +234,7 @@ void ble_throughput_206_dump_result(void)
                      g_206_tp_test_param.end_time,
                      g_206_tp_test_param.elapsed_time,
                      g_206_tp_test_param.data_rate);
-    data_uart_print("[206][TX]: conn_interval %d, latency %d, length %d, count = %d,  begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
+    printf("[206][TX]: conn_interval %d, latency %d, length %d, count = %d,  begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
                     g_206_prefer_param.con_interval,
                     g_206_prefer_param.conn_slave_latency,
                     g_206_prefer_param.length,
@@ -245,13 +246,13 @@ void ble_throughput_206_dump_result(void)
     APP_PRINT_ERROR2("[206][TX]: count %d count_remain %d",
                      g_206_prefer_param.count, g_206_tp_test_param.count_remain);
 	
-    data_uart_print("[206][TX]: count %d count_remain %d\r\n",
+    printf("[206][TX]: count %d count_remain %d\r\n",
                     g_206_prefer_param.count, g_206_tp_test_param.count_remain);
 }
 
 void ble_throughput_206_link_disconnected(uint8_t conn_id, uint16_t reason)
 {
-    data_uart_print("Disc reason 0x%04x\r\n", reason);
+    printf("Disc reason 0x%04x\r\n", reason);
     ble_throughput_206_dump_result();
 }
 
@@ -298,7 +299,7 @@ void ble_throughput_207_tp_rx_conn_param_update_event(uint8_t conn_id)
 
     APP_PRINT_INFO3("GAP_MSG_LE_CONN_PARAM_UPDATE update success, con_interval = 0x%x, conn_slave_latency = 0x%x, conn_supervision_timeout = 0x%x",
                     con_interval, conn_slave_latency, conn_supervision_timeout);
-	data_uart_print("GAP_MSG_LE_CONN_PARAM_UPDATE update success, con_interval = 0x%x, conn_slave_latency = 0x%x, conn_supervision_timeout = 0x%x",
+	printf("GAP_MSG_LE_CONN_PARAM_UPDATE update success, con_interval = 0x%x, conn_slave_latency = 0x%x, conn_supervision_timeout = 0x%x\r\n",
                     con_interval, conn_slave_latency, conn_supervision_timeout);
 }
 
@@ -356,7 +357,7 @@ void ble_throughput_207_tp_handle_write_data(void *pdata)
                                      i, p_value[i],
                                      g_207_tp_test_param.initial_value,
                                      g_207_tp_test_param.count);
-                    data_uart_print("[207][RX]: data check failed\r\n");
+                    printf("[207][RX]: data check failed\r\n");
                     le_disconnect(0);
                     return;
                 }
@@ -367,7 +368,7 @@ void ble_throughput_207_tp_handle_write_data(void *pdata)
     {
         APP_PRINT_ERROR1("[207][RX]: Len check failed: length %d",
                          p_simp_client_cb_data->msg_data.write.u.write_data.length);
-        data_uart_print("[207][RX]: Len check failed: length %d\r\n",
+        printf("[207][RX]: Len check failed: length %d\r\n",
                         p_simp_client_cb_data->msg_data.write.u.write_data.length);
         le_disconnect(0);
         return;
@@ -399,7 +400,7 @@ void ble_throughput_207_dump_result(void)
                      g_207_tp_test_param.end_time,
                      g_207_tp_test_param.elapsed_time,
                      g_207_tp_test_param.data_rate);
-    data_uart_print("[207][RX]: conn_interval %d, latency %d, length %d, begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
+    printf("[207][RX]: conn_interval %d, latency %d, length %d, begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
                     g_207_prefer_param.con_interval,
                     g_207_prefer_param.conn_slave_latency,
                     g_207_prefer_param.length,
@@ -410,13 +411,13 @@ void ble_throughput_207_dump_result(void)
     APP_PRINT_ERROR2("[207][RX]: count %d rx_count %d",
                      g_207_prefer_param.count, g_207_tp_test_param.count);
 
-    data_uart_print("[207][RX]: count %d rx_count %d\r\n",
+    printf("[207][RX]: count %d rx_count %d\r\n",
                     g_207_prefer_param.count, g_207_tp_test_param.count);
 }
 
 void ble_throughput_207_link_disconnected(uint8_t conn_id, uint16_t reason)
 {
-    data_uart_print("\r\nDisc reason 0x%04x\r\n", reason);
+    printf("\r\nDisc reason 0x%04x\r\n", reason);
     ble_throughput_207_dump_result();
 }
-
+#endif

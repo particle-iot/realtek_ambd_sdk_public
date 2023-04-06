@@ -125,6 +125,14 @@
   * @}
   */
 
+typedef enum IC_Version_Definition {
+    IC_VERSION_0    =  0,
+    IC_VERSION_1    =  1,
+    IC_VERSION_2    =  2,
+    IC_VERSION_3    =  3,
+    IC_VERSION_4    =  4,
+} IC_VERSION_E;
+
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup SYSCFG_Exported_Functions SYSCFG Exported Functions
   * @{
@@ -143,7 +151,7 @@ _LONG_CALL_ void SYSCFG_ROMINFO_Set(void);
 /* Registers Definitions --------------------------------------------------------*/
 
 static inline u32 
-SYSCFG_CUTVersion(void)
+SYSCFG_CUTVersion_U(void)
 {
 	u32 tmp = (HAL_READ32(0x48000000, 0x000C) >> 8) & 0xF; //get chip version from REG_AON_BOOT_REASON1
 
@@ -157,7 +165,36 @@ SYSCFG_CUTVersion(void)
 			return tmp;
 	}
 }
+static inline u32 
+SYSCFG_CUTVersion(void)
+{
+	u32 vendortmp = (HAL_READ32(0x48000000, 0x03F0) >> 4) & 0x3;
+	u32 cuttmp = HAL_READ32(0x48000000, 0x03F0) & 0xF;
+	
+	if(0x0 == vendortmp) 
+		return SYSCFG_CUTVersion_U();
+	else if(0x1 == vendortmp)
+		return cuttmp;
+	else {
+		DBG_8195A("CUT VERSION ERROR!\n");
+		return cuttmp;
+	}
+}
 
+static inline u32
+SYSCFG_ICVersion(void)
+{
+	u32 vendortmp = (HAL_READ32(0x48000000, 0x03F0) >> 4) & 0x3;
+	
+	if(0x1 == vendortmp)
+		return (SYSCFG_CUTVersion() + 4);
+	else if(0x0 == vendortmp)
+		return SYSCFG_CUTVersion();
+	else {
+		DBG_8195A("IC VERSION ERROR!\n");
+		return SYSCFG_CUTVersion();
+	}
+}
 /** @} */
 
 /**

@@ -11,8 +11,15 @@ DIR_CLASS = $(BASEDIR)/component/common/drivers/usb/host
 ifeq ($(CONFIG_USBH_MSC),y)
 DIR = $(DIR_CLASS)/msc/src
 endif
+ifeq ($(CONFIG_USBH_UVC),y)
+DIR = $(DIR_CLASS)/uvc/src
+IFLAGS += -I$(BASEDIR)/component/common/video/v4l2/inc
+endif
 ifeq ($(CONFIG_USBH_VENDOR),y)
 DIR = $(DIR_CLASS)/vendor/src
+endif
+ifeq ($(CONFIG_USBH_CDC_ACM),y)
+DIR = $(DIR_CLASS)/cdc_acm/src
 endif
 IFLAGS += -I$(DIR)/../inc
 IFLAGS += -I$(DIR_OTG)/inc
@@ -34,8 +41,22 @@ CSRC = $(DIR)/us.c \
     $(DIR)/scsi/scsi_eh.c
 endif
 
+ifeq ($(CONFIG_USBH_UVC),y)
+CSRC = $(DIR)/uvc_ctrl.c \
+    $(DIR)/uvc_driver.c \
+    $(DIR)/uvc_intf.c \
+    $(DIR)/uvc_queue.c \
+    $(DIR)/uvc_status.c \
+    $(DIR)/uvc_v4l2.c \
+    $(DIR)/uvc_video.c
+endif
+
 ifeq ($(CONFIG_USBH_VENDOR),y)
 CSRC = $(DIR)/usbh_vendor.c
+endif
+
+ifeq ($(CONFIG_USBH_CDC_ACM),y)
+CSRC = $(DIR)/usbh_cdc_acm.c
 endif
 
 #*****************************************************************************#

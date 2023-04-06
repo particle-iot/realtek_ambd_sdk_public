@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include <os_msg.h>
 #include <os_task.h>
 #include <gap.h>
@@ -27,7 +29,6 @@
 #include "bt_airsync_config_app_task.h"
 #include "bt_airsync_config_app_flags.h"
 #include "bt_airsync_config_peripheral_app.h"
-
 
 /** @defgroup  PERIPH_APP_TASK Peripheral App Task
     * @brief This file handles the implementation of application task related functions.
@@ -51,10 +52,12 @@ static void *app_task_handle = NULL;   //!< APP Task handle
 static void *evt_queue_handle = NULL;  //!< Event queue handle
 static void *io_queue_handle = NULL;   //!< IO queue handle
 extern T_GAP_DEV_STATE bt_airsync_config_gap_dev_state;
+T_BT_AIRSYNC_CONFIG_TX_DATA bt_airsync_config_tx_data;
 
 /*============================================================================*
  *                              Functions
  *============================================================================*/
+
 void bt_airsync_config_send_msg(uint16_t sub_type)
 {
 	uint8_t event = EVENT_IO_TO_APP;
@@ -66,12 +69,13 @@ void bt_airsync_config_send_msg(uint16_t sub_type)
 
 	if (evt_queue_handle != NULL && io_queue_handle != NULL) {
 		if (os_msg_send(io_queue_handle, &io_msg, 0) == false) {
-			BC_printf("bt airsync config send msg fail: subtype 0x%x", io_msg.subtype);
+			BC_printf("bt airsync config send msg fail: subtype 0x%x\r\n", io_msg.subtype);
 		} else if (os_msg_send(evt_queue_handle, &event, 0) == false) {
-			BC_printf("bt airsync config send event fail: subtype 0x%x", io_msg.subtype);
+			BC_printf("bt airsync config send event fail: subtype 0x%x\r\n", io_msg.subtype);
 		}
 	}
 }
+
 void bt_airsync_config_app_main_task(void *p_param);
 
 /**
@@ -81,11 +85,11 @@ void bt_airsync_config_app_main_task(void *p_param);
 void bt_airsync_config_app_task_init(void)
 {
 	if (app_task_handle == NULL) {
-		BC_printf("bt_airsync_config_app_task_init\n\r");
+		BC_printf("bt_airsync_config_app_task_init\r\n");
     	os_task_create(&app_task_handle, "bt_airsync_config_app", bt_airsync_config_app_main_task, 0, APP_TASK_STACK_SIZE,
                    APP_TASK_PRIORITY);
 	} else {
-		BC_printf("bt_airsync_config_app_main_task already on\n\r");
+		BC_printf("bt_airsync_config_app_main_task already on\r\n");
 	}
 }
 
@@ -96,14 +100,14 @@ void bt_airsync_config_app_task_init(void)
 void bt_airsync_config_app_task_deinit(void)
 {
 	//gap_stop_bt_stack
+	if (app_task_handle) {
+		os_task_delete(app_task_handle);
+	}
 	if (io_queue_handle) {
 		os_msg_queue_delete(io_queue_handle);
 	}
 	if (evt_queue_handle) {
 		os_msg_queue_delete(evt_queue_handle);
-	}
-	if (app_task_handle) {
-		os_task_delete(app_task_handle);
 	}
 	io_queue_handle = NULL;
 	evt_queue_handle = NULL;
@@ -164,5 +168,28 @@ bool bt_airsync_config_app_send_msg_to_apptask(T_IO_MSG *p_msg)
     }
     return true;
 }
+
+void bt_airsync_config_send_data_to_apptask(uint8_t *buf, uint16_t length)
+{
+    uint8_t event = EVENT_IO_TO_APP;
+    T_IO_MSG io_msg;
+
+    memset(&bt_airsync_config_tx_data, 0, sizeof(bt_airsync_config_tx_data));
+    bt_airsync_config_tx_data.buf = buf;
+    bt_airsync_config_tx_data.length = length;
+
+    io_msg.type = IO_MSG_TYPE_WRISTBNAD;
+    io_msg.subtype = IO_MSG_WAS_TX_VALUE;
+    io_msg.u.buf = &bt_airsync_config_tx_data;
+
+    if (evt_queue_handle != NULL && io_queue_handle != NULL) {
+        if (os_msg_send(io_queue_handle, &io_msg, 0) == false) {
+            BC_printf("bt_airsync_config_send_data_to_apptask send msg fail: subtype 0x%x\r\n", io_msg.subtype);
+        } else if (os_msg_send(evt_queue_handle, &event, 0) == false) {
+            BC_printf("bt_airsync_config_send_data_to_apptask send event fail: subtype 0x%x\r\n", io_msg.subtype);
+        }
+    }
+}
 /** @} */ /* End of group PERIPH_APP_TASK */
+#endif
 

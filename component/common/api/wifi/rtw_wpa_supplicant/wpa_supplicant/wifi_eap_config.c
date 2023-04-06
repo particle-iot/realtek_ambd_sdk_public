@@ -28,10 +28,18 @@ char *eap_identity = NULL;
 char *eap_password = NULL;
 // if set eap_ca_cert and defined(EAP_SSL_VERIFY_SERVER), client will verify server's cert
 const unsigned char *eap_ca_cert = NULL;
+int eap_ca_cert_len = 0;
 // if set eap_client_cert, eap_client_key, and defined(EAP_SSL_VERIFY_CLIENT), client will send its cert to server
 const unsigned char *eap_client_cert = NULL;
 const unsigned char *eap_client_key = NULL;
+int eap_client_cert_len = 0;
+int eap_client_key_len = 0;
 char *eap_client_key_pwd = NULL;
+int eap_fast_max_pac_list_len = 10;
+int eap_fast_provisioning_mode = 2;
+int eap_fast_use_binary_pac = 0;
+char * eap_fast_machine_pac = "";
+const configSTACK_DEPTH_TYPE *eap_eapol_recvd_stack = NULL;
 
 void eap_eapol_recvd_hdl(char *buf, int buf_len, int flags, void* handler_user_data);
 void eap_eapol_start_hdl(char *buf, int buf_len, int flags, void* handler_user_data);
@@ -58,9 +66,13 @@ void reset_config(void){
 	eap_client_cert = NULL;
 	eap_client_key = NULL;
 	eap_client_key_pwd = NULL;
+	eap_fast_max_pac_list_len = 10;
+	eap_fast_provisioning_mode = 2;
+	eap_fast_use_binary_pac = 0;
+	eap_fast_machine_pac = "";
 }
 
-void judge_station_disconnect(void) 
+void judge_station_disconnect(void)
 {
 	int mode = 0;
 	unsigned char ssid[33];
@@ -68,12 +80,12 @@ void judge_station_disconnect(void)
 	wext_get_mode(WLAN0_NAME, &mode);
 
 	switch(mode) {
-	case IW_MODE_MASTER:	//In AP mode
+	case RTW_MODE_MASTER:	//In AP mode
 		wifi_off();
 		vTaskDelay(20);
 		wifi_on(RTW_MODE_STA);
 		break;
-	case IW_MODE_INFRA:		//In STA mode
+	case RTW_MODE_INFRA:		//In STA mode
 		if(wext_get_ssid(WLAN0_NAME, ssid) > 0)
 			wifi_disconnect();
 	}	
@@ -209,6 +221,12 @@ int eap_start(char *method)
 	}
 #endif
 
+#if CONFIG_ENABLE_FAST
+	if(strcmp(method,"fast") == 0){
+		ret = set_eap_fast_method();
+	}
+#endif
+
 	if(ret == -1){
 		printf("\r\neap method %s not supported\r\n", method);
 		return -1;
@@ -222,7 +240,10 @@ int eap_start(char *method)
 
 	set_eap_phase(ENABLE);
 	wifi_reg_event_handler(WIFI_EVENT_EAPOL_START, eap_eapol_start_hdl, NULL);
-	wifi_reg_event_handler(WIFI_EVENT_EAPOL_RECVD, eap_eapol_recvd_hdl, NULL);
+	if (eap_eapol_recvd_stack!=NULL)
+		wifi_reg_event_handler(WIFI_EVENT_EAPOL_RECVD, eap_eapol_recvd_hdl, (void *)eap_eapol_recvd_stack);	
+	else
+		wifi_reg_event_handler(WIFI_EVENT_EAPOL_RECVD, eap_eapol_recvd_hdl, NULL);
 
 	
 
@@ -320,6 +341,9 @@ void eap_autoreconnect_hdl(u8 method_id)
 			break;
 		case 21: // EAP_TYPE_TTLS
 			method = "ttls";
+			break;
+		case 43: // EAP_TYPE_FAST
+			method = "fast";
 			break;
 		default:
 			printf("invalid eap method\n");
@@ -476,12 +500,24 @@ int eap_cert_setup(ssl_context *ssl)
 
 #elif CONFIG_USE_MBEDTLS
 
+#if CONFIG_MBEDTLS_VERSION3 == 1
+#include "mbedtls/build_info.h"
+#include "ssl_misc.h"
+#define MBEDTLS_SSL_COMPRESSION_ADD 0
+#define MBEDTLS_SSL_MAX_CONTENT_LEN MBEDTLS_SSL_IN_CONTENT_LEN
+#else
 #include <mbedtls/config.h>
+#include <mbedtls/ssl_internal.h>
+#endif
 #include <mbedtls/platform.h>
 #include <mbedtls/ssl.h>
-#include <mbedtls/ssl_internal.h>
 
-int max_buf_bio_size = MBEDTLS_SSL_BUFFER_LEN;
+int max_buf_bio_size = ( MBEDTLS_SSL_MAX_CONTENT_LEN                \
+                        + MBEDTLS_SSL_COMPRESSION_ADD               \
+                        + 29 /* counter + header + IV */    \
+                        + MBEDTLS_SSL_MAC_ADD                       \
+                        + MBEDTLS_SSL_PADDING_ADD                   \
+                        );    //modify by Relatek,  original define is MBEDTLS_SSL_BUFFER_LEN
 
 struct eap_tls{
 	void *ssl;
@@ -605,18 +641,30 @@ int eap_cert_setup(struct eap_tls *tls_context)
 	( void ) tls_context;
 #if (defined(ENABLE_EAP_SSL_VERIFY_CLIENT) && ENABLE_EAP_SSL_VERIFY_CLIENT)
 	if(eap_client_cert != NULL && eap_client_key != NULL){
-		if(mbedtls_x509_crt_parse(_cli_crt, eap_client_cert, strlen(eap_client_cert)+1) != 0)
+		if(mbedtls_x509_crt_parse(_cli_crt, eap_client_cert, eap_client_cert_len) != 0)
 			return -1;
-	
-		if(mbedtls_pk_parse_key(_clikey_rsa, eap_client_key, strlen(eap_client_key)+1, eap_client_key_pwd, strlen(eap_client_key_pwd)+1) != 0)
-			return -1;
+		if(eap_client_key_pwd){
+#if CONFIG_MBEDTLS_VERSION3 == 1
+			if(mbedtls_pk_parse_key(_clikey_rsa, eap_client_key, eap_client_key_len, eap_client_key_pwd, strlen(eap_client_key_pwd)+1, rtw_get_random_bytes_f_rng, (void*)1) != 0)
+#else
+			if(mbedtls_pk_parse_key(_clikey_rsa, eap_client_key, eap_client_key_len, eap_client_key_pwd, strlen(eap_client_key_pwd)+1) != 0)
+#endif
+				return -1;
+		}else{
+#if CONFIG_MBEDTLS_VERSION3 == 1
+			if(mbedtls_pk_parse_key(_clikey_rsa, eap_client_key, eap_client_key_len, eap_client_key_pwd, 0, rtw_get_random_bytes_f_rng, (void*)1) != 0)
+#else
+			if(mbedtls_pk_parse_key(_clikey_rsa, eap_client_key, eap_client_key_len, eap_client_key_pwd, 0) != 0)
+#endif
+				return -1;
+		}
 
 		mbedtls_ssl_conf_own_cert(tls_context->conf, _cli_crt, _clikey_rsa);
 	}
 #endif
 #if (defined(ENABLE_EAP_SSL_VERIFY_SERVER) && ENABLE_EAP_SSL_VERIFY_SERVER)
 	if(eap_ca_cert != NULL){
-		if(mbedtls_x509_crt_parse(_ca_crt, eap_ca_cert, strlen(eap_ca_cert)+1) != 0)
+		if(mbedtls_x509_crt_parse(_ca_crt, eap_ca_cert, eap_ca_cert_len) != 0)
 			return -1;
 		mbedtls_ssl_conf_ca_chain(tls_context->conf, _ca_crt, NULL);
 		mbedtls_ssl_conf_authmode(tls_context->conf, MBEDTLS_SSL_VERIFY_REQUIRED);

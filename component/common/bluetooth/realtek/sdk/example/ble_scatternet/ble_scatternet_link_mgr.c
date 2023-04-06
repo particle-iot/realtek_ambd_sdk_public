@@ -15,6 +15,11 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if ((defined(CONFIG_BT_SCATTERNET) && CONFIG_BT_SCATTERNET) || \
+	(defined(CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) && CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) || \
+	(defined(CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE) && CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE))
+
 #include <ble_scatternet_link_mgr.h>
 #include <trace_app.h>
 #include <string.h>
@@ -22,7 +27,7 @@
 /*============================================================================*
  *                              Constants
  *============================================================================*/
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 /** @brief  Define start offset of the flash to save static random address. */
 #define BLE_SCATTERNET_APP_STATIC_RANDOM_ADDR_OFFSET 0
 #endif
@@ -95,10 +100,10 @@ void ble_scatternet_link_mgr_clear_device_list(void)
     * @{
     */
 /** @defgroup  SCATTERNET_RANDOM Static Random Address Storage
-    * @brief Use @ref F_BT_LE_USE_STATIC_RANDOM_ADDR to open
+    * @brief Use @ref F_BT_LE_USE_RANDOM_ADDR to open
     * @{
     */
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 /**
  * @brief   Save static random address information into flash.
  * @param[in] p_addr Pointer to the buffer for saving data.
@@ -131,4 +136,4 @@ uint32_t ble_scatternet_app_load_static_random_address(T_APP_STATIC_RANDOM_ADDR 
 #endif
 /** @} */
 /** @} */
-
+#endif

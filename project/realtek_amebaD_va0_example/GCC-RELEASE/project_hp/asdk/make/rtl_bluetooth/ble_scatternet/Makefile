@@ -7,21 +7,14 @@ include ../amebad_bsp/Makefile
 
 # board-specific
 MODULE_IFLAGS += \
-   -I$(DIR)/sdk/example/ble_scatternet \
-   -I$(DIR)/sdk/board/amebad/src/data_uart \
-   -I$(DIR)/sdk/src/mcu/module/data_uart_cmd 
-
-
+   -I$(DIR)/sdk/example/ble_scatternet
 
 CSRC += \
     $(DIR)/sdk/src/ble/profile/client/gcs_client.c \
-    $(DIR)/sdk/src/mcu/module/data_uart_cmd/user_cmd_parse.c \
-    $(DIR)/sdk/board/amebad/src/data_uart/data_uart.c \
     $(DIR)/sdk/example/ble_scatternet/ble_scatternet_app_main.c \
     $(DIR)/sdk/example/ble_scatternet/ble_scatternet_app_task.c \
     $(DIR)/sdk/example/ble_scatternet/ble_scatternet_app.c \
-    $(DIR)/sdk/example/ble_scatternet/ble_scatternet_link_mgr.c \
-	$(DIR)/sdk/example/ble_scatternet/ble_scatternet_user_cmd.c
+    $(DIR)/sdk/example/ble_scatternet/ble_scatternet_link_mgr.c
 
 OBJS = $(CSRC:.c=.o)
 TOBJS = $(notdir $(OBJS))

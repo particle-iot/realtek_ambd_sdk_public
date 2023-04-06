@@ -5,34 +5,61 @@
 
 #include <stdio.h>
 #include <string.h>
-
 #include "ameba_soc.h"
-
-#include "os_sched.h"
-#include "os_pool.h"
-#include "os_sync.h"
-#include "os_mem.h"
-
-#include "trace_app.h"
-
 #include "hci_uart.h"
 #include "bt_board.h"
+#include "osif.h"
 
-#define HCI_UART_RX_BUF_SIZE        0x2000   /* RX buffer size 8K */
-#define HCI_UART_RX_ENABLE_COUNT    (HCI_UART_RX_BUF_SIZE - 2 * (1021 + 5))   /* Enable RX */
-#define HCI_UART_RX_DISABLE_COUNT   (HCI_UART_RX_BUF_SIZE - 1021 - 5 - 10)   /* Disable RX */
+#define HCI_UART_RX_BUF_SIZE         0x2000    /* RX buffer size 8K */
+#define HCI_UART_RX_ENABLE_COUNT     (HCI_UART_RX_BUF_SIZE - 2 * (1021 + 5))    /* Enable RX */
+#define HCI_UART_RX_DISABLE_COUNT    (HCI_UART_RX_BUF_SIZE - 1021 - 5 - 10)     /* Disable RX */
+
+#define UART_SEND_DONE_TASK_PRIORITY             5
+#define UART_SEND_DONE_TASK_STACK_SIZE           512
+
+#define TX_TRASMIT_COUNT 16
+#define hci_board_debug DBG_8195A
+
+#define HCI_UART_IDX    1    //(only 0, 1, 3)
+
+/*BT CTS   PA0  -----  RTS_PIN*/
+/*BT TX    PA2  -----  RX_PIN*/
+/*BT RX    PA4  -----  TX_PIN*/
+#if (HCI_UART_IDX == 0)
+    #define HCI_UART_OUT
+    #define HCI_UART_DEV    UART0_DEV
+    #define HCI_UART_IRQ    UART0_IRQ
+#if 1
+    #define HCI_TX_PIN      _PA_18
+    #define HCI_RX_PIN      _PA_19
+#else
+    #define HCI_TX_PIN      _PA_21
+    #define HCI_RX_PIN      _PA_22
+#endif
+#elif (HCI_UART_IDX == 3)
+    #define HCI_UART_OUT
+    #define HCI_UART_DEV    UART3_DEV
+    #define HCI_UART_IRQ    UARTLP_IRQ
+    #define HCI_TX_PIN      _PA_26
+    #define HCI_RX_PIN      _PA_25
+#else
+    #define HCI_UART_DEV    UART1_DEV
+    #define HCI_UART_IRQ    UART1_IRQ
+#endif
+
+#define HCIUART_IRQ_PRIO    10
+
 typedef struct
 {
     UART_InitTypeDef    UART_InitStruct;
     IRQn_Type           irqn;
     uint32_t            ier;
 
-    //tx
+//tx
     uint32_t            tx_len;
     uint8_t            *tx_buf_cur;
     uint32_t            tx_len_cur;
-    P_UART_TX_CB        tx_cb; 
-
+    P_UART_TX_CB        tx_cb;
 
 //rx
     bool                rx_disabled;
@@ -45,50 +72,12 @@ typedef struct
     bool                hci_uart_bridge_flag;
 }T_HCI_UART;
 
-//===========
 T_HCI_UART *hci_uart_obj;
+extern uint8_t flag_for_hci_trx;
 
-#define TX_TRASMIT_COUNT 16
-#define hci_board_debug DBG_8195A
+void *uart_send_done_task = NULL;
+void *uart_send_done_sem = NULL;
 
-#define HCI_UART_IDX  1      //(only 0, 1, 3)
-
-/*BT CTS   PA0   ----- RTS_PIN*/
-/*BT TX   PA2    ----- RX_PIN*/
-/*BT RX   PA4    ----- TX_PIN*/
-#if (HCI_UART_IDX == 0)
-      #define HCI_UART_OUT
-      #define HCI_UART_DEV  UART0_DEV
-      #define HCI_UART_IRQ  UART0_IRQ
- #if 1
-      #define HCI_TX_PIN    _PA_18
-      #define HCI_RX_PIN    _PA_19
-        //#define HCI_CTS_PIN   _PA_17
-        //#define HCI_RTS_PIN   _PA_16    //BT_LOG
- #else
-      #define HCI_TX_PIN    _PA_21
-      #define HCI_RX_PIN    _PA_22
-    //#define HCI_CTS_PIN   _PA_24
-      #define HCI_RTS_PIN   _PA_23
- #endif
-
-#elif (HCI_UART_IDX == 3)
-      #define HCI_UART_OUT
-      #define HCI_UART_DEV  UART3_DEV
-      #define HCI_UART_IRQ  UARTLP_IRQ
-      #define HCI_TX_PIN    _PA_26
-      #define HCI_RX_PIN    _PA_25
-    //#define HCI_CTS_PIN   _PA_25
-      #define HCI_RTS_PIN   _PA_27
-#else
-      #define HCI_UART_DEV  UART1_DEV
-      #define HCI_UART_IRQ  UART1_IRQ
-#endif
-
-#define HCIUART_IRQ_PRIO    10
-
-
-//========================================HCI UART BRIDGE=================
 void set_hci_uart_out(bool flag)
 {
     T_HCI_UART *p_uart_obj = hci_uart_obj;
@@ -98,7 +87,7 @@ void set_hci_uart_out(bool flag)
     }
     else
     {
-       hci_board_debug("set_hci_uart_out: hci_uart_obj is NULL");
+       hci_board_debug("set_hci_uart_out: hci_uart_obj is NULL\r\n");
     }
 }
 
@@ -114,6 +103,7 @@ extern void bt_uart_tx(uint8_t rc);
     bt_uart_tx(rc);
     return true;
 }
+
 uint8_t hci_rx_empty()
 {
     uint16_t tmpRead = hci_uart_obj->rx_read_idx;
@@ -125,16 +115,38 @@ uint16_t hci_rx_data_len()
 {
     return (hci_uart_obj->rx_write_idx + HCI_UART_RX_BUF_SIZE - hci_uart_obj->rx_read_idx) % HCI_UART_RX_BUF_SIZE;
 }
+
 uint16_t hci_rx_space_len()
 {
     return (hci_uart_obj->rx_read_idx + HCI_UART_RX_BUF_SIZE - hci_uart_obj->rx_write_idx - 1) % HCI_UART_RX_BUF_SIZE;
 }
-//========================================HCI UART BRIDGE==================
+
+static void uart_send_done(void)
+{
+    if (uart_send_done_sem != NULL)
+        osif_sem_give(uart_send_done_sem);
+}
+
+static void uart_send_done_handler(void *p_param)
+{
+    (void) p_param;
+
+    while (1) {
+        if (osif_sem_take(uart_send_done_sem, 0xFFFFFFFF) == false) {
+            hci_board_debug("uart_send_done_handle: osif_sem_take uart_send_done_sem fail\r\n");
+        } else {
+            T_HCI_UART *hci_rtk_obj = hci_uart_obj;
+            if (hci_rtk_obj->tx_cb)
+            {
+                hci_rtk_obj->tx_cb();
+            }
+        }
+    }
+}
 
 void hci_uart_set_baudrate(uint32_t baudrate)
 {
-    HCI_PRINT_INFO1("Set baudrate to %u", baudrate);
-    //hci_board_debug("Set baudrate to %d\n", baudrate);
+    hci_board_debug("Set baudrate to %d\r\n", baudrate);
     UART_SetBaud(HCI_UART_DEV, baudrate);
 }
 
@@ -143,14 +155,14 @@ void hci_uart_rx_disable(T_HCI_UART *hci_adapter)
     /* We disable received data available and rx timeout interrupt, then
      * the rx data will stay in UART FIFO, and RTS will be pulled high if
      * the watermark is higher than rx trigger level. */
-    HCI_PRINT_INFO0("hci_uart_rx_disable");
+    hci_board_debug("hci_uart_rx_disable\r\n");
     UART_INTConfig(HCI_UART_DEV, RUART_IER_ERBI | RUART_IER_ETOI, DISABLE);
     hci_adapter->rx_disabled = true;
 }
 
 void hci_uart_rx_enable(T_HCI_UART *hci_adapter)
 {
-    HCI_PRINT_INFO0("comuart_rx_enable");
+    hci_board_debug("hci_uart_rx_enable\r\n");
     UART_INTConfig(HCI_UART_DEV, RUART_IER_ERBI | RUART_IER_ETOI, ENABLE);
     hci_adapter->rx_disabled = false;
 }
@@ -164,24 +176,20 @@ static inline void hciuart_stop_tx(T_HCI_UART *hci_adapter)
     }
 }
 
-
 static inline void transmit_chars(T_HCI_UART *hci_adapter)
 {
     int count;
 
     if(hci_adapter == NULL)
     {
-        hci_board_debug(" %s:hci_adapter is NULL !!!,\r\n", __FUNCTION__);
+        hci_board_debug("transmit_chars: hci_adapter is NULL\r\n");
         return;
     }
 
     if (hci_adapter->tx_len_cur == 0)
     {
         hciuart_stop_tx(hci_adapter);
-        if (hci_adapter->tx_cb)
-        {
-            hci_adapter->tx_cb();
-        }
+        uart_send_done();
         return;
     }
 
@@ -197,16 +205,14 @@ static inline void transmit_chars(T_HCI_UART *hci_adapter)
 
 static inline void uart_insert_char(T_HCI_UART *hci_adapter, uint8_t ch)
 {
-
     /* Should neve happen */
     if (hci_rx_space_len()==0)
     {
-        HCI_PRINT_ERROR0("uart_insert_char: rx buffer full");
-        hci_board_debug("uart_insert_char: rx buffer full");
+        hci_board_debug("uart_insert_char: rx buffer full\r\n");
         return;
     }
 
-   // if(rltk_wlan_is_mp())
+    // if(rltk_wlan_is_mp())
     {
         if(hci_adapter->hci_uart_bridge_flag == true)
         {
@@ -217,10 +223,9 @@ static inline void uart_insert_char(T_HCI_UART *hci_adapter, uint8_t ch)
     hci_adapter->rx_buffer[hci_adapter->rx_write_idx++] = ch;
     hci_adapter->rx_write_idx %= HCI_UART_RX_BUF_SIZE;
 
-
     if (hci_rx_data_len() >= HCI_UART_RX_DISABLE_COUNT && hci_adapter->rx_disabled == false)
     {
-        hci_board_debug("uart_insert_char: rx disable, data len %d", hci_rx_data_len());
+        hci_board_debug("uart_insert_char: rx disable, data len %d\r\n", hci_rx_data_len());
         hci_uart_rx_disable(hci_adapter);
     }
 }
@@ -233,7 +238,7 @@ static inline void receive_chars(T_HCI_UART *hci_adapter, int ind)
     if(hci_adapter == NULL)
     {
         UART_CharGet(HCI_UART_DEV, &byte);
-        hci_board_debug(" %s:hci_adapter is NULL !!!, %x,data: %x\r\n",__FUNCTION__,ind, byte);
+        hci_board_debug("receive_chars: hci_adapter is NULL, ind:%x, data:%x\r\n", ind, byte);
         return;
     }
     /* start timer*/
@@ -253,10 +258,11 @@ static inline void receive_chars(T_HCI_UART *hci_adapter, int ind)
 
     /* HCI_PRINT_INFO1("receive_chars: rx_len %u", hci_adapter->rx_len); */
     /* FIXME: There is too many rx indication events ? */
-    if (ind && hci_adapter->rx_ind)
-    {
-        hci_adapter->rx_ind();
-
+    if (flag_for_hci_trx == 0) {
+        if (ind && hci_adapter->rx_ind)
+        {
+            hci_adapter->rx_ind();
+        }
     }
 }
 
@@ -285,7 +291,7 @@ u32 hciuart_irq(void *data)
          * } else {
          *     DUart1MonitorDone = 1;
          * } */
-        hci_board_debug("hciuart_irq: monitor done");
+        hci_board_debug("hciuart_irq: monitor done\r\n");
         break;
     case RUART_MODEM_STATUS:
         reg_val = UART_ModemStatusGet(HCI_UART_DEV);
@@ -301,25 +307,25 @@ u32 hciuart_irq(void *data)
         break;
     case RUART_RECEIVE_LINE_STATUS:
         reg_val = (UART_LineStatusGet(HCI_UART_DEV));
-        hci_board_debug("hciuart_irq: LSR %08x interrupt", reg_val);
+        hci_board_debug("hciuart_irq: LSR %08x interrupt\r\n", reg_val);
         if (reg_val & RUART_LINE_STATUS_ERR_OVERRUN)
         {
-            hci_board_debug("hciuart_irq: LSR over run interrupt");
+            hci_board_debug("hciuart_irq: LSR over run interrupt\r\n");
         }
 
         if (reg_val & RUART_LINE_STATUS_ERR_PARITY)
         {
-            hci_board_debug("hciuart_irq: LSR parity error interrupt");
+            hci_board_debug("hciuart_irq: LSR parity error interrupt\r\n");
         }
 
         if (reg_val & RUART_LINE_STATUS_ERR_FRAMING)
         {
-            hci_board_debug("hciuart_irq: LSR frame error(stop bit error) interrupt");
+            hci_board_debug("hciuart_irq: LSR frame error(stop bit error) interrupt\r\n");
         }
 
         if (reg_val & RUART_LINE_STATUS_ERR_BREAK)
         {
-            hci_board_debug("hciuart_irq: LSR break error interrupt");
+            hci_board_debug("hciuart_irq: LSR break error interrupt\r\n");
         }
 
         /* if (reg_val & RUART_LINE_STATUS_REG_THRE)
@@ -328,7 +334,7 @@ u32 hciuart_irq(void *data)
         break;
 
     default:
-        hci_board_debug("hciuart_irq: Unknown interrupt type %u", int_id);
+        hci_board_debug("hciuart_irq: Unknown interrupt type %u\r\n", int_id);
         break;
     }
 
@@ -337,19 +343,16 @@ u32 hciuart_irq(void *data)
 
 bool hci_uart_tx(uint8_t *p_buf, uint16_t len, P_UART_TX_CB tx_cb)
 {
-
 #if 0
     UART_SendData(HCI_UART_DEV, p_buf, len);
     if (tx_cb)
         tx_cb();
     return true;
 #else
-
     T_HCI_UART *uart_obj = hci_uart_obj;
 
     uart_obj->tx_len  = len;
     uart_obj->tx_cb   = tx_cb;
-
 
     uart_obj->tx_buf_cur = p_buf;
     uart_obj->tx_len_cur = len;
@@ -361,7 +364,7 @@ bool hci_uart_tx(uint8_t *p_buf, uint16_t len, P_UART_TX_CB tx_cb)
     }
     else
     {
-        hci_board_debug("!!!Transmitter FIFO empty interrupt has been enabled");
+        hci_board_debug("hci_uart_tx: Transmitter FIFO empty interrupt has been enabled\r\n");
         return false;
     }
 #endif
@@ -372,21 +375,18 @@ bool hci_uart_malloc(void)
 {
     if(hci_uart_obj == NULL)
     {
-        hci_uart_obj = os_mem_zalloc(RAM_TYPE_DATA_ON, sizeof(T_HCI_UART)); //reopen not need init uart
+        hci_uart_obj = osif_mem_alloc(RAM_TYPE_DATA_ON, sizeof(T_HCI_UART)); //reopen not need init uart
 
         if(!hci_uart_obj)
         {
-            hci_board_debug("%s:need %d, left %d\n", __FUNCTION__ ,sizeof(T_HCI_UART),os_mem_peek(RAM_TYPE_DATA_ON));
+            hci_board_debug("hci_uart_malloc: need %d, left %d\r\n", sizeof(T_HCI_UART), osif_mem_peek(RAM_TYPE_DATA_ON));
             return false;
         }
-        else
-        {
-            //ok 
-        }
+        memset(hci_uart_obj, 0, sizeof(T_HCI_UART));
     }
     else
     {
-        hci_board_debug("%s:rx_buffer not free\n",__FUNCTION__);
+        hci_board_debug("hci_uart_malloc: rx_buffer not free\r\n");
         return false;
     }
     return true;
@@ -396,12 +396,12 @@ bool hci_uart_free(void)
 {
     if(hci_uart_obj == NULL)
     {
-        hci_board_debug("%s: hci_uart_obj = NULL, no need free\r\n",__FUNCTION__);
+        hci_board_debug("hci_uart_free: hci_uart_obj = NULL, no need free\r\n");
         return true;
     }
     else
     {
-        os_mem_free(hci_uart_obj);
+        osif_mem_free(hci_uart_obj);
         hci_uart_obj = NULL;
     }
     return true;
@@ -414,7 +414,15 @@ bool hci_uart_init(P_UART_RX_CB rx_ind)
         return false;
     }
 
-    //malloc
+    if (osif_sem_create(&uart_send_done_sem, 0, 1) == false) {
+        hci_board_debug("hci_uart_init: osif_sem_create uart_send_done_sem fail\r\n");
+        return false;
+    }
+    if (osif_task_create(&uart_send_done_task, "uart_send_done_handler", uart_send_done_handler, 0, UART_SEND_DONE_TASK_STACK_SIZE, UART_SEND_DONE_TASK_PRIORITY) == false) {
+        hci_board_debug("hci_uart_init: osif_task_create uart_send_done_task fail\r\n");
+        return false;
+    }
+
 #ifdef HCI_UART_OUT
     //PINMUX THE PIN
     Pinmux_Config(HCI_TX_PIN, PINMUX_FUNCTION_UART);
@@ -424,8 +432,8 @@ bool hci_uart_init(P_UART_RX_CB rx_ind)
 
     PAD_PullCtrl(HCI_TX_PIN, GPIO_PuPd_UP);
     PAD_PullCtrl(HCI_RX_PIN, GPIO_PuPd_NOPULL);
-#else
 #endif
+
     UART_InitTypeDef    *pUARTStruct;
     pUARTStruct = &hci_uart_obj->UART_InitStruct;
 
@@ -455,48 +463,48 @@ bool hci_uart_init(P_UART_RX_CB rx_ind)
     UART_RxCmd(HCI_UART_DEV, ENABLE);
 
     hci_uart_obj->rx_ind = rx_ind;
+
     return true;
 }
 
 bool hci_uart_deinit(void)
 {
-    //hardware deinit
     UART_DeInit(HCI_UART_DEV);
     InterruptDis(HCI_UART_IRQ);
     InterruptUnRegister(HCI_UART_IRQ);
-#ifdef UART_TIMER
 
-#endif
+    if (uart_send_done_task != NULL) {
+        osif_task_delete(uart_send_done_task);
+        uart_send_done_task = NULL;
+    }
+    if (uart_send_done_sem != NULL) {
+        osif_sem_delete(uart_send_done_sem);
+        uart_send_done_sem = NULL;
+    }
 
-#ifdef HCI_UART_DMA
-
-#endif
     hci_uart_free();
-    return true;
-    //free
-}
 
+    return true;
+}
 
 uint16_t hci_uart_recv(uint8_t *p_buf, uint16_t size)
 {
     uint16_t rx_len;
-    
+
     T_HCI_UART *p_uart_obj = hci_uart_obj;
-    //hci_board_debug("hci_uart_recv: write:%d, read:%d,rx_len:%d,need:%d space_len:%d, count:%d\r\n",p_uart_obj->rx_write_idx, p_uart_obj->rx_read_idx, hci_rx_data_len(),size, hci_rx_space_len(), hci_irq_count);
-    
+    //hci_board_debug("hci_uart_recv: write:%d, read:%d, rx_len:%d, need:%d, space_len:%d\r\n", p_uart_obj->rx_write_idx, p_uart_obj->rx_read_idx, hci_rx_data_len(), size, hci_rx_space_len());
+
     if(p_uart_obj == NULL)
     {
-        hci_board_debug(" %s:the p_uart_obj is NULL !!!!! \r\n", __FUNCTION__);
+        hci_board_debug("hci_uart_recv: the p_uart_obj is NULL\r\n");
         return 0;
     }
     if(hci_rx_empty())
     {
-
-         //rx empty
          return 0;
     }
     rx_len = hci_rx_data_len();
-    
+
     if (rx_len > size)
     {
         rx_len = size;
@@ -518,6 +526,7 @@ uint16_t hci_uart_recv(uint8_t *p_buf, uint16_t size)
         {
             if (hci_rx_data_len() < HCI_UART_RX_ENABLE_COUNT)
             {
+                hci_board_debug("hci_uart_recv: rx enable, data len %d\r\n", hci_rx_data_len());
                 hci_uart_rx_enable(p_uart_obj);
             }
         }
@@ -525,5 +534,3 @@ uint16_t hci_uart_recv(uint8_t *p_buf, uint16_t size)
 
     return rx_len;
 }
-
-

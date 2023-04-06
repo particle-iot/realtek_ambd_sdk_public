@@ -28,6 +28,7 @@
   * @param  NewStatus: TRUE/FALSE.
   * @retval None
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_SetWakeEvent(u32 Option, u32 NewStatus)
 {
@@ -58,6 +59,7 @@ void SOCPS_SetWakeEvent(u32 Option, u32 NewStatus)
   * @param  NewStatus: TRUE/FALSE.
   * @retval None
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_SetWakeEventAON(u32 Option, u32 NewStatus)
 {
@@ -78,6 +80,7 @@ void SOCPS_SetWakeEventAON(u32 Option, u32 NewStatus)
   * @retval None
   *
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_ClearWakePin(void)
 {
@@ -93,6 +96,7 @@ void SOCPS_ClearWakePin(void)
   * @brief  clear wake event.
   * @retval None
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_ClearWakeEvent(void)
 {
@@ -108,6 +112,7 @@ void SOCPS_ClearWakeEvent(void)
 	SOCPS_AONWakeClear(BIT_ALL_WAKE_STS & (~BIT_KEYSCAN_WAKE_STS));
 }
 
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_AudioLDO(u32 NewStatus)
 {
@@ -128,7 +133,7 @@ void SOCPS_AudioLDO(u32 NewStatus)
 		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_SYSPLL_CTRL0, temp);
 	
 	} else {
-		if (wifi_config.wifi_ultra_low_power) {
+		if (rtk_wifi_config.wifi_ultra_low_power) {
 			return;
 		}
 	
@@ -170,6 +175,7 @@ void SOCPS_AudioLDO(u32 NewStatus)
 }
 
 //IMAGE2_RAM_TEXT_SECTION
+_OPTIMIZE_O3_
 VOID SOCPS_OSC2M_Cmd(u32 new_status)
 {
 	u32 Temp = 0;
@@ -183,6 +189,7 @@ VOID SOCPS_OSC2M_Cmd(u32 new_status)
 	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_OSC2M_CTRL, Temp);
 }
 
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 VOID SOCPS_SWRLDO_Suspend(u32 new_status)
 {
@@ -258,6 +265,7 @@ VOID SOCPS_SWRLDO_Suspend(u32 new_status)
   * @retval None
   *
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_SleepCG_RAM(VOID)
 {
@@ -293,10 +301,8 @@ void SOCPS_SleepCG_RAM(VOID)
 	Rtemp |= (BIT_LSYS_PMC_PMEN_SLEP);
 	Rtemp &= ~BIT_LSYS_PMC_PMEN_DSLP;
 	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LP_PWRMGT_CTRL, Rtemp);
-
 	/* it will take 6.5us to enter clock gating mode after register set */
 	DelayUs(50);
-
 	/* use to check wakeup time in 66319D */
 	//BOOT_ROM_CM4PON((u32)HSPWR_ON_SEQ_TEST);
 	//DelayMs(3);
@@ -407,6 +413,9 @@ void SOCPS_SleepPG_RAM(VOID)
 	
 	/*for break power-off condition to reinit spic*/
 	RCC_PeriphClockCmd(APBPeriph_FLASH, APBPeriph_FLASH_CLOCK_XTAL, ENABLE);
+
+	/* invalidate spic auto write */
+	FLASH_Invalidate_Auto_Write();
 
 	FLASH_Init(flash_init_para.FLASH_cur_bitmode);
 

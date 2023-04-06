@@ -24,7 +24,6 @@ i2s_t i2s_obj;
 #define I2S_DMA_PAGE_NUM    4   // Vaild number is 2~4
 
 u8 i2s_tx_buf[I2S_DMA_PAGE_SIZE*I2S_DMA_PAGE_NUM];
-u8 i2s_rx_buf[I2S_DMA_PAGE_SIZE*I2S_DMA_PAGE_NUM];
 
 #define SAMPLE_FILE
 #define SAMPLE_FILE_RATE 8000//44100
@@ -236,24 +235,6 @@ void test_tx_complete(void *data, char *pbuf)
     i2s_send_page(obj, (uint32_t*)ptx_buf);
 }
 
-void test_rx_complete(void *data, char* pbuf)
-{
-    i2s_t *obj = (i2s_t *)data;
-    int *ptx_buf;
-
-    static u32 count=0;
-    count++;
-    if ((count&1023) == 1023)
-    {
-         DBG_8195A("%s \n", __func__);
-    }
-
-    //ptx_buf = i2s_get_tx_page(obj);
-    //_memcpy((void*)ptx_buf, (void*)pbuf, I2S_DMA_PAGE_SIZE);
-    i2s_recv_page(obj);    // submit a new page for receive
-    //i2s_send_page(obj, (uint32_t*)ptx_buf);    // loopback
-}
-
 void main(void)
 {
     int *ptx_buf;
@@ -270,12 +251,10 @@ void main(void)
 	i2s_obj.channel_num = CH_MONO;//CH_STEREO;
 	i2s_obj.sampling_rate = SR_44p1KHZ;
 	i2s_obj.word_length = WL_16b;
-	i2s_obj.direction = I2S_DIR_TXRX;    
+	i2s_obj.direction = I2S_DIR_TX;
 	i2s_init(&i2s_obj, I2S_SCLK_PIN, I2S_WS_PIN, I2S_SD_TX_PIN, I2S_SD_RX_PIN, I2S_MCK_PIN);
-    i2s_set_dma_buffer(&i2s_obj, (char*)i2s_tx_buf, (char*)i2s_rx_buf, \
-        I2S_DMA_PAGE_NUM, I2S_DMA_PAGE_SIZE);
+    i2s_set_dma_buffer(&i2s_obj, (char*)i2s_tx_buf, NULL, I2S_DMA_PAGE_NUM, I2S_DMA_PAGE_SIZE);
     i2s_tx_irq_handler(&i2s_obj, (i2s_irq_handler)test_tx_complete, (uint32_t)&i2s_obj);
-    i2s_rx_irq_handler(&i2s_obj, (i2s_irq_handler)test_rx_complete, (uint32_t)&i2s_obj);
     
 #if defined(SAMPLE_FILE)	
 	i2s_set_param(&i2s_obj,SAMPLE_FILE_CHNUM,SAMPLE_FILE_RATE,WL_16b);

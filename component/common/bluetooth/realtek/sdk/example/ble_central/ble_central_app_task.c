@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_CENTRAL) && CONFIG_BT_CENTRAL
 #include <os_msg.h>
 #include <os_task.h>
 #include <gap.h>
@@ -24,9 +26,6 @@
 #include <app_msg.h>
 #include <ble_central_app_task.h>
 #include <ble_central_client_app.h>
-#include <data_uart.h>
-#include <user_cmd_parse.h>
-#include <user_cmd.h>
 #include <basic_types.h>
 #include <gap_msg.h>
 
@@ -83,11 +82,6 @@ void ble_central_app_main_task(void *p_param)
 
     gap_start_bt_stack(ble_central_evt_queue_handle, ble_central_io_queue_handle, BLE_CENTRAL_MAX_NUMBER_OF_GAP_MESSAGE);
 
-    data_uart_init(ble_central_evt_queue_handle, ble_central_io_queue_handle);
-#if	defined (CONFIG_BT_USER_COMMAND) && (CONFIG_BT_USER_COMMAND)
-    user_cmd_init(&user_cmd_if, "central_client");
-#endif
-
     while (true)
     {
         if (os_msg_recv(ble_central_evt_queue_handle, &event, 0xFFFFFFFF) == true)
@@ -110,14 +104,14 @@ void ble_central_app_main_task(void *p_param)
 
 void ble_central_app_task_deinit(void)
 {
+	if (ble_central_app_task_handle) {
+		os_task_delete(ble_central_app_task_handle);
+	}
 	if (ble_central_io_queue_handle) {
 		os_msg_queue_delete(ble_central_io_queue_handle);
 	}
 	if (ble_central_evt_queue_handle) {
 		os_msg_queue_delete(ble_central_evt_queue_handle);
-	}
-	if (ble_central_app_task_handle) {
-		os_task_delete(ble_central_app_task_handle);
 	}
 	ble_central_io_queue_handle = NULL;
 	ble_central_evt_queue_handle = NULL;
@@ -132,5 +126,5 @@ void ble_central_app_task_deinit(void)
 }
 
 /** @} */ /* End of group CENTRAL_CLIENT_APP_TASK */
-
+#endif
 

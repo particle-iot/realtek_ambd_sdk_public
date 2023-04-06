@@ -14,9 +14,9 @@
  * limitations under the License.
  ******************************************************************************/
 
-
 #ifndef WLANCONFIG_H
 #define WLANCONFIG_H
+
 
 /*
  * Include user defined options first. Anything not defined in these files
@@ -79,7 +79,7 @@
 #endif
 #define CONFIG_LITTLE_ENDIAN
 #define CONFIG_80211N_HT
-//#define CONFIG_RECV_REORDERING_CTRL
+#define CONFIG_RECV_REORDERING_CTRL
 #define RTW_NOTCH_FILTER 0
 #define CONFIG_EMBEDDED_FWIMG
 #define CONFIG_PHY_SETTING_WITH_ODM
@@ -136,19 +136,10 @@
 
 #define BAD_MIC_COUNTERMEASURE 1
 #define DEFRAGMENTATION 1
+#define RX_AGGREGATION 1
+#define RX_AMSDU 1
 
 #define WIFI_LOGO_CERTIFICATION 0
-#if WIFI_LOGO_CERTIFICATION
-    #define RX_AGGREGATION 1
-	#define RX_AMSDU 1
-#else
-	#ifdef CONFIG_HIGH_TP_TEST
-    		#define RX_AGGREGATION 1
-	#else
-		#define RX_AGGREGATION 0
-	#endif
-	#define RX_AMSDU 0
-#endif
 
 #if defined(CONFIG_PLATFORM_8711B)
 	#define CONFIG_FW_C2H_PKT
@@ -201,7 +192,7 @@
 #define NOT_SUPPORT_RF_MULTIPATH
 #endif
 #define NOT_SUPPORT_VHT
-#define NOT_SUPPORT_40M
+//#define NOT_SUPPORT_40M
 #define NOT_SUPPORT_80M
 #if defined(CONFIG_PLATFORM_8195A)
 #define NOT_SUPPORT_BBSWING
@@ -233,7 +224,9 @@
 #endif
 
 #define CONFIG_PMKSA_CACHING
-
+#ifdef CONFIG_PMKSA_CACHING
+//#define CONFIG_PMKSA_CACHING_RECONNECT
+#endif
 /* For WPA3 */
 #define CONFIG_IEEE80211W
 #define CONFIG_SAE_SUPPORT
@@ -243,6 +236,11 @@
 #endif
 
 
+/* For repeater mode */
+#define CONFIG_REPEATER		0
+#if defined(CONFIG_REPEATER) && CONFIG_REPEATER
+#define NOT_SUPPORT_40M
+#endif
 
 /* For promiscuous mode */
 #define CONFIG_PROMISC
@@ -262,14 +260,21 @@
 #define CONFIG_MULTICAST
 #endif
 
+#define CONFIG_RX_PACKET_APPEND_FCS
+
 /* For STA+AP Concurrent MODE */
 #define CONFIG_CONCURRENT_MODE
 #ifdef CONFIG_CONCURRENT_MODE
 //#define CONFIG_MCC_MODE
+//#define MAC_CARRY // customize for telit, change mac calculation for softap under concurrent
   #if defined(CONFIG_PLATFORM_8195A) || defined(CONFIG_PLATFORM_8195BHP) || defined(CONFIG_PLATFORM_8710C)
     #define CONFIG_RUNTIME_PORT_SWITCH
   #endif
-  #define NET_IF_NUM ((CONFIG_ETHERNET) + (CONFIG_WLAN) + 1)
+  #ifdef CONFIG_BRIDGE
+    #define NET_IF_NUM ((CONFIG_ETHERNET) + (CONFIG_BRIDGE) + (CONFIG_WLAN) + 1)
+  #else
+    #define NET_IF_NUM ((CONFIG_ETHERNET) + (CONFIG_WLAN) + 1)
+  #endif
 #else
   #define NET_IF_NUM ((CONFIG_ETHERNET) + (CONFIG_WLAN))
 #endif
@@ -279,6 +284,7 @@
 #define CONFIG_TLS	1
 #define CONFIG_PEAP	1
 #define CONFIG_TTLS	1
+#define CONFIG_FAST	1
 
 // DO NOT change the below config of EAP
 #ifdef PRE_CONFIG_EAP
@@ -288,15 +294,17 @@
 #define CONFIG_PEAP	1
 #undef CONFIG_TTLS
 #define CONFIG_TTLS	1
+#undef CONFIG_FAST
+#define CONFIG_FAST	1
 #endif
 
 // enable 1X code in lib_wlan as default (increase 380 bytes)
 #define CONFIG_EAP
 
-#if CONFIG_TLS || CONFIG_PEAP || CONFIG_TTLS
+#if CONFIG_TLS || CONFIG_PEAP || CONFIG_TTLS || CONFIG_FAST
 #define EAP_REMOVE_UNUSED_CODE 1
-#endif	     
-	     
+#endif
+
 #define EAP_SSL_VERIFY_SERVER
 
 #if CONFIG_TLS
@@ -328,6 +336,10 @@
 
 /* For AP_MODE */
 #define CONFIG_AP_MODE
+//#define UAPSD
+#ifdef UAPSD
+#define TX_CHECK_DSEC_ALWAYS
+#endif
 extern unsigned char g_user_ap_sta_num;
 #define USER_AP_STA_NUM g_user_ap_sta_num
 #if (CONFIG_PLATFORM_AMEBA_X == 1)
@@ -526,6 +538,11 @@ extern unsigned int g_ap_sta_num;
 			#undef CONFIG_CONCURRENT_MODE
 			#undef CONFIG_AUTO_RECONNECT
 		#endif
+	#define CONFIG_WLAN_SWITCH_MODE         //save memory while switching mode without driver re-init
+	//#define LOW_POWER_WIFI_CONNECT
+	//#define LONG_PERIOD_TICKLESS
+
+	#define RA_ANTI_INTERF 0		// when set to 1, please also set CONFIG_TPBASE_RA to 1
 	#endif
 	#if defined(CONFIG_PLATFORM_8195BHP)
 		#define CONFIG_RTL8195B
@@ -638,6 +655,7 @@ extern unsigned int g_ap_sta_num;
 		#if defined(CONFIG_MAC_LOOPBACK_DRIVER_RTL8710C) && (CONFIG_MAC_LOOPBACK_DRIVER_RTL8710C == 3)
 		#define CONFIG_MAC_LOOPBACK_DRIVER_AMEBA
 		#endif
+		#define CONFIG_WLAN_SWITCH_MODE         //save memory while switching mode without driver re-init
 	#endif
 #elif defined(CONFIG_HARDWARE_8188F)
 #define CONFIG_RTL8188F
@@ -853,5 +871,15 @@ extern unsigned int g_ap_sta_num;
 #define WLAN_WRAPPER_VERSION 1
 
 #define TIME_THRES	20
+
+#ifndef LONG_PERIOD_TICKLESS
+/* 80211 - K V R */
+#define CONFIG_IEEE80211K
+#define CONFIG_LAYER2_ROAMING
+#endif
+#ifdef CONFIG_LAYER2_ROAMING
+    #define CONFIG_RTW_WNM
+    #define CONFIG_IEEE80211R
+#endif
 
 #endif //WLANCONFIG_H

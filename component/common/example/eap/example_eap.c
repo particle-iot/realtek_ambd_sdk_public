@@ -13,7 +13,11 @@ extern char *eap_password;
 extern const unsigned char *eap_ca_cert;
 extern const unsigned char *eap_client_cert;
 extern const unsigned char *eap_client_key;
+extern int eap_ca_cert_len;
+extern int eap_client_cert_len;
+extern int eap_client_key_len;
 extern char *eap_client_key_pwd;
+extern const configSTACK_DEPTH_TYPE *eap_eapol_recvd_stack;
 
 void example_eap_config(void){
 	eap_target_ssid = "Test_eap";
@@ -135,6 +139,9 @@ void example_eap_config(void){
 "QTiZHgjlMQb2XXMmXLn8kBgoDnqkXFNe8j0h8uxIJSrjOoIyn1h1wvX5/w==\r\n" \
 "-----END CERTIFICATE-----\r\n";
 
+	eap_client_cert_len = strlen(eap_client_cert)+1;
+	eap_client_key_len = strlen(eap_client_key)+1;
+	eap_ca_cert_len = strlen(eap_ca_cert)+1;
 }
 
 static void example_eap_thread(void *method){
@@ -150,9 +157,12 @@ static void example_eap_thread(void *method){
 	else if(strcmp(method, "ttls") == 0){
 		eap_start("ttls");
 	}
+	else if(strcmp(method, "fast") == 0){
+		eap_start("fast");
+	}
 	else
 		printf("Invalid method\n");
-	
+
 	vTaskDelete(NULL);
 }
 

@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_BEACON) && CONFIG_BT_BEACON
 #include "platform_stdlib.h"
 #include <trace_app.h>
 #include <string.h>
@@ -24,8 +26,6 @@
 #include <gap_msg.h>
 #include <app_msg.h>
 #include "bt_beacon_app.h"
-
-
 
 /** @defgroup  PERIPH_APP Peripheral Application
     * @brief This file handles BLE peripheral application routines.
@@ -83,7 +83,7 @@ void bt_beacon_app_handle_dev_state_evt(T_GAP_DEV_STATE new_state, uint16_t caus
     {
         if (new_state.gap_init_state == GAP_INIT_STATE_STACK_READY)
         {
-			printf("\n\rGAP stack ready\n\r");
+			printf("GAP stack ready\r\n");
             APP_PRINT_INFO0("GAP stack ready");
             /*stack ready*/
             le_adv_start();
@@ -95,12 +95,12 @@ void bt_beacon_app_handle_dev_state_evt(T_GAP_DEV_STATE new_state, uint16_t caus
         if (new_state.gap_adv_state == GAP_ADV_STATE_IDLE)
         {
             APP_PRINT_INFO0("GAP adv stopped");
-            printf("\n\rGAP adv stopped\n\r");
+            printf("GAP adv stopped\r\n");
         }
         else if (new_state.gap_adv_state == GAP_ADV_STATE_ADVERTISING)
         {
             APP_PRINT_INFO0("GAP adv start");
-            printf("\n\rGAP adv start\n\r");
+            printf("GAP adv start\r\n");
         }
     }
 
@@ -166,3 +166,4 @@ T_APP_RESULT bt_beacon_app_gap_callback(uint8_t cb_type, void *p_cb_data)
 }
 /** @} */ /* End of group PERIPH_GAP_CALLBACK */
 /** @} */ /* End of group PERIPH_APP */
+#endif

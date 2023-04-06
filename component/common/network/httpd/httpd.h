@@ -126,6 +126,13 @@ void httpd_clear_page_callbacks(void);
 void httpd_setup_debug(uint8_t debug);
 
 /**
+ * @brief     This function is used to setup httpd server priority.
+ * @param[in] priority: the default priority is defined to 1
+ * @return    None
+ */
+void httpd_setup_priority(uint8_t priority);
+
+/**
  * @brief     This function is used to setup connection idle timeout for server.
  * @param[in] idle_timeout: timeout in seconds
  * @return    None
@@ -152,6 +159,14 @@ int httpd_setup_cert(const char *server_cert, const char *server_key, const char
  * @note      Must be used before httpd_start() if basic authorization is used
  */
 int httpd_setup_user_password(char *user, char *password);
+
+/**
+ * @brief     This function is used to set the maximum handling header size in httpd_request_read_header()
+              The default maximum size of http header is 1024 Bytes
+ * @param[in] size: the maximum size of http header
+ * @return    None
+ */
+void httpd_set_header_size(size_t size);
 
 /**
  * @brief     This function is used to free memory allocated by httpd API, such as httpd_request_get_header_field() and httpd_request_get_query_key().

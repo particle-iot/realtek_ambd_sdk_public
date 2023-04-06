@@ -18,12 +18,10 @@ vpath %.c $(DIR) $(DIR_COM) $(CFGDIR)
 #*****************************************************************************#
 CSRC =	$(DIR)/rtl8721dlp_pinmap.c \
 	$(DIR)/rtl8721dlp_clk.c \
-	$(DIR)/rtl8721dlp_pmc.c \
 	$(DIR)/rtl8721dlp_cpft.c \
 	$(DIR)/rtl8721dlp_system.c \
 	$(DIR)/rtl8721dlp_app_start.c \
 	$(DIR)/rtl8721dlp_startup.c \
-	$(DIR)/rtl8721dlp_pmc_ram.c \
 	$(DIR)/rtl8721dlp_km4.c \
 	$(DIR)/rtl8721dlp_simulation.c \
 	$(DIR)/rtl8721dlp_flashclk.c \

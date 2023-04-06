@@ -10,7 +10,7 @@
 #include "ameba_soc.h"
 #include "main.h"
 
-#define PWM_PERIOD	99
+#define PWM_PERIOD	100
 
 static GPIO_InitTypeDef GPIO_InitStruct;
 
@@ -23,14 +23,14 @@ void tim5_gen_pwm_one_pulse(void)
 	RTIM_TimeBaseStructInit(&TIM_InitStruct_temp);
 	TIM_InitStruct_temp.TIM_Idx = 5;
 	TIM_InitStruct_temp.TIM_Prescaler = 199;
-	TIM_InitStruct_temp.TIM_Period = PWM_PERIOD;
+	TIM_InitStruct_temp.TIM_Period = PWM_PERIOD - 1;
 	RTIM_TimeBaseInit(TIM5, &TIM_InitStruct_temp, TIMER5_IRQ, NULL, 0);
 	/*enable one pulse mode*/
 	RTIM_SetOnePulseOutputMode(TIM5, TIM_OPMode_Single, TIM_OPMode_ETP_negative);
 
 	RTIM_CCStructInit(&TIM_CCInitStruct);
+	TIM_CCInitStruct.TIM_OCPulse = PWM_PERIOD / 2;
 	RTIM_CCxInit(TIM5, &TIM_CCInitStruct, pwm_chan);
-	RTIM_CCRxSet(TIM5, PWM_PERIOD / 2 + 1, pwm_chan);
 	RTIM_CCxCmd(TIM5, pwm_chan, TIM_CCx_Enable);
 
 	Pinmux_Config(_PA_13, PINMUX_FUNCTION_PWM_HS);

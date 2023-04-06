@@ -126,6 +126,8 @@ void ota_platform_reset(void)
 	rtc_backup_timeinfo();
 #endif
 
+	BKUP_Set(BKUP_REG0, BIT_KM4SYS_RESET_HAPPEN);
+
 	WDG_Scalar(50, &CountProcess, &DivFacProcess);
 	WDG_InitStruct.CountProcess = CountProcess;
 	WDG_InitStruct.DivFacProcess = DivFacProcess;
@@ -1281,7 +1283,7 @@ int http_read_socket( int socket, u8 *recevie_buf, int buf_len )
 	bytes_rcvd = recv(socket, recevie_buf, buf_len, 0 );
 
 	if(bytes_rcvd <= 0) {
-		printf("[%s], Close HTTP Socket[%d].\n", socket, __FUNCTION__);
+		printf("[%s], Close HTTP Socket.\n", __FUNCTION__);
 		return -2;
 	}
 	return bytes_rcvd;

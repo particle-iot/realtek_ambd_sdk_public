@@ -8,6 +8,8 @@
  */
 
 // #include <os_sched.h>
+#include <platform_opts_bt.h>
+#if (defined(CONFIG_BT_CONFIG) && CONFIG_BT_CONFIG) || (defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG)
 #include <platform/platform_stdlib.h>
 #include <string.h>
 #include <trace_app.h>
@@ -31,9 +33,9 @@
 #include "wifi_constants.h"
 #include "wifi_conf.h"
 #include "lwip_netconf.h"
+#include "os_sched.h"
 
 extern bool bt_trace_uninit(void);
-extern void wifi_btcoex_set_bt_on(void);
 extern uint8_t airsync_specific;
 
 /** @defgroup  PERIPH_DEMO_MAIN Peripheral Main
@@ -90,11 +92,10 @@ static const uint8_t adv_data[] =
  * NOTE: This function shall be called before @ref bte_init is invoked.
  * @return void
  */
-extern void gap_config_hci_task_secure_context(uint32_t size);
 void bt_config_stack_config_init(void)
 {
     gap_config_max_le_link_num(APP_MAX_LINKS);
-    gap_config_hci_task_secure_context (280);
+    gap_config_max_le_paired_device(APP_MAX_LINKS);
 }
 /**
   * @brief  Initialize peripheral and gap bond manager related parameters
@@ -216,7 +217,7 @@ int bt_config_app_init(void)
 	
 	/*Check WIFI init complete*/
 	if( ! (wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
-		BC_printf("WIFI is disabled\n\r");
+		BC_printf("WIFI is disabled\r\n");
 		return -1;
 	}
 	
@@ -239,7 +240,7 @@ int bt_config_app_init(void)
 	
 	if (new_state.gap_init_state == GAP_INIT_STATE_STACK_READY) {
 		bt_stack_already_on = 1;
-		BC_printf("BT Stack already on\n\r");
+		BC_printf("BT Stack already on\r\n");
 	}
 	else{
 		bt_trace_init();
@@ -256,12 +257,9 @@ int bt_config_app_init(void)
 	
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	} while (new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
-	
-	/*Start BT WIFI coexistence*/
-	wifi_btcoex_set_bt_on();
 	
 	if (bt_stack_already_on) {
 		bt_config_app_set_adv_data();
@@ -281,14 +279,15 @@ void bt_config_app_deinit(void)
 	
 	le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	if (new_state.gap_init_state != GAP_INIT_STATE_STACK_READY) {
-		BC_printf("BT Stack is not running\n\r");
+		BC_printf("BT Stack is not running\r\n");
 	}
 #if F_BT_DEINIT
 	else {
 		bte_deinit();
 		bt_trace_uninit();
-		BC_printf("BT Stack deinitalized\n\r");
+		BC_printf("BT Stack deinitalized\r\n");
 	}
 #endif
 	set_bt_config_state(BC_DEV_DISABLED); // BT Config off
 }
+#endif

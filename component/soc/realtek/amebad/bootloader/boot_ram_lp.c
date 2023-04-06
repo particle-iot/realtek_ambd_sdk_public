@@ -102,10 +102,13 @@ static VOID BOOT_RAM_WakeFromPG(VOID)
 	/*enable HS platform power for high 8k txpktbuffer.*/
 	Temp = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_LP_PWR_ISO_CTRL);
 	Temp |= BIT_MASK_LSYS_HPLAT_PWC_EN_BIT2;
-	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_PWR_ISO_CTRL, Temp);
+	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_PWR_ISO_CTRL, Temp);
 	/*enable flash clock and init spic*/
 	RCC_PeriphClockCmd(APBPeriph_FLASH, APBPeriph_FLASH_CLOCK_XTAL, ENABLE);
 	
+	/* invalidate spic auto write */
+	BOOT_FLASH_Invalidate_Auto_Write();
+
 	FLASH_Init(flash_init_para.FLASH_cur_bitmode);
 	
 	/* we should Cache_Flush when we wake */

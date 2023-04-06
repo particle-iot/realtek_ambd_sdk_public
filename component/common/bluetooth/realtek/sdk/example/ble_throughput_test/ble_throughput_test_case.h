@@ -3,12 +3,9 @@
 #define _BLE_AUTO_TEST_CASE_H_
 #include "app_msg.h"
 #include <gap_conn_le.h>
-#include "user_cmd_parse.h"
- 
 #if F_BT_LE_GAP_PERIPHERAL_SUPPORT
 #include <ble_throughput_200.h>
 #endif
-
 #if F_BT_LE_GAP_CENTRAL_SUPPORT
 #include <ble_throughput_200_sut.h>
 #endif
@@ -17,6 +14,22 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define USER_CMD_MAX_PARAMETERS         8   /**< max. number of parameters that the parser will scan */
+
+/**
+ * @brief Data UART command parse value.
+ *
+ * This is the structure where the command line parser puts its values.
+ */
+typedef struct
+{
+    char       *p_cmd;                              /**< pointer to command */
+    int32_t     param_count;                        /**< number of found parameters */
+    uint32_t    dw_param[USER_CMD_MAX_PARAMETERS];  /**< automatically parsed parameters */
+    char       *p_param[USER_CMD_MAX_PARAMETERS];   /**< automatically parsed parameters */
+} T_USER_CMD_PARSED_VALUE;
+
 
 typedef uint8_t TGATTDBdAddr[6];
 extern TGATTDBdAddr g_cur_rembd;

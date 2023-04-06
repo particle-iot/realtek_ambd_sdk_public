@@ -16,6 +16,8 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include <os_sched.h>
 #include <string.h>
 #include <trace_app.h>
@@ -40,6 +42,7 @@
 #include "rtk_coex.h"
 #include <stdio.h>
 #include "wechat_airsync_protocol.h"
+
 /** @defgroup  PERIPH_DEMO_MAIN Peripheral Main
     * @brief Main file to initialize hardware and BT stack and start task scheduling
     * @{
@@ -108,6 +111,7 @@ static const uint8_t adv_data[] =
 void bt_airsync_config_stack_config_init(void)
 {
     gap_config_max_le_link_num(APP_MAX_LINKS);
+    gap_config_max_le_paired_device(APP_MAX_LINKS);
 }
 
 /**
@@ -184,7 +188,7 @@ void bt_airsync_config_app_le_gap_init(void)
  */
 void bt_airsync_config_app_le_profile_init(void)
 {
-    server_init(3);
+    server_init(1);
 
     bt_airsync_config_srv_id = airsync_add_service((void *)bt_airsync_config_app_profile_callback);
 	server_register_app_cb(bt_airsync_config_app_profile_callback);
@@ -193,7 +197,7 @@ void bt_airsync_config_app_le_profile_init(void)
 void bt_airsync_config_task_init(void)
 {
 	bt_airsync_config_app_task_init();
-	p_airsync_send_data_handler = airsync_send_data;
+	p_airsync_send_data_handler = bt_airsync_config_send_data_to_apptask;
 	airsync_specific = 1;
 	bt_config_wifi_init();
 }
@@ -205,7 +209,6 @@ void bt_airsync_config_task_deinit(void)
 	bt_airsync_config_app_task_deinit();
 }
 
-extern void wifi_btcoex_set_bt_on(void);
 int bt_airsync_config_app_init(void)
 {
 	int bt_stack_already_on = 0;
@@ -215,7 +218,7 @@ int bt_airsync_config_app_init(void)
 
 	/*Check WIFI init complete*/
 	if( ! (wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
-		BC_printf("WIFI is disabled\n\r");
+		BC_printf("WIFI is disabled\r\n");
 		return -1;
 	}
 
@@ -234,7 +237,7 @@ int bt_airsync_config_app_init(void)
 	
 	if (new_state.gap_init_state == GAP_INIT_STATE_STACK_READY) {
 		bt_stack_already_on = 1;
-		BC_printf("BT Stack already on\n\r");
+		BC_printf("BT Stack already on\r\n");
 	} else {
 		bt_trace_init();
 		bt_airsync_config_stack_config_init();
@@ -250,12 +253,9 @@ int bt_airsync_config_app_init(void)
 
 	/*Wait BT init complete*/
 	do {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		os_delay(100);
 		le_get_gap_param(GAP_PARAM_DEV_STATE, &new_state);
 	} while (new_state.gap_init_state != GAP_INIT_STATE_STACK_READY);
-
-	/*Start BT WIFI coexistence*/
-	wifi_btcoex_set_bt_on();
 
 	if (bt_stack_already_on) {
 		bt_airsync_config_app_set_adv_data();
@@ -274,14 +274,14 @@ void bt_airsync_config_app_deinit(void)
 
 	le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 	if (new_state.gap_init_state != GAP_INIT_STATE_STACK_READY) {
-		BC_printf("BT Stack is not running\n\r");
+		BC_printf("BT Stack is not running\r\n");
 	}
 #if F_BT_DEINIT
 	else {
 		bte_deinit();
 		bt_trace_uninit();
-		BC_printf("BT Stack deinitalized\n\r");
+		BC_printf("BT Stack deinitalized\r\n");
 	}
 #endif
 }
-
+#endif

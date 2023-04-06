@@ -21,6 +21,7 @@
 #include "build_info.h"
 #include "bt_intf.h"
 #include "wifi_conf.h" //for wifi_disable_powersave and wifi_resume_powersave
+#include "device_lock.h"
 
 #define hci_board_32reg_set(addr, val) HAL_WRITE32(addr, 0, val)
 #define hci_board_32reg_read(addr) HAL_READ32(addr, 0)
@@ -57,7 +58,7 @@ unsigned int baudrates_length = sizeof(baudrates) / sizeof(BAUDRATE_MAP);
 
 static uint32_t hci_tp_baudrate;
 uint8_t  hci_tp_lgc_efuse[BT_EFUSE_TABLE_LEN];
-uint8_t  hci_tp_phy_efuse[16];
+uint8_t  hci_tp_phy_efuse[19];
 
 
 static uint32_t cal_bit_shift(uint32_t Mask)
@@ -172,29 +173,20 @@ extern uint32_t bt_flatk_8721d(uint16_t txgain_flatk);
         case 0x0030:
             if (entry_len == 6)
             {
-                if ((efuse_buf[0] != 0xff) && (efuse_buf[1] != 0xff))
+                if ((efuse_buf[0] != 0xff) || (efuse_buf[1] != 0xff) || (efuse_buf[2] != 0xff) || \
+                    (efuse_buf[3] != 0xff) || (efuse_buf[4] != 0xff) || (efuse_buf[5] != 0xff))
                 {
-                    //memcpy(p,&efuse_buf[0],6);
-                    /*
-                    hci_board_debug("\r\nBT ADDRESS:\r\n");
-                    for(int i = 0 ;i <6;i ++)
-                    {
-						p[i] = efuse_buf[5-i];
-                        hci_board_debug("%02x:",efuse_buf[i]);
-                    }
-                    hci_board_debug("\r\n");*/
-                    for(int i = 0 ;i <6;i ++)
+                    for (int i = 0; i < 6; i++)
                     { 
                         p[i] = efuse_buf[5-i]; 
                     }
 
-                    hci_board_debug("\nBT ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\r\n",
-                        efuse_buf[0], efuse_buf[1], efuse_buf[2],
-                        efuse_buf[3], efuse_buf[4], efuse_buf[5]);
-				}
+                    hci_board_debug("BT ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\r\n",
+                        efuse_buf[0], efuse_buf[1], efuse_buf[2], efuse_buf[3], efuse_buf[4], efuse_buf[5]);
+                }
                 else
                 {
-                    hci_board_debug("hci_rtk_parse_config: BT ADDRESS  %02x %02x %02x %02x %02x %02x, use the defaut config\n",
+                    hci_board_debug("hci_rtk_parse_config: BT ADDRESS %02x %02x %02x %02x %02x %02x, use the default config\r\n",
                               p[0], p[1], p[2], p[3], p[4], p[5]);
                 }
             }
@@ -322,7 +314,7 @@ uint8_t *hci_find_patch_address(void)
     else
     {
         hci_board_debug("\nWe use BT ROM OTA1 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA1);
-        HCI_PRINT_INFO1("\nWe use BT ROM OTA1 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA2);
+        HCI_PRINT_INFO1("\nWe use BT ROM OTA1 PATCH ADDRESS:0x%x\n", MERGE_PATCH_ADDRESS_OTA1);
         return (uint8_t *)MERGE_PATCH_ADDRESS_OTA1;
     }
 }
@@ -363,7 +355,7 @@ uint8_t *hci_rtk_combine_config(void)
 
     HCI_PRINT_WARN1("hci_rtk_combine_config: invalid len, calculated %u",   config_length);
 
-    LE_UINT16_TO_STREAM(p_len, config_length);  //just avoid the length is not coreect
+    LE_UINT16_TO_STREAM(p_len, config_length - HCI_CONFIG_HEAD);  //just avoid the length is not coreect
     if(!CHECK_SW(EFUSE_SW_DRIVER_DEBUG_LOG))
     {
         hci_board_debug("hci_rtk_combine_config: all config length is %x\r\n",config_length);
@@ -381,7 +373,7 @@ uint16_t fix_config_len(void)
 }
 
 
-bool hci_rtk_find_patch(void)
+bool hci_rtk_find_patch(uint8_t bt_hci_chip_id)
 {
     extern unsigned int  rtlbt_fw_len;
     extern unsigned char rtlbt_config[];
@@ -433,7 +425,7 @@ bool hci_rtk_find_patch(void)
                 hci_flash_stream_read(p_merge_addr+0x0e + 2*i ,2, (uint8_t *)&fw_chip_id);
                // LE_ARRAY_TO_UINT16(fw_chip_id, p_merge_addr+0x0e + 2*i);
 
-                if(fw_chip_id == SYSCFG_CUTVersion())
+                if(fw_chip_id == bt_hci_chip_id)
                 {
                     hci_flash_stream_read(p_merge_addr+0x0e +2*mp_num_of_patch + 2*i ,2, (uint8_t *)&fw_len);
                     //LE_ARRAY_TO_UINT16(fw_len, p_merge_addr+0x0e +2*mp_num_of_patch + 2*i);
@@ -523,7 +515,9 @@ void bt_read_efuse(void)
 
     //read logic efuse
     p_buf = os_mem_zalloc(RAM_TYPE_DATA_ON, 1024);
+	device_mutex_lock(RT_DEV_LOCK_EFUSE);
     ret = EFUSE_LMAP_READ(p_buf);
+	device_mutex_unlock(RT_DEV_LOCK_EFUSE);
     if (ret == _FAIL)
     {
         hci_board_debug("EFUSE_LMAP_READ fail \n");
@@ -544,14 +538,30 @@ void bt_read_efuse(void)
     //read physical efuse
     for (Idx = 0; Idx < 16; Idx++)
     {
-       EFUSE_PMAP_READ8(0, 0x120 + Idx, hci_tp_phy_efuse + Idx, L25EOUTVOLTAGE);
+		device_mutex_lock(RT_DEV_LOCK_EFUSE);
+		EFUSE_PMAP_READ8(0, 0x120 + Idx, hci_tp_phy_efuse + Idx, L25EOUTVOLTAGE);
+		device_mutex_unlock(RT_DEV_LOCK_EFUSE);
+        if ((Idx == 7) && (hci_tp_phy_efuse[Idx] == 0))
+        {
+            hci_tp_phy_efuse[Idx] = 0x13;
+        }
     }
+	device_mutex_lock(RT_DEV_LOCK_EFUSE);
+    EFUSE_PMAP_READ8(0, 0x1FD, hci_tp_phy_efuse + 16, L25EOUTVOLTAGE);
+    EFUSE_PMAP_READ8(0, 0x1FE, hci_tp_phy_efuse + 17, L25EOUTVOLTAGE);
+    EFUSE_PMAP_READ8(0, 0x1FF, hci_tp_phy_efuse + 18, L25EOUTVOLTAGE);
+	device_mutex_unlock(RT_DEV_LOCK_EFUSE);
 
     if(!CHECK_SW(EFUSE_SW_DRIVER_DEBUG_LOG))
     {
         //0
-        hci_board_debug("\r\n==bt phy_efuse 0x120~0x130:==\r\n ");
+        hci_board_debug("\r\n==bt phy_efuse 0x120~0x12F:==\r\n ");
         for (Idx = 0; Idx < 16; Idx++)
+        {
+            hci_board_debug("\n%x:", hci_tp_phy_efuse[Idx]);
+        }
+        hci_board_debug("\r\n==bt phy_efuse 0x1FD~0x1FF:==\r\n ");
+        for (Idx = 16; Idx < 19; Idx++)
         {
             hci_board_debug("\n%x:", hci_tp_phy_efuse[Idx]);
         }
@@ -569,7 +579,9 @@ void bt_power_off(void)
 {
     set_reg_value(0x40000000,BIT0 | BIT1, 0);
     rltk_coex_bt_enable(0);
-    wifi_resume_powersave();
+    if(!rltk_wlan_is_mp()){
+        wifi_resume_powersave();
+    }
 }
 
 void bt_change_gnt_bt_only(void)
@@ -584,7 +596,14 @@ void bt_change_gnt_wifi_only(void)
 
 void bt_reset(void)
 {
-    wifi_disable_powersave();
+    if(!rltk_wlan_is_mp()) {
+		if (rltk_wlan_btcoex_lps_enabled()){
+			wifi_enable_powersave_for_coex();
+		} else {
+        wifi_disable_powersave();
+    }
+    }
+
     if(!CHECK_SW(EFUSE_SW_BT_FW_LOG))
     {
         //0
@@ -618,7 +637,7 @@ void bt_reset(void)
 
 bool hci_board_init()
 {
-    bool ret=false;
+
 	
     if(!(wifi_is_up(RTW_STA_INTERFACE) || wifi_is_up(RTW_AP_INTERFACE))) {
         hci_board_debug("\nWIFI is off !Please restart BT after WIFI on!\n");
@@ -641,12 +660,6 @@ bool hci_board_init()
     hci_board_debug("\r\nBT BUILD Date: %s \r\n",UTS_VERSION);
     bt_read_efuse();
 
-    ret = hci_rtk_find_patch();
-    if(ret == false)
-    {
-        hci_board_debug("\r\n%s: error operate\r\n",__FUNCTION__);
-        return false;
-    }
     return true;
 }
 
@@ -676,7 +689,9 @@ void bt_write_phy_efuse_value(void)
     for(int i=0;i<0x10; i++)
     {
         hci_board_debug("\r\n write physical efuse 0x%x =0x%02x",0x120+i, hci_tp_phy_efuse[i]);
+		device_mutex_lock(RT_DEV_LOCK_EFUSE);
         EFUSE_PMAP_WRITE8(0, 0x120 + i, hci_tp_phy_efuse[i], L25EOUTVOLTAGE);
+		device_mutex_unlock(RT_DEV_LOCK_EFUSE);
     }
 }
 
@@ -710,7 +725,9 @@ bool hci_board_complete(void)
         hci_board_debug("\r\n=================original ========================\r\n");
         for (int Idx = 0; Idx < 16; Idx++)
         {
-            EFUSE_PMAP_READ8(0, 0x120 + Idx, orignal_hci_tp_phy_efuse + Idx, L25EOUTVOLTAGE);
+			device_mutex_lock(RT_DEV_LOCK_EFUSE);
+			EFUSE_PMAP_READ8(0, 0x120 + Idx, orignal_hci_tp_phy_efuse + Idx, L25EOUTVOLTAGE);
+			device_mutex_unlock(RT_DEV_LOCK_EFUSE);
             hci_board_debug("\r\n original physical efuse 0x%x =0x%02x",0x120+Idx, orignal_hci_tp_phy_efuse[Idx]);
             if(orignal_hci_tp_phy_efuse[Idx] != 0xff)
             {

@@ -17,6 +17,7 @@
  *                              Header Files
  *============================================================================*/
 #include <platform_opts_bt.h>
+#if defined(CONFIG_BT_SCATTERNET) && CONFIG_BT_SCATTERNET
 #if	defined (CONFIG_BT_USER_COMMAND) && (CONFIG_BT_USER_COMMAND)
 #include <string.h>
 #include <trace_app.h>
@@ -27,6 +28,7 @@
 #include <gap_conn_le.h>
 #include <gcs_client.h>
 #include <stdio.h>
+#include <ble_scatternet_app_flags.h>
 /** @defgroup  CENTRAL_CLIENT_CMD Central Client User Command
     * @brief This file handles Central Client User Command.
     * @{
@@ -120,4 +122,5 @@ const T_USER_CMD_TABLE_ENTRY ble_scatternet_user_cmd_table[] =
 };
 /** @} */ /* End of group SCATTERNET_CMD */
 
+#endif
 #endif

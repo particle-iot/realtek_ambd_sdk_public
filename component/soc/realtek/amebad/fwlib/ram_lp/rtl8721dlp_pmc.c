@@ -34,6 +34,8 @@ typedef struct {
 	u32 SCBbackup[4];
 	u32 CPUPSP;
 	u32 IPCbackup;
+	u32 BASEPRI_backup;
+	u32 PRIMASK_backup;
 	u32 PortSVC_Backup;
 	u8 NVICIPbackup[MAX_PERIPHERAL_IRQ_NUM];
 	MPU_BackUp_TypeDef MPU_BK;
@@ -45,6 +47,7 @@ u32 WakeEventFlag = _FALSE;
 u32 WakeEventAon = 0x00;
 u32 WakeEvent = 0x00;
 
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_SWR_PFMForce(u32 NewStatus)
 {
@@ -143,6 +146,7 @@ void SOCPS_PWROption(u32 pwrmgt_option)
   * @param  None
   * @retval BIT(0): wakepin, BIT(1): aon_timer, BIT(2): RTC, BIT(3): tsf_timer, BIT(4): key-scan
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 int SOCPS_AONWakeReason(void)
 {
@@ -165,6 +169,7 @@ int SOCPS_AONWakeReason(void)
   *		 @arg BIT_CAPTOUCH_WAKE_STS
   * @retval none
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_AONWakeClear(u32 BitMask)
 {
@@ -189,12 +194,74 @@ int SOCPS_WakePinCheck(void)
 }
 
 /**
+  * @brief  For some peripheral,Should switch it's clock to 32K or 131K before sleep.
+  * @param  NewStatus: ENABLE/DISABLE.
+  * @retval None
+  */
+_OPTIMIZE_O3_
+IMAGE2_RAM_TEXT_SECTION
+VOID SOCPS_SetPeripheralClock(u32 NewStatus)
+{
+	u32 Rtemp = 0;
+	int i;
+
+	for (i = 0;;) {
+		/*  Check if search to end */
+		if (sleep_wevent_config[i].Module == 0xFFFFFFFF) {
+			break;
+		}
+		   
+		//switch GPIO reg/intr clock to 32k from SDM 
+		if ((sleep_wevent_config[i].Status == ON) && \
+			(sleep_wevent_config[i].Module & BIT_LP_WEVT_GPIO_MSK)) {
+
+			Rtemp = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_LP_CLK_CTRL1);
+			if (NewStatus == ENABLE) {
+				Rtemp |= BIT_LSYS_GPIO0_CKSL;
+			} else {
+				Rtemp &= ~BIT_LSYS_GPIO0_CKSL;
+			}
+			
+			HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_CLK_CTRL1, Rtemp);
+			break;
+		}
+
+		i++;
+	}
+#if 0
+	for (i = 0;;) {
+		/*  Check if search to end */
+		if (sleep_aon_wevent_config[i].Module == 0xFFFFFFFF) {
+			break;
+		}
+		
+		// Switch captouch reg/intr clock to 131K clock
+		if ((sleep_aon_wevent_config[i].Status == ON) && \
+		    (sleep_aon_wevent_config[i].Module == BIT_CAPTOUCH_WAKE_STS )) {
+
+			Rtemp = HAL_READ32(SYSTEM_CTRL_BASE, REG_AON_ISO_CTRL);
+			if (NewStatus == ENABLE) {
+				Rtemp &= ~BIT_AON_CTOUCH_CK_SEL;
+			} else {
+				Rtemp |= BIT_AON_CTOUCH_CK_SEL;
+			}
+
+			HAL_WRITE32(SYSTEM_CTRL_BASE, REG_AON_ISO_CTRL, Rtemp);
+		} 		
+		i++;
+	}
+
+#endif
+}
+
+/**
   * @brief  set AON timer for wakeup.
   * @param  SDuration: sleep time, unit is ms
   * @note wakeup state:sleep PG & CG &deep standby & deep sleep
   * @note This is 32.768KHz timer, max counter = 0x3FFFFFFF/32768/60 = 546min
   * @retval None
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_AONTimer(u32 SDuration)
 {
@@ -241,6 +308,7 @@ u32 SOCPS_AONTimerGet(VOID)
   * @brief  set AON Timer Disable or Enable.
   * @retval None
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_AONTimerCmd(u32 NewStatus)
 {
@@ -618,6 +686,7 @@ VOID SOCPS_TimingTest(VOID)
 
 }
 
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 u32 SOCPS_KM4Wake(VOID)
 {
@@ -660,6 +729,7 @@ u32 SOCPS_KM4Wake(VOID)
 	}
 }
 
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 VOID SOCPS_SleepCG(VOID)
 {
@@ -691,6 +761,8 @@ VOID SOCPS_SleepCG(VOID)
 	Rtemp &= ~BIT_AON_CTOUCH_CK_SEL;
 	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_AON_ISO_CTRL, Rtemp);
 
+	SOCPS_SetPeripheralClock(ENABLE);
+
 	//Enable low power mode
 	SOCPS_SleepCG_RAM();
 
@@ -699,6 +771,8 @@ VOID SOCPS_SleepCG(VOID)
 	Rtemp |= BIT_AON_CTOUCH_CK_SEL;
 	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_AON_ISO_CTRL, Rtemp);
 
+	SOCPS_SetPeripheralClock(DISABLE);
+	
 	/*Get wake event*/
 	WakeEvent = HAL_READ32(SYSTEM_CTRL_BASE, REG_LP_SLP_WAKE_EVENT_STATUS0);
 	WakeEventAon = SOCPS_AONWakeReason();
@@ -719,6 +793,7 @@ VOID SOCPS_SleepCG(VOID)
 /* keep power functions: UART/I2C/RTC/GPIO/Gtimer/REGU/ANAtimer */
 /* close power functions: GDMA */
 _OPTIMIZE_NONE_
+IMAGE2_RAM_TEXT_SECTION
 VOID SOCPS_SleepPG(VOID)
 {
 	u32 nDeviceIdOffset = 0;
@@ -751,7 +826,11 @@ VOID SOCPS_SleepPG(VOID)
 	
 	/*Backup KM0 IPC configuration*/
 	PMC_BK.IPCbackup = IPC_IERGet(IPCM0_DEV);
-	
+	PMC_BK.PRIMASK_backup = __get_PRIMASK();
+#if (__CORTEX_M >= 0x03)
+	PMC_BK.BASEPRI_backup = __get_BASEPRI();
+#endif
+
 	/* backup registgers */
 	SOCPS_NVICBackup();
 	SOCPS_MPUBackup();
@@ -814,6 +893,11 @@ VOID SOCPS_SleepPG(VOID)
 	NewVectorTable[11] = (HAL_VECTOR_FUN)PMC_BK.PortSVC_Backup;
 
 	//DBG_8195A("IPCbackup = %x \n", PMC_BK.IPCbackup);
+	
+	__set_PRIMASK(PMC_BK.PRIMASK_backup);
+#if (__CORTEX_M >= 0x03)
+	__set_BASEPRI(PMC_BK.BASEPRI_backup);
+#endif
 
 	/*Refill KM4 IPC configuration*/
 	IPC_IERSet(IPCM0_DEV, PMC_BK.IPCbackup);
@@ -860,6 +944,7 @@ VOID SOCPS_InitSYSIRQ(VOID)
   *  @brief clear work modules/wake up event after resume.
   *  @retval None
   */
+_OPTIMIZE_O3_
 IMAGE2_RAM_TEXT_SECTION
 void SOCPS_SleepDeInit(void)
 {
@@ -883,6 +968,7 @@ void SOCPS_SleepDeInit(void)
   *  @brief set work modules/wake up event after clock gating.
   *  @retval None       
   */
+_OPTIMIZE_O3_
 void SOCPS_SleepInit(void)
 {
 	int i = 0;
@@ -1113,6 +1199,7 @@ void SOCPS_DsleepInit(void)
 	*			 @arg FALSE: boot from power on
 	* @retval None    
   */
+_OPTIMIZE_O3_
 void SOCPS_DsleepWakeStatusSet(u32 DslpWake)
 {
 	if (DslpWake == TRUE) {

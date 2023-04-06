@@ -116,7 +116,7 @@ del %km4_dir%\ram3_nsc.p.bin
 del %km4_dir%\psram3_s.r.bin
 del %km4_dir%\psram3_s.bin
 
-if %build_type% equ mp (
+if %build_type% equ "mp" (
 	copy %km4_dir%\cmse_implib_mp.a %libdir%\lib\common\IAR\cmse_implib_mp.a
 ) else (
 	copy %km4_dir%\cmse_implib.a %libdir%\lib\common\IAR\cmse_implib.a

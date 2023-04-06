@@ -805,6 +805,16 @@ int rtw_pop_from_xqueue( _xqueue* queue, void* message, u32 timeout_ms )
 	return FAIL;
 }
 
+int rtw_peek_from_xqueue( _xqueue* queue, void* message, u32 timeout_ms )
+{
+	if(osdep_service.rtw_peek_from_xqueue)
+		return (int)osdep_service.rtw_peek_from_xqueue(queue, message, timeout_ms);
+	else
+		OSDEP_DBG("Not implement osdep service: rtw_peek_from_xqueue");
+
+	return FAIL;
+}
+
 int rtw_deinit_xqueue( _xqueue* queue )
 {
 	if(osdep_service.rtw_deinit_xqueue)
@@ -1062,6 +1072,12 @@ int rtw_get_random_bytes(void* dst, u32 size)
 	return 0;
 }
 
+int rtw_get_random_bytes_f_rng( void *p_rng, unsigned char *output, size_t output_size )
+{
+	(void*)p_rng;
+	return rtw_get_random_bytes(output, output_size);
+}
+
 u32 rtw_getFreeHeapSize(void)
 {
 	if(osdep_service.rtw_getFreeHeapSize)
@@ -1150,6 +1166,45 @@ void rtw_wakeup_task(struct task_struct *task)
 		osdep_service.rtw_wakeup_task(task);
 	else
 		OSDEP_DBG("Not implement osdep service: rtw_wakeup_task");
+
+	return;	
+}
+
+void rtw_set_priority_task(void* task, u32 NewPriority)
+{
+	if(osdep_service.rtw_set_priority_task)
+		osdep_service.rtw_set_priority_task(task,NewPriority);
+	else
+		OSDEP_DBG("Not implement osdep service: rtw_set_priority_task");
+
+	return;	
+}
+
+int rtw_get_priority_task(void* task)
+{
+	if(osdep_service.rtw_get_priority_task)
+		return osdep_service.rtw_get_priority_task(task);
+	else
+		OSDEP_DBG("Not implement osdep service: rtw_get_priority_task");
+
+	return -1;	
+}
+void rtw_suspend_task(void * task)
+{
+	if(osdep_service.rtw_suspend_task)
+		osdep_service.rtw_suspend_task(task);
+	else
+		OSDEP_DBG("Not implement osdep service: rtw_suspend_task");
+
+	return;	
+}
+
+void rtw_resume_task(void * task)
+{
+	if(osdep_service.rtw_resume_task)
+		osdep_service.rtw_resume_task(task);
+	else
+		OSDEP_DBG("Not implement osdep service: rtw_resume_task");
 
 	return;	
 }
@@ -1421,4 +1476,13 @@ void rtw_create_secure_context(u32 secure_stack_size)
 	else{
 		OSDEP_DBG("Not implement osdep service: rtw_create_secure_context");
 	}	
+}
+void* rtw_get_current_TaskHandle(void)
+{
+	if(osdep_service.rtw_get_current_TaskHandle)
+		return osdep_service.rtw_get_current_TaskHandle();
+	else
+		OSDEP_DBG("Not implement osdep service: rtw_get_current_TaskHandle");
+
+	return NULL;
 }

@@ -15,6 +15,10 @@
 /*============================================================================*
  *                              Header Files
  *============================================================================*/
+#include <platform_opts_bt.h>
+#if ((defined(CONFIG_BT_CENTRAL) && CONFIG_BT_CENTRAL) || \
+	(defined(CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) && CONFIG_BT_MESH_PROVISIONER_MULTIPLE_PROFILE) || \
+	(defined(CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE) && CONFIG_BT_MESH_DEVICE_MULTIPLE_PROFILE))
 #include <ble_central_link_mgr.h>
 #include <trace_app.h>
 #include <string.h>
@@ -22,7 +26,7 @@
 /*============================================================================*
  *                              Constants
  *============================================================================*/
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 /** @brief  Define start offset of the flash to save static random address. */
 #define BLE_CENTRAL_APP_STATIC_RANDOM_ADDR_OFFSET 0
 #endif
@@ -36,7 +40,7 @@
 T_APP_LINK ble_central_app_link_table[BLE_CENTRAL_APP_MAX_LINKS];
 
 
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 /**
  * @brief   Save static random address information into flash.
  * @param[in] p_addr Pointer to the buffer for saving data.
@@ -66,6 +70,7 @@ uint32_t ble_central_app_load_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_
     }
     return result;
 }
+#endif
 #endif
 
 /** @} */

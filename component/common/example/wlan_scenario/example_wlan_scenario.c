@@ -204,6 +204,9 @@ static void authentication(void){
 	printf("\n\r[WLAN_SCENARIO_EXAMPLE] Show Wi-Fi information\n");
 	rtw_wifi_setting_t setting;
 	wifi_get_setting(WLAN0_NAME,&setting);
+    if(wifi_get_setting(WLAN0_NAME,&setting) != -1) {
+        setting.security_type = rltk_get_security_mode_full(WLAN0_NAME);
+    }   
 	wifi_show_setting(WLAN0_NAME,&setting);
 }
 
@@ -1227,10 +1230,15 @@ static rtw_result_t scan_result_handler(rtw_scan_handler_result_t* malloced_scan
                                  ( record->security == RTW_SECURITY_WEP_PSK ) ? "WEP" :
                                  ( record->security == RTW_SECURITY_WPA_TKIP_PSK ) ? "WPA TKIP" :
                                  ( record->security == RTW_SECURITY_WPA_AES_PSK ) ? "WPA AES" :
+                                 ( record->security == RTW_SECURITY_WPA_MIXED_PSK ) ? "WPA Mixed" :
                                  ( record->security == RTW_SECURITY_WPA2_AES_PSK ) ? "WPA2 AES" :
                                  ( record->security == RTW_SECURITY_WPA2_TKIP_PSK ) ? "WPA2 TKIP" :
                                  ( record->security == RTW_SECURITY_WPA2_MIXED_PSK ) ? "WPA2 Mixed" :
-                                 ( record->security == RTW_SECURITY_WPA_WPA2_MIXED ) ? "WPA/WPA2 AES" :
+                                 ( record->security == RTW_SECURITY_WPA_WPA2_TKIP_PSK) ? "WPA/WPA2 TKIP" :
+                                 ( record->security == RTW_SECURITY_WPA_WPA2_AES_PSK) ? "WPA/WPA2 AES" :
+                                 ( record->security == RTW_SECURITY_WPA_WPA2_MIXED_PSK) ? "WPA/WPA2 Mixed" :
+                                 ( record->security == RTW_SECURITY_WPA3_AES_PSK ) ? "WPA3 AES" :
+                                 ( record->security == RTW_SECURITY_WPA2_WPA3_MIXED) ? "WPA2/WPA3-SAE AES" :
                                  "Unknown");
     		printf( " %s ", record->SSID.val);
     		printf("\r\n");

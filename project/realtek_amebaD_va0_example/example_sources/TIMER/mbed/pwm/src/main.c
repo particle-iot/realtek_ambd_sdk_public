@@ -58,11 +58,31 @@ void pwm_delay(void)
 void main(void)
 {
     int i;
-    
+	u32 Status;
+	u32 cr_bkp;
+
     for (i=0; i<4; i++) {
         pwmout_init(&pwm_led[i], pwm_led_pin[i]);
         pwmout_period_us(&pwm_led[i], PWM_PERIOD);
-    }
+#if USE_FLOAT
+		pwmout_write(&pwm_led[i], pwms[i]);
+#else
+		pwmout_pulsewidth_us(&pwm_led[i], pwms[i]);
+#endif
+	}
+
+	cr_bkp = TIM5->CR;
+	RTIM_UpdateDisableConfig(TIM5, DISABLE);
+	RTIM_UpdateRequestConfig(TIM5, TIM_UpdateSource_Global);
+	TIM5->EGR = TIM_PSCReloadMode_Immediate;
+	while (1) {
+		if (TIM5->SR & TIM_SR_UG_DONE) {
+			break;
+		}
+	}
+	Status = TIM5->SR;
+	TIM5->SR = Status;
+	TIM5->CR = cr_bkp;
 
     while (1) {
 #if USE_FLOAT

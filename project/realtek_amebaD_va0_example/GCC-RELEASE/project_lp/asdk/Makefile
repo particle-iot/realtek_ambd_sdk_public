@@ -11,7 +11,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
           else echo sh; fi ; fi)
 
 
-CODE_ANALYZE_PYTHON=$(shell $(ABS_ROOTDIR)/code_analyze.py)
+CODE_ANALYZE_PYTHON=$(shell python $(ABS_ROOTDIR)/code_analyze.py)
 #ROM_SYMBOL_GEN_PYTHON=$(shell $(ABS_ROOTDIR)/export_rom_symbol.py)
 ROM_SYMBOL_GEN_PYTHON= 
 
@@ -58,6 +58,8 @@ endif
 ROM_LD = $(ROOTDIR)/ld/rlx8721d_rom.ld
 
 .PHONY: all build_target_folder menuconfig clean build_libraries package_prebuilt_rom_objs ucps_image2
+
+LINK_APP_LIB += $(ROOTDIR)/lib/application/lib_pmc_lp.a
 
 image2:LINK_APP_LIB += $(ROOTDIR)/lib/application/lib_wifi_fw.a
 ucps_image2:LINK_APP_LIB += $(ROOTDIR)/lib/application/lib_wifi_ucps_fw.a
@@ -120,6 +122,7 @@ make_subdirs_lib:
 	@ rm -f $(RAM_OBJS_LIST)
 	@make -C make/target/wifi_fw all
 	@make -C make/target/wifi_rcu_fw all
+	@make -C make/pmc_lp all
 	@ rm -f $(RAM_OBJS_LIST)
 
 #*****************************************************************************#
@@ -173,6 +176,10 @@ linker_image2:
 	$(UTILITYDIR)/pad.sh $(IMAGE_TARGET_FOLDER)/km0_image2_all.bin
 
 	$(UTILITYDIR)/image_tool/imagetool.sh $(IMAGE_TARGET_FOLDER)/km0_image2_all.bin $(KM4_BUILDDIR)/asdk/image
+	
+	@if [ -f $(IMAGE_TARGET_FOLDER)/km0_km4_image2.bin ]; then \
+		$(OTAPREPENDTOOL) $(IMAGE_TARGET_FOLDER)/km0_km4_image2.bin $(KM4_BUILDDIR)/asdk/image; \
+	fi
 
 	@echo "========== Image manipulating end =========="
 
@@ -222,7 +229,8 @@ linker_loader:
 #*****************************************************************************#
 
 menuconfig:
-	cp $(CONFIGDIR)/config.in $(CONFIGDIR)/config.in.old -f
+
+	cp -f $(CONFIGDIR)/config.in $(CONFIGDIR)/config.in.old
 ifeq ($(COMPILEOS_CYGWIN),Cygwin)
 	@cp $(LXDIALOG_CYGWIN_STATIC) $(SCRIPTSDIR)/lxdialog/lxdialog.exe
 else
@@ -273,6 +281,7 @@ check_toolchain:
 		then echo "ToolChain Had Existed"; \
 		else echo "Extract toolchain"; \
 			make -C $(TOOLCHAINDIR) all; fi
+	chmod 777 -R $(UTILITYDIR)
 
 #*****************************************************************************#
 #                      RULES TO ENTER GDB                                     #
@@ -453,9 +462,11 @@ endif
 #              COPY flashloader into flashdownload folder                     #
 #*****************************************************************************#
 copy_flashloader:
-	$(COPY) $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf -f
-	$(COPY) $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin -f
+
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(GNU_SCRIPT)/acut_loader/target_FPGA.axf
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(GNU_SCRIPT)/acut_loader/flash_loader_ram_1.bin
 
 copy_imgtool_flashloader:
-	$(COPY) $(IMAGE_TARGET_FOLDER)/target_loader.axf $(TARGETDIR)/imgtool_floader/image/target_FPGA.axf -f
-	$(COPY) $(IMAGE_TARGET_FOLDER)/ram_1.bin $(TARGETDIR)/imgtool_floader/image/imgtool_flashloader_amebad.bin -f
+
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/target_loader.axf $(TARGETDIR)/imgtool_floader/image/target_FPGA.axf
+	$(COPY) -f $(IMAGE_TARGET_FOLDER)/ram_1.bin $(TARGETDIR)/imgtool_floader/image/imgtool_flashloader_amebad.bin

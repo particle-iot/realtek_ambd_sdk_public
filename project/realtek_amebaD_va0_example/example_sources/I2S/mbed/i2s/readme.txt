@@ -1,6 +1,6 @@
 Example Description
 
-This example describes how to use i2s by using mbed extend api
+This example describes how to use i2s tx by using mbed extend api
 
 Requirement Components:
    -Extension board: RTL-AMEBA_EXT B1_1V0

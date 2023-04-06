@@ -8,6 +8,11 @@
 
 #include "platform_opts.h"
 
+#define STACKSIZE     2048
+#if defined(configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1) && defined(CONFIG_SSL_CLIENT_PRIVATE_IN_TZ) && (CONFIG_SSL_CLIENT_PRIVATE_IN_TZ == 1)
+#include "device_lock.h"
+#endif
+
 #if CONFIG_USE_POLARSSL
 
 #include <lwip/sockets.h>
@@ -132,6 +137,14 @@ void example_ssl_download(void)
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/ssl.h>
 
+//#define SSL_CLIENT_EXT
+
+#ifdef SSL_CLIENT_EXT
+extern int ssl_client_ext_init(void);
+extern int ssl_client_ext_setup(mbedtls_ssl_config *conf);
+extern void ssl_client_ext_free(void);
+#endif
+
 #define SERVER_HOST    "176.34.62.248"
 #define SERVER_PORT    "443"
 #define RESOURCE       "/repository/IOT/Project_Cloud_A.bin"
@@ -164,6 +177,15 @@ static void example_ssl_download_thread(void *param)
 	mbedtls_ssl_context ssl;
 	mbedtls_ssl_config conf;
 
+#if defined(configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1) && defined(CONFIG_SSL_CLIENT_PRIVATE_IN_TZ) && (CONFIG_SSL_CLIENT_PRIVATE_IN_TZ == 1)
+	extern void rtw_create_secure_context(u32 secure_stack_size);
+	rtw_create_secure_context(STACKSIZE*2);
+	extern int NS_ENTRY secure_mbedtls_platform_set_calloc_free(void);
+	secure_mbedtls_platform_set_calloc_free();
+	extern void NS_ENTRY secure_set_ns_device_lock(void (*device_mutex_lock_func)(uint32_t), void (*device_mutex_unlock_func)(uint32_t));
+	secure_set_ns_device_lock(device_mutex_lock, device_mutex_unlock);
+#endif
+
 	// Delay to wait for IP by DHCP
 	vTaskDelay(10000);
 	printf("\nExample: SSL download\n");
@@ -173,6 +195,13 @@ static void example_ssl_download_thread(void *param)
 	mbedtls_net_init(&server_fd);
 	mbedtls_ssl_init(&ssl);
 	mbedtls_ssl_config_init(&conf);
+
+#ifdef SSL_CLIENT_EXT
+	if((ret = ssl_client_ext_init()) != 0) {
+		printf(" failed\n\r  ! ssl_client_ext_init returned %d\n", ret);
+		goto exit;
+	}
+#endif
 
 	if((ret = mbedtls_net_connect(&server_fd, SERVER_HOST, SERVER_PORT, MBEDTLS_NET_PROTO_TCP)) != 0) {
 		printf("ERROR: mbedtls_net_connect ret(%d)\n", ret);
@@ -186,12 +215,26 @@ static void example_ssl_download_thread(void *param)
 			MBEDTLS_SSL_TRANSPORT_STREAM,
 			MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
 
-		printf("ERRPR: mbedtls_ssl_config_defaults ret(%d)\n", ret);
+		printf("ERROR: mbedtls_ssl_config_defaults ret(%d)\n", ret);
 		goto exit;
 	}
 
 	mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE);
 	mbedtls_ssl_conf_rng(&conf, my_random, NULL);
+
+#ifdef SSL_CLIENT_EXT
+	if((ret = ssl_client_ext_setup(&conf)) != 0) {
+		printf(" failed\n\r  ! ssl_client_ext_setup returned %d\n", ret);
+		goto exit;
+	}
+#endif
+
+#if MBEDTLS_SSL_MAX_CONTENT_LEN == 4096
+	if(ret = mbedtls_ssl_conf_max_frag_len(&conf, MBEDTLS_SSL_MAX_FRAG_LEN_4096) < 0) {
+			printf("ERROR: mbedtls_ssl_conf_max_frag_len ret(%d)\n", ret);
+			goto exit;
+	}
+#endif
 
 	if((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0) {
 		printf("ERRPR: mbedtls_ssl_setup ret(%d)\n", ret);
@@ -259,6 +302,10 @@ exit:
 	mbedtls_net_free(&server_fd);
 	mbedtls_ssl_free(&ssl);
 	mbedtls_ssl_config_free(&conf);
+
+#ifdef SSL_CLIENT_EXT
+	ssl_client_ext_free();
+#endif
 
 	vTaskDelete(NULL);
 }

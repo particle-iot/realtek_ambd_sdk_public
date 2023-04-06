@@ -7,6 +7,8 @@
 
 //  Version : 1.0.4
 
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -626,3 +628,4 @@ void epb_unpack_switch_backgroud_push_free(SwitchBackgroudPush *push)
     epb_unpack_base_push_free(push->base_push);
     os_mem_free(push);
 }
+#endif

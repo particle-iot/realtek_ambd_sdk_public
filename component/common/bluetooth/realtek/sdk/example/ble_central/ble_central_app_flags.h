@@ -18,6 +18,9 @@
 #include <trace_app.h>
 #include <bt_flags.h>
 
+#include <app_common_flags.h>
+
+
 /** @defgroup  CENTRAL_CLIENT_Config Central Client App Configuration
     * @brief This file is used to config app functions.
     * @{
@@ -35,16 +38,6 @@
 
 /** @brief  Config the discovery table number of gcs_client */
 #define BLE_CENTRAL_APP_MAX_DISCOV_TABLE_NUM 40
-
-/** @brief  Config set physical: 0-Not built in, 1-built in, use user command to set*/
-#if defined(CONFIG_PLATFORM_8721D)
-#define F_BT_LE_5_0_SET_PHY_SUPPORT         1
-#elif defined(CONFIG_PLATFORM_8710C)
-#define F_BT_LE_5_0_SET_PHY_SUPPORT         0
-#endif
-
-/** @brief  Config local address type: 0-pulic address, 1-static random address */
-#define F_BT_LE_USE_STATIC_RANDOM_ADDR      0
 
 /** @} */ /* End of group CENTRAL_CLIENT_Config */
 

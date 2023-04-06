@@ -20,11 +20,9 @@ CSRC =	\
 	$(DIR)/rtl8721dhp_startup.c \
 	$(DIR)/rtl8721dhp_app_start.c \
 	$(DIR)/rtl8721dhp_clk.c \
-	$(DIR)/rtl8721dhp_pmc.c \
 	$(DIR)/rtl8721dhp_cpft.c \
 	$(DIR)/rtl8721dhp_ota_ram.c \
 	$(DIR)/rtl8721dhp_system.c \
-	$(DIR)/rtl8721dhp_pmc_ram.c \
 	$(DIR)/rtl8721dhp_simulation.c \
 
 CSRC +=	$(DIR)/rtl8721dhp_i2s.c \
@@ -37,7 +35,6 @@ CSRC +=	$(DIR)/rtl8721dhp_i2s.c \
 	$(DIR)/rtl8721dhp_audio.c \
 	$(DIR)/rtl8721dhp_sdio_host.c \
 	$(DIR)/rtl8721dhp_sd.c	\
-	$(DIR)/rtl8721dhp_psram.c \
 
 CSRC +=	$(DIR_COM)/rtl8721d_i2c.c \
 	$(DIR_COM)/rtl8721d_rtc.c \
@@ -53,7 +50,6 @@ CSRC +=	$(DIR_COM)/rtl8721d_i2c.c \
 	$(DIR_COM)/rtl8721d_sgpio.c \
 	$(DIR_COM)/rtl8721d_keyscan.c \
 	$(DIR_COM)/rtl8721d_captouch.c \
-	$(DIR_COM)/rtl8721d_rand2.c \
 	$(DIR_COM)/rtl8721d_gdma_memcpy.c \
 	$(DIR_COM)/rtl8721d_bor.c \
 	$(DIR_COM)/rtl8721d_ram_libc.c \

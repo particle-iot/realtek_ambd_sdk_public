@@ -17,6 +17,7 @@ SECTION(".data") u8* __bss_end__ = 0;
 #endif
 
 static u32 Cutversion;
+static u32 ICversion;
 
 extern int main(void);
 
@@ -73,7 +74,7 @@ void app_load_patch_to_retention(void)
 {
 	u32 Temp = 0;
 
-	if(Cutversion<=0x1){
+	if(ICversion<=0x1){
 		_memcpy(__retention_entry_func__, retention_ram_patch_array[0], RETENTION_RAM_SYS_OFFSET);
 	}else {
 		_memcpy(__retention_entry_func__, retention_ram_patch_array[1], RETENTION_RAM_SYS_OFFSET);
@@ -95,7 +96,7 @@ void app_retention_ram_patch(void)
 	Temp |= BIT_SHIFT_FLASH_CLK_XTAL;
 	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_CLK_CTRL0, Temp);
 
-	if( Cutversion<=0x1){
+	if( ICversion<=0x1){
 		/* dslp again to fix pad shutdown flashdownload issue */
 		Temp = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_AON_PWR_CTRL);
 		if ((Temp & BIT_DSLP_SNOOZE_MODE_LSPAD_SHUTDOWN) == 0) {
@@ -198,10 +199,10 @@ VOID app_pmc_patch(VOID)
 	//0x4800_00B8[31:0]  = 0x0A00_301A
 	//0x4800_00BC[31:0] = 0x0801_3802
 	//0x4800_00C0[31:0] = 0x00C0_0123
-	Cutversion = SYSCFG_CUTVersion();
+	ICversion = SYSCFG_ICVersion();
 	//DBG_8195A("cut version:%d\n", Cutversion);
 
-	if(Cutversion<=0x1){
+	if(ICversion<=0x1){
 		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, 0xB0, 0x00801A12);
 		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, 0xB8, 0x0A00301A);
 		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, 0xBC, 0x08013802);
@@ -213,11 +214,17 @@ VOID app_pmc_patch(VOID)
 	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP1_H, 0x202);
 	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP2_L, 0x1A0048B4);
 	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP2_H, 0x08088849);
-	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP3_L, 0x021A4D4C);
-	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP4_L, 0x0080645B);
-	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP5_L, 0x121A4C64);
-	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP5_H, 0x0805C300);
-
+	if (ICversion <= 0x5) {
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP3_L, 0x021A4D4C);
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP4_L, 0x0080645B);
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP5_L, 0x121A4C64);
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP5_H, 0x0805C300);
+	} else {
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP3_L, 0x021A4D4D);
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP4_L, 0x0080645C);
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP5_L, 0x121A4C64);
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_SYSON_PMC_PATCH_GRP5_H, 0x0805D300);
+	}
 	/* SPIC clock source switch patch */
 	app_load_patch_to_retention();
 }
@@ -294,7 +301,8 @@ void app_dslp_wake_check(void)
 
 static void app_gen_random_seed(void)
 {
-	u16 value, data;
+	u16 value;
+	u32 data;
 	int i = 0, j = 0;
 	u8 random[4], tmp;
 
@@ -304,6 +312,9 @@ static void app_gen_random_seed(void)
 	RegData = (u32)CapTouch->CT_ADC_REG1X_LPAD;
 	RegTemp = RegData | (BIT(6) | BIT(7));
 	CapTouch->CT_ADC_REG1X_LPAD = RegTemp;
+
+	RCC_PeriphClockCmd(APBPeriph_ADC, APBPeriph_ADC_CLOCK, DISABLE);
+	RCC_PeriphClockCmd(APBPeriph_ADC, APBPeriph_ADC_CLOCK, ENABLE);
 
 	ADC_Cmd(DISABLE);
 
@@ -411,6 +422,9 @@ void app_start(void)
 		
 		SDM32K_RTCCalEnable(ps_config.km0_rtc_calibration); /* 0.3ms */
 
+		Temp = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_AON_BOOT_REASON1);
+		Temp &= ~BIT_DSLP_RETENTION_RAM_PATCH;
+		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_AON_BOOT_REASON1, Temp);
 		// Retention Ram reset
 		_memset((void*)RETENTION_RAM_BASE,0,1024);
 		assert_param(sizeof(RRAM_TypeDef) <= 0xB0);

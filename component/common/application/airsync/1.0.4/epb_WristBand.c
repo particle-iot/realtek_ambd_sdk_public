@@ -7,12 +7,13 @@
 
 //  Version : 1.0.2
 
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "epb_WristBand.h"
 #include "os_mem.h"
-
 
 #define TAG_MMOpen_BaseResponse_ErrCode                                 0x08
 #define TAG_MMOpen_BaseResponse_ErrMsg                                  0x12
@@ -221,3 +222,4 @@ MMOpen_WristbandResponse *epb_mmopen_unpack_wristband_response(const uint8_t *bu
 
     return response;
 }
+#endif

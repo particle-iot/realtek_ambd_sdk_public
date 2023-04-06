@@ -49,7 +49,7 @@
 /* MEM_SIZE: the size of the heap memory. If the application will send
 a lot of data that needs to be copied, this should be set high. */
 #if WIFI_LOGO_CERTIFICATION_CONFIG
-    #define MEM_SIZE                (10*1024) //for ping 10k test
+    #define MEM_SIZE                (20*1024) //for ping 10k test
 #elif CONFIG_ETHERNET
 	#define MEM_SIZE				(6*1024)  //for iperf test
 #elif defined(CONFIG_HIGH_TP_TEST) && CONFIG_HIGH_TP_TEST
@@ -89,7 +89,7 @@ a lot of data that needs to be copied, this should be set high. */
 /* ---------- Pbuf options ---------- */
 /* PBUF_POOL_SIZE: the number of buffers in the pbuf pool. */
 #if WIFI_LOGO_CERTIFICATION_CONFIG
-    #define PBUF_POOL_SIZE          30 //for ping 10k test
+    #define PBUF_POOL_SIZE          60 //for ping 10k test
     #define IP_REASS_MAXAGE		1
 #elif defined(CONFIG_HIGH_TP_TEST) && CONFIG_HIGH_TP_TEST
     #define PBUF_POOL_SIZE          60
@@ -99,7 +99,7 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* IP_REASS_MAX_PBUFS: Total maximum amount of pbufs waiting to be reassembled.*/
 #if WIFI_LOGO_CERTIFICATION_CONFIG
-    #define IP_REASS_MAX_PBUFS              30 //for ping 10k test
+    #define IP_REASS_MAX_PBUFS              60 //for ping 10k test
 #else
     #define IP_REASS_MAX_PBUFS              10
 #endif
@@ -202,6 +202,10 @@ extern unsigned int sys_now(void);
 #define TCP_KEEPIDLE_DEFAULT			10000UL
 #define TCP_KEEPINTVL_DEFAULT			1000UL
 #define TCP_KEEPCNT_DEFAULT			10U
+#endif
+
+#if CONFIG_BRIDGE
+#define LWIP_NUM_NETIF_CLIENT_DATA            1
 #endif
 
 #if (defined(CONFIG_EXAMPLE_UART_ATCMD) && (CONFIG_EXAMPLE_UART_ATCMD)) \
@@ -379,6 +383,7 @@ Certain platform allows computing and verifying the IP, UDP, TCP and ICMP checks
 /* Added by Realtek start */
 #define LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS 1
 #define LWIP_DNS_LEGACY_SUPPORT 0
+#define LWIP_DNS_SUPPORT_RECV_MULTIPLE_IP 0
 /* Added by Realtek end */
 
 /* Extra options for lwip_v2.0.2 which should not affect lwip_v1.4.1 */

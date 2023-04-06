@@ -10,53 +10,22 @@
 
 #if CONFIG_EXAMPLE_AUDIO_MP3
 
-//-----------------Frequency Mapping Table--------------------//
-/*+-------------+-------------------------+--------------------+
-| Frequency(hz) | Number of Channels      | Decoded Bytes      |
-                |(CH_MONO:1 CH_STEREO:2)  |(I2S_DMA_PAGE_SIZE) |
-+---------------+-------------------------+--------------------+
-|          8000 |                       1 |               1152 |
-|          8000 |                       2 |               2304 |
-|         16000 |                       1 |               1152 |
-|         16000 |                       2 |               2304 |
-|         22050 |                       1 |               1152 |
-|         22050 |                       2 |               2304 |
-|         24000 |                       1 |               1152 |
-|         24000 |                       2 |               2304 |
-|         32000 |                       1 |               2304 |
-|         32000 |                       2 |               4608 |
-|         44100 |                       1 |               2304 |
-|         44100 |                       2 |               4608 |
-|         48000 |                       1 |               2304 |
-|         48000 |                       2 |               4608 |
-+---------------+-------------------------+------------------+*/
 
 
 //------------------------------------- ---CONFIG Parameters-----------------------------------------------//
-//#define I2S_DMA_PAGE_SIZE 4608   //Use frequency mapping table and set this value to number of decoded bytes 
-                                 //Options:- 1152, 2304, 4608
-
 #define NUM_CHANNELS CH_STEREO   //Use mp3 file properties to determine number of channels
                                  //Options:- CH_MONO, CH_STEREO
 
-#define SAMPLING_FREQ SR_44P1K   //Use mp3 file properties to identify frequency and use appropriate macro
-                                 //Options:- SR_8KHZ     =>8000hz  - PASS       
-                                 //          SR_16KHZ    =>16000hz - PASS
-                                 //          SR_24KHZ    =>24000hz - PASS
-                                 //          SR_32KHZ    =>32000hz - PASS
-                                 //          SR_48KHZ    =>48000hz - PASS
-                                 //          SR_96KHZ    =>96000hz ~ NOT SUPPORTED
-                                 //          SR_7p35KHZ  =>7350hz  ~ NOT SUPPORTED
-                                 //          SR_14p7KHZ  =>14700hz ~ NOT SUPPORTED
-                                 //          SR_22p05KHZ =>22050hz - PASS
-                                 //          SR_29p4KHZ  =>29400hz ~ NOT SUPPORTED
-                                 //          SR_44p1KHZ  =>44100hz - PASS
-                                 //          SR_88p2KHZ  =>88200hz ~ NOT SUPPORTED
+#define SAMPLING_FREQ SR_32K   
 
 #define FILE_NAME "AudioSDTest.mp3"    //Specify the file name you wish to play that is present in the SDCARD
 
 //------------------------------------- ---CONFIG Parameters-----------------------------------------------//
-                                
+//#define MEM_ALLOC Psram_reserve_malloc
+#define MEM_ALLOC malloc
+//#define MEM_FREE Psram_reserve_free
+#define MEM_FREE free
+
 #ifdef __GNUC__
 #undef SDRAM_DATA_SECTION
 #define SDRAM_DATA_SECTION 
@@ -64,8 +33,10 @@
 
 #define INPUT_FRAME_SIZE 1500
 
-SDRAM_DATA_SECTION unsigned char MP3_Buf[INPUT_FRAME_SIZE]; 
-SDRAM_DATA_SECTION signed short WAV_Buf[MP3_DECODE_SIZE*2];
+//SDRAM_DATA_SECTION unsigned char MP3_Buf[INPUT_FRAME_SIZE]; 
+//SDRAM_DATA_SECTION signed short WAV_Buf[MP3_DECODE_SIZE*2];
+static u8 *MP3_Buf = NULL;
+static short *WAV_Buf = NULL;
 
 static SP_InitTypeDef SP_InitStruct;
 static SP_GDMA_STRUCT SPGdmaStruct;
@@ -464,13 +435,16 @@ void example_audio_mp3_thread(void* param)
 		vTaskDelay(1000);
 		GDMA_flag = 0;
 	}
+	MEM_FREE(MP3_Buf);
+	MEM_FREE(WAV_Buf);
 exit:
 	vTaskDelete(NULL);
 }
 
 void example_audio_mp3(void)
 {
-	
+	MP3_Buf = MEM_ALLOC(INPUT_FRAME_SIZE);
+	WAV_Buf = MEM_ALLOC(MP3_DECODE_SIZE * 2 * 2);
 	sp_obj.mono_stereo = NUM_CHANNELS;
 	sp_obj.sample_rate = SAMPLING_FREQ;
 	sp_obj.word_len = WL_16;

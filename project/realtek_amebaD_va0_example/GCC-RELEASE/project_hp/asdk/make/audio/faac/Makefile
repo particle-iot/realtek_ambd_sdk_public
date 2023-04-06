@@ -46,6 +46,7 @@ OBJS = $(notdir $(CSRC:.c=.o))
 #all: CORE_TARGETS
 all: CORE_TARGETS COPY_RAM_OBJS
 	$(AR) rvs lib_faac.a $(OBJS)
+	$(FROMELF) --strip-debug lib_faac.a
 	$(MOVE) -f lib_faac.a $(ROOTDIR)/lib/application
 #*****************************************************************************#
 #              GENERATE OBJECT FILE 

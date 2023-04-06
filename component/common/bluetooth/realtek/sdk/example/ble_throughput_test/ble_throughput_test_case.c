@@ -1,4 +1,5 @@
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
 #include "app_msg.h"
 #include "trace_app.h"
@@ -7,9 +8,7 @@
 #include "gap_msg.h"
 #include "gap_bond_le.h"
 #include "ble_throughput_app.h"
-
-#include "ble_throughput_user_cmd.h"
-#include "user_cmd_parse.h"
+#include "os_sched.h"
 #if F_BT_LE_GATT_SERVER_SUPPORT
 #include "profile_server.h"
 #endif
@@ -130,17 +129,17 @@ void ble_throughput_app_set_cur_role(T_CUR_DEVICE_ROLE role)
     switch (role)
     {
     case TC_ROLE_UNDEFINED:
-        data_uart_print("ble_throughput_app_set_cur_role: TC_ROLE_UNDEFINED\r\n");
+        printf("ble_throughput_app_set_cur_role: TC_ROLE_UNDEFINED\r\n");
         break;
     case TC_ROLE_DUT:
-        data_uart_print("ble_throughput_app_set_cur_role: role TC_ROLE_DUT\r\n");
+        printf("ble_throughput_app_set_cur_role: role TC_ROLE_DUT\r\n");
         break;
     case TC_ROLE_SUT:
-        data_uart_print("ble_throughput_app_set_cur_role: TC_ROLE_SUT\r\n");
+        printf("ble_throughput_app_set_cur_role: TC_ROLE_SUT\r\n");
         break;
     default:
         role = TC_ROLE_UNDEFINED;
-        data_uart_print("ble_throughput_app_set_cur_role: TC_ROLE_UNDEFINED\r\n");
+        printf("ble_throughput_app_set_cur_role: TC_ROLE_UNDEFINED\r\n");
         break;
     }
     g_cur_test_role = role;
@@ -158,25 +157,25 @@ void ble_throughput_app_display_case_details(T_CUR_TEST_CASE test_case_id)
     {
     case TC_IDLE:
         {
-            data_uart_print("select one test case:\r\n");
+            printf("select one test case:\r\n");
 
-            data_uart_print("testcase 1 - %s\r\n", "TC_0206_TP_NOTIFICATION_TX_02");
-            data_uart_print("testcase 2 - %s\r\n", "TC_0207_TP_WRITE_COMMAND_RX_02");
+            printf("testcase 1 - %s\r\n", "TC_0206_TP_NOTIFICATION_TX_02");
+            printf("testcase 2 - %s\r\n", "TC_0207_TP_WRITE_COMMAND_RX_02");
         }
         break;
 
     case TC_0206_TP_NOTIFICATION_TX_02:
-        data_uart_print("TC_0206_TP_NOTIFICATION_TX_02 is selected\r\n");
+        printf("TC_0206_TP_NOTIFICATION_TX_02 is selected\r\n");
         APP_PRINT_INFO0("TC_0206_TP_NOTIFICATION_TX_02 Start\r\n");
         break;
 
     case TC_0207_TP_WRITE_COMMAND_RX_02:
-        data_uart_print("TC_0207_TP_WRITE_COMMAND_RX_02 is selected\r\n");
+        printf("TC_0207_TP_WRITE_COMMAND_RX_02 is selected\r\n");
         APP_PRINT_INFO0("TC_0207_TP_WRITE_COMMAND_RX_02 Start\r\n");
         break;
 
     default:
-        data_uart_print("invlid test case id\r\n");
+        printf("invlid test case id\r\n");
         return;
     }
 
@@ -203,7 +202,7 @@ bool ble_throughput_app_set_rembd(T_USER_CMD_PARSED_VALUE *p_parse_value)
         ret = false;
     }
 
-    data_uart_print("g_cur_rembd: 0x%02x:%02x:%02x:%02x:%02x:%02x\r\n",
+    printf("g_cur_rembd: 0x%02x:%02x:%02x:%02x:%02x:%02x\r\n",
                     g_cur_rembd[5], g_cur_rembd[4],
                     g_cur_rembd[3], g_cur_rembd[2],
                     g_cur_rembd[1], g_cur_rembd[0]);
@@ -221,12 +220,12 @@ void ble_throughput_app_select_cur_test_case(T_USER_CMD_PARSED_VALUE *p_parse_va
     switch (role)
     {
     case TC_ROLE_UNDEFINED:
-        data_uart_print("app_handle_test_case: TC_ROLE_UNDEFINED\r\n");
+        printf("app_handle_test_case: TC_ROLE_UNDEFINED\r\n");
         return;
 
     case TC_ROLE_DUT:
         {
-            data_uart_print("app_handle_test_case: role TC_ROLE_DUT\r\n");
+            printf("app_handle_test_case: role TC_ROLE_DUT\r\n");
             ble_throughput_app_display_case_details(test_case_id);
             switch (test_case_id)
             {
@@ -275,7 +274,7 @@ void ble_throughput_app_select_cur_test_case(T_USER_CMD_PARSED_VALUE *p_parse_va
 
     case TC_ROLE_SUT:
         {
-            data_uart_print("app_handle_test_case: TC_ROLE_SUT\r\n");
+            printf("app_handle_test_case: TC_ROLE_SUT\r\n");
             ble_throughput_app_display_case_details(test_case_id);
             switch (test_case_id)
             {
@@ -310,6 +309,36 @@ void ble_throughput_app_select_cur_test_case(T_USER_CMD_PARSED_VALUE *p_parse_va
 
     g_cur_test_case = test_case_id;
 }
+
+extern T_TP_TEST_PARAM g_206_tp_test_param;
+extern T_TP_TEST_PARAM g_207_tp_test_param;
+
+void ble_throughput_app_get_result(void)
+{
+	if(ble_throughput_app_get_cur_role() == TC_ROLE_DUT)
+	{
+		if(ble_throughput_app_get_cur_test_case() == TC_0206_TP_NOTIFICATION_TX_02)
+		{
+			int tx_count = g_206_tp_test_param.count - g_206_tp_test_param.count_remain;
+			g_206_tp_test_param.end_time = os_sys_time_get();
+			g_206_tp_test_param.elapsed_time = ble_throughput_os_time_get_elapsed(g_206_tp_test_param.begin_time,
+																	g_206_tp_test_param.end_time);
+			g_206_tp_test_param.data_rate = tx_count * g_206_tp_test_param.length * 1000 /
+																	(g_206_tp_test_param.elapsed_time);
+		} else if(ble_throughput_app_get_cur_test_case() == TC_0207_TP_WRITE_COMMAND_RX_02){
+			g_207_tp_test_param.end_time = os_sys_time_get();
+			g_207_tp_test_param.elapsed_time = ble_throughput_os_time_get_elapsed(g_207_tp_test_param.begin_time,
+																			   g_207_tp_test_param.end_time);
+			g_207_tp_test_param.data_rate = g_207_tp_test_param.count * g_207_tp_test_param.length * 1000 /
+																	(g_207_tp_test_param.elapsed_time);
+		}
+		le_disconnect(0);		
+	}
+	else {
+		printf("ATBT=RESULT only used by DUT!!\r\n");
+	}		
+}
+
 int ble_throughput_at_cmd(int argc, char **argv)
 {
 	int ret = 0;
@@ -328,11 +357,11 @@ int ble_throughput_at_cmd(int argc, char **argv)
 	if(strcmp(argv[1],"ROLE") == 0) {
 		
 		if(argc != 3){
-			printf("ERROR:input parameter error!\n\r");
+			printf("ERROR:input parameter error!\r\n");
 			return -1;
 		}
 		if(strcmp(argv[2],"1")&&strcmp(argv[2],"2")){
-			printf("ERROR:input parameter error!\n\r");
+			printf("ERROR:input parameter error!\r\n");
 			return -1;
 		}
 		
@@ -340,7 +369,7 @@ int ble_throughput_at_cmd(int argc, char **argv)
 		ble_throughput_app_set_cur_role(role);
 	}else if(strcmp(argv[1], "REMBD") == 0){
 		if(argc !=8){
-			printf("ERROR:input parameter error!\n\r");
+			printf("ERROR:input parameter error!\r\n");
 			return -1;
 		}
 		do
@@ -353,7 +382,7 @@ int ble_throughput_at_cmd(int argc, char **argv)
 			return -1;
 	}else if(strcmp(argv[1], "TEST") == 0){	
 		if((argc != 9)&&(argc != 3)){
-			printf("ERROR:input parameter error!\n\r");
+			printf("ERROR:input parameter error!\r\n");
 			return -1;
 		}
 		do
@@ -362,8 +391,10 @@ int ble_throughput_at_cmd(int argc, char **argv)
 			i++;
 		}while(i<argc-2);
 		ble_throughput_app_select_cur_test_case(p_parsed_value);
+	}else if(strcmp(argv[1], "RESULT") == 0){
+		ble_throughput_app_get_result();
 	}else{
-		printf("ERROR:input parameter error!\n\r");
+		printf("ERROR:input parameter error!\r\n");
 		return -1;
 	}
 	
@@ -386,4 +417,4 @@ int ble_throughput_app_handle_at_cmd(uint16_t subtype, void *arg)
 		
 	return common_cmd_flag;
 }
-
+#endif

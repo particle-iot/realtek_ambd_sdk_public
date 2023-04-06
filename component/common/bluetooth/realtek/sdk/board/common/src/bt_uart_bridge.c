@@ -59,6 +59,7 @@ char bt_uart_bridge_getc(void)
 
 #ifdef CONFIG_PLATFORM_8710C
 static int log_flag = 0;
+extern uint32_t btc_set_single_tone_tx(uint8_t bStart);
 static void _bt_uart_bridge_irq(u32 id,u32 event)
 {
 	unsigned char rc = 0;

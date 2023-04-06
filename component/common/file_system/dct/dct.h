@@ -10,7 +10,7 @@
   * This module is a confidential and proprietary property of RealTek and possession or use of this module requires written permission of RealTek.
   *
   * Copyright(c) 2016, Realtek Semiconductor Corporation. All rights reserved.
-  ****************************************************************************** 
+  ******************************************************************************
   */
 #ifndef __RTK_DCT_H__
 #define __RTK_DCT_H__
@@ -22,12 +22,12 @@
  * @defgroup dct dct
  * @brief device configuration table API.
  *
- * DCT module have below functions 
+ * DCT module have below functions
  *  - dct init, deinit
  *  - dct module register, unregister, open, close
  *	- dct variable set, get ,delete
  * @{
- */ 
+ */
 
 /**
   * @brief  DCT error number.
@@ -110,7 +110,7 @@ int32_t dct_unregister_module(char *module_name);
 /**
  * @brief      Open module in DCT.
  * @param[out] dct_handle : setup module informations in dct handler
- * @param[in]  module_name : module name 
+ * @param[in]  module_name : module name
  * @return     0  : SUCCESS
  * @return     <0 : ERROR
  */
@@ -135,6 +135,17 @@ int32_t dct_close_module(dct_handle_t *dct_handle);
 int32_t dct_set_variable(dct_handle_t *dct_handle, char *variable_name, char *variable_value);
 
 /**
+ * @brief      Write variable name and value in opened module.
+ * @param[in]  dct_handle : dct handler
+ * @param[in]  variable_name : variable name which you want to store in module
+ * @param[in]  variable_value : variable value which you want to store in module
+ * @param[in]  variable_value_length : variable value length which you want to store in module
+ * @return     0  : SUCCESS
+ * @return     <0 : ERROR
+ */
+int32_t dct_set_variable_new(dct_handle_t *dct_handle, char *variable_name, char *variable_value, uint16_t variable_value_length);
+
+/**
  * @brief      read value of variable name in opened module.
  * @param[in]  dct_handle : dct handler
  * @param[in]  variable_name : variable name which you want to get from module
@@ -146,6 +157,17 @@ int32_t dct_set_variable(dct_handle_t *dct_handle, char *variable_name, char *va
 int32_t dct_get_variable(dct_handle_t *dct_handle, char *variable_name, char *buffer, uint16_t buffer_size);
 
 /**
+ * @brief         read value of variable name in opened module.
+ * @param[in]     dct_handle : dct handler
+ * @param[in]     variable_name : variable name which you want to get from module
+ * @param[out]    buffer : read variable value
+ * @param[in-out] buffer_size : in: the buffer size, out: the real length of variable value
+ * @return        0  : SUCCESS
+ * @return        <0 : ERROR
+ */
+int32_t dct_get_variable_new(dct_handle_t *dct_handle, char *variable_name, char *buffer, uint16_t *buffer_size);
+
+/**
  * @brief      delete variable name and value in opened module.
  * @param[in]  dct_handle : dct handler
  * @param[in]  variable_name : variable name which you want to delete in module
@@ -155,12 +177,38 @@ int32_t dct_get_variable(dct_handle_t *dct_handle, char *variable_name, char *bu
 int32_t dct_delete_variable(dct_handle_t *dct_handle, char *variable_name);
 
 /**
+ * @brief      delete variable name and value in opened module.
+ * @param[in]  dct_handle : dct handler
+ * @param[in]  variable_name : variable name which you want to delete in module
+ * @return     0  : SUCCESS
+ * @return     <0 : ERROR
+ */
+int32_t dct_delete_variable_new(dct_handle_t *dct_handle, char *variable_name);
+
+/**
  * @brief      Remaining variable amount in opened module.
  * @param[in]  dct_handle : dct handler
  * @return     integer  : Remaining variable amount
  * @return     <0 : ERROR
  */
 int32_t dct_remain_variable(dct_handle_t *dct_handle);
+
+/**
+ * @brief      Get variable number in opened module.
+ * @param[in]  dct_handle : dct handler
+ * @return     <0 : ERROR
+ */
+uint16_t dct_get_variable_num(dct_handle_t *dct_handle);
+
+/**
+ * @brief      Get variable name by index in opened module.
+ * @param[in]  dct_handle : dct handler
+ * @param[in]  idx : index of variable_name in opened module.
+ * @param[out] buffer : read variable name
+ * @return     <0 : ERROR
+ */
+int32_t dct_get_variable_name(dct_handle_t *dct_handle, uint16_t idx, uint8_t *variable_name);
+
 
 /*\@}*/
 

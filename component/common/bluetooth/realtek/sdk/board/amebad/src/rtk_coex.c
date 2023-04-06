@@ -19,6 +19,22 @@ struct rtl_btinfo
     uint8_t data[6];
 };
 
+unsigned int send_coex_mailbox_to_wifi_from_BtAPP(uint8_t state)
+{
+    uint8_t para[8];
+
+    para[0] = 0x45;      //Mailbox ID
+    para[1] = state;     //Data0
+    para[2] = 0;     //Data1
+    para[3] = 0;     //Data2
+    para[4] = 0;     //Data3
+    para[5] = 0;     //Data4
+    para[6] = 0;     //Data5
+    para[7] = 0;     //Data6
+    rltk_coex_mailbox_to_wifi(para, 8);
+    return 1;
+}
+
 static void rtk_notify_info_to_wifi(uint8_t length, uint8_t *report_info)
 {
     uint8_t para_length = 1 + length;

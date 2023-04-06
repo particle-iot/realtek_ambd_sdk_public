@@ -1,7 +1,7 @@
 
 include $(MAKE_INCLUDE_GEN)
 
-.PHONY: all clean
+.PHONY: all lib clean test
 
 
 #*****************************************************************************#
@@ -48,13 +48,39 @@ endif
 #	make -C hls all
 #	make -C kws all
 #	make -C flac all
+ifeq ($(CONFIG_MEDIA_PLAYER),y)
+	make -C frameworks/media/playback/standard/config
+endif
 	make -C resample all
+
+test:
+ifeq ($(CONFIG_AUDIO_FWK),y)
+	#make -C frameworks/media/audio test
+	#make -C hal test
+endif
+ifeq ($(CONFIG_MEDIA_PLAYER),y)
+	#make -C frameworks/media/playback tests
+endif
+
+lib:
+ifeq ($(CONFIG_AUDIO_FWK),y)
+	make -C hal lib
+	make -C base lib
+	make -C frameworks audiolib
+endif
+ifeq ($(CONFIG_MEDIA_PLAYER),y)
+	make -C base lib
+	make -C frameworks playerlib
+	make -C 3rdparty lib
+	make -C third_party lib
+endif
+
 #*****************************************************************************#
-#              GENERATE OBJECT FILE 
+#              GENERATE OBJECT FILE                                           #
 #*****************************************************************************#
 CORE_TARGETS: $(OBJS)
 
-	
+
 
 
 #*****************************************************************************#
@@ -85,4 +111,11 @@ clean:
 	make -C example_audio_opus_decode clean
 	make -C libopusenc-0.2.1 clean
 	make -C example_audio_opus_encode clean
+	make -C hal clean
+	make -C base clean
+	make -C frameworks clean
+	make -C 3rdparty clean
+	make -C third_party clean
+	make -C frameworks/media/playback/standard/config clean
+
 -include $(DEPS)

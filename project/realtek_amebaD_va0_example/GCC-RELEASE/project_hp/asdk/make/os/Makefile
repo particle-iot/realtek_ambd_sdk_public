@@ -19,6 +19,7 @@ ifeq ($(CONFIG_KERNEL),y)
 	make -C freertos all
 	make -C freertos/freertos_v10.2.0 all
 endif
+	make -C stdlib_wrap all
 
 #*****************************************************************************#
 #              GENERATE OBJECT FILE 
@@ -37,6 +38,7 @@ ifeq ($(CONFIG_KERNEL),y)
 	make -C freertos clean
 	make -C os_dep clean
 endif
+	make -C stdlib_wrap clean
 	
 
 

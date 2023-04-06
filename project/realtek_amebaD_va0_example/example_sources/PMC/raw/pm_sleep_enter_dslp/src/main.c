@@ -124,7 +124,7 @@ VOID app_pmu_init(VOID)
 
 	/* Set SWR ZCD & Voltage */
 	Temp=HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_SYS_EFUSE_SYSCFG1);
-	if (wifi_config.wifi_ultra_low_power) {
+	if (rtk_wifi_config.wifi_ultra_low_power) {
 		Temp &= ~(0x0f);//SWR @ 1.05V
 		Temp |= (0x07);
 		Temp &= ~BIT_MASK_SWR_REG_ZCDC_H; /* reg_zcdc_H: EFUSE[5]BIT[6:5] 00 0.1u@PFM */ /* 4uA @ sleep mode */

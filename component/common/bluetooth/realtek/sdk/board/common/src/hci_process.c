@@ -22,7 +22,7 @@ extern void hci_normal_start(void);
 extern bool bt_check_iqk(void);
 extern bool hci_start_iqk(void);
 extern uint8_t  hci_tp_lgc_efuse[0x20];
-extern uint8_t  hci_tp_phy_efuse[16];
+extern uint8_t  hci_tp_phy_efuse[19];
 
 static uint8_t vendor_flow;
 static uint8_t iqk_type = 0xff;
@@ -100,13 +100,25 @@ uint8_t hci_tp_read_rom_ver(void)
     return HCI_TP_CHECK_OK;
 }
 
+extern bool hci_rtk_find_patch(uint8_t bt_hci_chip_id);
 uint8_t hci_read_rom_check(uint8_t len, uint8_t *p_buf)
 {
     (void)len;
+    bool ret = false;
     uint8_t    rom_version;
+    uint8_t    bt_hci_chip_id;
     LE_STREAM_TO_UINT8(rom_version, p_buf);
     HCI_PRINT_INFO1("hci_tp_config: rom_version 0x%02x", rom_version);
-    //hci_board_debug("%s: rom_version 0x%04x\n",__FUNCTION__,rom_version);
+    bt_hci_chip_id = rom_version + 1;
+    hci_board_debug("%s: rom_version 0x%04x, bt_hci_chip_id 0x%04x\n", __FUNCTION__, rom_version, bt_hci_chip_id);
+
+    ret = hci_rtk_find_patch(bt_hci_chip_id);
+    if(ret == false)
+    {
+        hci_board_debug("\r\n%s: error operate\r\n",__FUNCTION__);
+        return HCI_TP_CHECK_ERROR;
+    }
+
     return HCI_TP_CHECK_OK;
 }
 
@@ -192,8 +204,8 @@ typedef struct
 {
     uint8_t            *fw_buf;
     uint8_t            *config_buf;
-    uint8_t             patch_frag_cnt;
-    uint8_t             patch_frag_idx;
+    uint16_t            patch_frag_cnt;
+    uint16_t            patch_frag_idx;
     uint8_t             patch_frag_len;
     uint8_t             patch_frag_tail;
     uint16_t            fw_len;
@@ -251,16 +263,23 @@ uint8_t hci_tp_download_patch(void)
     uint8_t  *p;
     uint8_t  *p_frag;
     uint16_t  sent_len;
+    uint8_t   patch_frag_index;
     T_HCI_PATCH *p_hci_rtk = &hci_patch_info;
 
     if (p_hci_rtk->patch_frag_idx < p_hci_rtk->patch_frag_cnt)
     {
+        if (p_hci_rtk->patch_frag_idx >= 0x80) {
+            patch_frag_index = (p_hci_rtk->patch_frag_idx - 0x80) % 0x7f + 1;
+        } else {
+            patch_frag_index = p_hci_rtk->patch_frag_idx % 0x80;
+        }
+
         if (p_hci_rtk->patch_frag_idx == p_hci_rtk->patch_frag_cnt - 1)
         {
             HCI_PRINT_TRACE0("hci_tp_download_patch: send last frag");
             //hci_board_debug("hci_tp_download_patch: send last frag\n");
 
-            p_hci_rtk->patch_frag_idx |= 0x80;
+            patch_frag_index |= 0x80;
             p_hci_rtk->patch_frag_len  = p_hci_rtk->patch_frag_tail;
         }
         else
@@ -270,9 +289,9 @@ uint8_t hci_tp_download_patch(void)
     }
 
     //hci_board_debug("hci_tp_download_patch: frag index %d, len %d\n",
-     //         p_hci_rtk->patch_frag_idx, p_hci_rtk->patch_frag_len);
+    //                patch_frag_index, p_hci_rtk->patch_frag_len);
     HCI_PRINT_TRACE2("hci_tp_download_patch: frag index %d, len %d",
-                     p_hci_rtk->patch_frag_idx, p_hci_rtk->patch_frag_len);
+                     patch_frag_index, p_hci_rtk->patch_frag_len);
 
     p_cmd = os_mem_zalloc(RAM_TYPE_DATA_ON, HCI_CMD_HDR_LEN + 1 + p_hci_rtk->patch_frag_len);
     if (p_cmd != NULL)
@@ -281,9 +300,9 @@ uint8_t hci_tp_download_patch(void)
         LE_UINT8_TO_STREAM(p, HCI_CMD_PKT);
         LE_UINT16_TO_STREAM(p, HCI_VSC_DOWNLOAD_PATCH);
         LE_UINT8_TO_STREAM(p, 1 + p_hci_rtk->patch_frag_len);  /* length */
-        LE_UINT8_TO_STREAM(p, p_hci_rtk->patch_frag_idx);  /* frag index */
+        LE_UINT8_TO_STREAM(p, patch_frag_index);  /* frag index */
 
-        sent_len = (p_hci_rtk->patch_frag_idx & 0x7F) * PATCH_FRAGMENT_MAX_SIZE;
+        sent_len = p_hci_rtk->patch_frag_idx * PATCH_FRAGMENT_MAX_SIZE;
 
         if (sent_len >= p_hci_rtk->fw_len)    /* config patch domain */
         {
@@ -498,16 +517,16 @@ uint8_t hci_tp_write_efuse_iqk(void)
 
     HCI_PRINT_TRACE0("hci_tp_write_efuse_iqk");
     
-    p_cmd = os_mem_zalloc(RAM_TYPE_DATA_ON, 15);
+    p_cmd = os_mem_zalloc(RAM_TYPE_DATA_ON, 23);
     if (p_cmd != NULL)
     {
         p = p_cmd;
         LE_UINT8_TO_STREAM(p, HCI_CMD_PKT);
         LE_UINT16_TO_STREAM(p, HCI_VSC_VENDOR_IQK);
-        LE_UINT8_TO_STREAM(p, 0xc); /* length */
+        LE_UINT8_TO_STREAM(p, 19); /* length */
 
-        memcpy(p, hci_tp_phy_efuse,0x0c);
-        p+=0x0c;
+        memcpy(p, hci_tp_phy_efuse, 19);
+        p+=19;
         hci_adapter_send(p_cmd, p - p_cmd);
         //hci_tp_send(p_cmd, p - p_cmd, hci_rtk_tx_cb);
         return HCI_TP_CHECK_OK;

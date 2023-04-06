@@ -8,7 +8,7 @@
 #include <example_entry.h>
 
 #if configENABLE_TRUSTZONE == 0
-	#error User should set configENABLE_TRUSTZONE to 1 in FreeRTOSConfig.h to use RDP.
+	#error User should refer to AN for how to enable RDP.
 #endif
 
 u32 no_protection_func(u32 data)
@@ -28,10 +28,6 @@ void rdp_demo(void)
 	u32 rdp_result;
 	u32 no_rdp_result;
 
-	if((HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_SYS_EFUSE_SYSCFG3) & BIT_SYS_RDP_EN) ==0) {
-		DBG_8195A("RDP is not enabled!\n");
-		goto end;
-	}
 
 	/* Tasks are not created with a secure context. Any task that is going to call secure functions must call 
 		portALLOCATE_SECURE_CONTEXT() to allocate itself a secure context before it calls any secure function. */

@@ -42,7 +42,7 @@ void app_section_init(void)
 u32 app_mpu_nocache_check(u32 mem_addr) {
 	mpu_region_config mpu_cfg;
 
-	if (wifi_config.km4_cache_enable) {
+	if (rtk_wifi_config.km4_cache_enable) {
 		mpu_cfg.region_base = (uint32_t)__ram_nocache_start__;
 		mpu_cfg.region_size = __ram_nocache_end__-__ram_nocache_start__;
 	} else {
@@ -62,7 +62,7 @@ u32 app_mpu_nocache_init(void)
 	u32 mpu_entry = 0;
 
 	mpu_entry = mpu_entry_alloc();
-	if (wifi_config.km4_cache_enable) {
+	if (rtk_wifi_config.km4_cache_enable) {
 		mpu_cfg.region_base = (uint32_t)__ram_nocache_start__;
 		mpu_cfg.region_size = __ram_nocache_end__-__ram_nocache_start__;
 	} else {
@@ -107,7 +107,25 @@ u32 app_mpu_nocache_init(void)
 	mpu_cfg.attr_idx = MPU_MEM_ATTR_IDX_NC;
 	mpu_region_cfg(mpu_entry, &mpu_cfg);
 
+	/* set No-Security PSRAM Memory Write-Back */
+    mpu_entry = mpu_entry_alloc();
+    mpu_cfg.region_base = 0x02000000;
+    mpu_cfg.region_size = 0x400000;
+    mpu_cfg.xn = MPU_EXEC_ALLOW;
+    mpu_cfg.ap = MPU_UN_PRIV_RW;
+    mpu_cfg.sh = MPU_NON_SHAREABLE;
+    mpu_cfg.attr_idx = MPU_MEM_ATTR_IDX_WB_T_RWA;
+    mpu_region_cfg(mpu_entry, &mpu_cfg);
+
 	return 0;
+}
+
+u32 app_mpu_s_nocache_init(void)
+{
+#if defined (configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1U)
+		mpu_s_no_cache_init();
+#endif
+        return 0;
 }
 
 VOID app_vdd1833_detect(VOID)
@@ -272,7 +290,7 @@ u32 app_psram_resume(u32 expected_idle_time, void *param)
 	( void ) expected_idle_time;
 	( void ) param;
 
-	u32 temp;
+    u32 temp;
 
 	if((SLEEP_PG == pmu_get_sleep_type()) || (FALSE == psram_dev_config.psram_dev_retention)) {
 		app_init_psram();
@@ -340,12 +358,13 @@ static void* app_psram_load_ns()
 
 	/* load psram code+data into PSRAM */
 	if((PsramHdr->image_size != 0) && \
-		(PsramHdr->image_addr == 0x02000000) && \
+		(PsramHdr->image_addr == 0x02000020) && \
 		(PsramHdr->signature[0] == 0x35393138) && \
 		(PsramHdr->signature[1] == 0x31313738)) {
 
 		_memcpy((void*)PsramHdr->image_addr, (void*)(PsramHdr + 1), PsramHdr->image_size);
 	}
+    return NULL;
 }
 
 static void* app_psram_load_s()
@@ -353,6 +372,7 @@ static void* app_psram_load_s()
 #if defined (configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1U)
 	load_psram_image_s();
 #endif
+    return NULL;
 }
 
 /*initialize driver call os_function map*/
@@ -392,6 +412,10 @@ void app_start(void)
 	}
 
 	/* configure FreeRTOS interrupt and heap region */
+#if (defined(configUSE_PSRAM_FOR_HEAP_REGION) && ( configUSE_PSRAM_FOR_HEAP_REGION == 1 ))
+	/* psram should be enabled */
+	assert_param(TRUE == psram_dev_config.psram_dev_enable);
+#endif
 	os_heap_init();
 	__NVIC_SetVector(SVCall_IRQn, (u32)(VOID*)vPortSVCHandler);
 	__NVIC_SetVector(PendSV_IRQn, (u32)(VOID*)xPortPendSVHandler);
@@ -418,6 +442,8 @@ extern void __libc_init_array(void);
 
 	mpu_init();
 	app_mpu_nocache_init();
+	app_mpu_s_nocache_init();
+
 	app_vdd1833_detect();
 	memcpy_gdma_init();
 	//retention Ram space should not exceed 0xB0

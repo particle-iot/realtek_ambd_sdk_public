@@ -8,7 +8,7 @@
 
 //TODO: remove section when combine BD and BF
 //8710C uses the linker symbol to determine the SRAM region and PSRAM region
-#if ((defined CONFIG_PLATFORM_8195A) || (defined CONFIG_PLATFORM_8711B) || (defined CONFIG_PLATFORM_8721D))
+#if ((defined CONFIG_PLATFORM_8195A) || (defined CONFIG_PLATFORM_8711B))
 	#include "section_config.h"
 	SRAM_BF_DATA_SECTION
 	static unsigned char ucHeap[ configTOTAL_HEAP_SIZE ];
@@ -88,14 +88,86 @@
 
 #elif (defined CONFIG_PLATFORM_8721D)
 
+#if (defined(configUSE_PSRAM_FOR_HEAP_REGION) && ( configUSE_PSRAM_FOR_HEAP_REGION == 1 ))
+#define configTOTAL_PSRAM_HEAP_SIZE 	(0x200000)
+		
+PSRAM_HEAP_SECTION 
+static unsigned char psRAMHeap[configTOTAL_PSRAM_HEAP_SIZE];
+#endif
+
+#if CONFIG_DYNAMIC_HEAP_SIZE
+
+#if defined(__ICCARM__)
+#undef configTOTAL_HEAP_SIZE 
+#undef configTOTAL_HEAP_ext_SIZE
+        
+        extern uint8_t __sram_end__[];
+        extern uint8_t RAMBSSHEAP$$Limit[];
+        
+#define configTOTAL_HEAP0_SIZE ((uint32_t)__sram_end__ - ((uint32_t)RAMBSSHEAP$$Limit))
+#define HEAP0_START (uint8_t*)RAMBSSHEAP$$Limit
+        
+    HeapRegion_t xHeapRegions[] =
+    {
+#if defined (ARM_CORE_CM0)
+        { (uint8_t*)0x00080A00, 0x1600 },   // KM0 ROM BSS just used RAM befor 0x000809ce
+#endif
+#if (defined(configUSE_PSRAM_FOR_HEAP_REGION) && ( configUSE_PSRAM_FOR_HEAP_REGION == 1 ))
+		{ psRAMHeap, sizeof(psRAMHeap) },
+#endif
+        { 0, 0 },     // Defines a block from ucHeap
+        { NULL, 0 }                     // Terminates the array.
+    };
+#elif defined(__GNUC__)
+#undef configTOTAL_HEAP_SIZE 
+#undef configTOTAL_HEAP_ext_SIZE
+        
+        extern uint8_t __sram_end__[];
+        extern uint8_t __bfsram_end__[];
+        
+#define configTOTAL_HEAP0_SIZE ((uint32_t)__sram_end__ - ((uint32_t)__bfsram_end__))
+#define HEAP0_START (uint8_t*)__bfsram_end__
+        
+    HeapRegion_t xHeapRegions[] =
+    {
+#if defined (ARM_CORE_CM0)
+        { (uint8_t*)0x00080A00, 0x1600 },   // KM0 ROM BSS just used RAM befor 0x000809ce
+#endif
+#if (defined(configUSE_PSRAM_FOR_HEAP_REGION) && ( configUSE_PSRAM_FOR_HEAP_REGION == 1 ))
+		{ psRAMHeap, sizeof(psRAMHeap) },
+#endif
+        { 0, 0 },     // Defines a block from ucHeap
+        { NULL, 0 }                     // Terminates the array.
+    };
+#endif
+
+#else
+	#include "section_config.h"
+#if (defined(configAUDIO_USE_SRAM_FOR_HEAP_REGION) && ( configAUDIO_USE_SRAM_FOR_HEAP_REGION == 1 ))
+	#define configAUDIO_SRAM_HEAP_SIZE 	(200*1024)
+	SRAM_BF_DATA_SECTION
+	static unsigned char sRAMAudioHeap[configAUDIO_SRAM_HEAP_SIZE];
+#else
+	#define configAUDIO_SRAM_HEAP_SIZE 	(0)	
+#endif
+
+	SRAM_BF_DATA_SECTION
+	static unsigned char ucHeap[ configTOTAL_HEAP_SIZE-configAUDIO_SRAM_HEAP_SIZE ];
+
 	HeapRegion_t xHeapRegions[] =
 	{
 	#if defined (ARM_CORE_CM0)
 		{ (uint8_t*)0x00080A00, 0x1600 },	// KM0 ROM BSS just used RAM befor 0x000809ce
 	#endif
+#if (defined(configUSE_PSRAM_FOR_HEAP_REGION) && ( configUSE_PSRAM_FOR_HEAP_REGION == 1 ))
+		{ psRAMHeap, sizeof(psRAMHeap) },
+#endif
 		{ ucHeap, sizeof(ucHeap) }, 	// Defines a block from ucHeap
 		{ NULL, 0 } 					// Terminates the array.
 	};
+
+#endif
+
 
 #else
 	#error NOT SUPPORT CHIP
@@ -157,6 +229,29 @@ void os_heap_init(void)
 #if defined(configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1)
 		secure_heap_init();
 #endif
+#elif defined(CONFIG_PLATFORM_8721D)
+#if CONFIG_DYNAMIC_HEAP_SIZE
+
+#if (defined(configUSE_PSRAM_FOR_HEAP_REGION) && ( configUSE_PSRAM_FOR_HEAP_REGION == 1 ))
+		xHeapRegions[ 1 ].xSizeInBytes = configTOTAL_HEAP0_SIZE;
+        xHeapRegions[ 1 ].pucStartAddress = (uint8_t*)HEAP0_START;
+#else
+	    xHeapRegions[ 0 ].xSizeInBytes = configTOTAL_HEAP0_SIZE;
+        xHeapRegions[ 0 ].pucStartAddress = (uint8_t*)HEAP0_START;
+#endif
+
+#endif
 #endif
 		vPortDefineHeapRegions( xHeapRegions );	
+
+#if (defined(configAUDIO_USE_SRAM_FOR_HEAP_REGION) && ( configAUDIO_USE_SRAM_FOR_HEAP_REGION == 1 ))
+	{
+		HeapRegion_t xAudioHeapRegions[] =
+		{
+			{ sRAMAudioHeap, sizeof(sRAMAudioHeap) },
+			{ NULL, 0 }   // Terminates the array.
+		};
+		RtSRAMHeapInit(xAudioHeapRegions);
+	}
+#endif
 }

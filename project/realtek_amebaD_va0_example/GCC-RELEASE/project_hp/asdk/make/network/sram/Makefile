@@ -26,6 +26,9 @@ OBJS += \
 		$(LWIPDIR)/src/api/netbuf.o \
 		$(LWIPDIR)/port/realtek/freertos/sys_arch.o \
 		$(LWIPDIR)/port/realtek/freertos/ethernetif.o \
+		$(LWIPDIR)/port/realtek/freertos/br_rpt_handle.o \
+		$(LWIPDIR)/port/realtek/freertos/bridgeif.o \
+		$(LWIPDIR)/port/realtek/freertos/bridgeif_fdb.o \
 		$(WLANDRV)/src/osdep/lwip_intf.o \
 
 OBJS +=		\
@@ -64,7 +67,7 @@ OBJS +=		\
 #*****************************************************************************#
 #                        RULES TO GENERATE TARGETS                            #
 #*****************************************************************************#
-all: CORE_TARGETS NETWORK_RENAME_CODE2SRAM COPY_RAM_OBJS
+all: CORE_TARGETS COPY_RAM_OBJS
 #*****************************************************************************#
 #              GENERATE OBJECT FILE 
 #*****************************************************************************#
@@ -72,7 +75,8 @@ CORE_TARGETS: $(OBJS)
 
 %.o:%.c
 	$(CC) $(GLOBAL_CFLAGS) $(MODULE_IFLAGS) $<  -o $@
-
+	$(FROMELF) --prefix-sections .image2.net.ram $@
+	
 #*****************************************************************************#
 #              CLEAN GENERATED FILES                                          #
 #*****************************************************************************#

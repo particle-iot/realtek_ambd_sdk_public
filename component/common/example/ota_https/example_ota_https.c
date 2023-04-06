@@ -21,7 +21,7 @@
 #define HOST	"192.168.1.100"  //"m-apps.oss-cn-shenzhen.aliyuncs.com"
 #define RESOURCE "OTA_All13.bin"     //"051103061600.bin"
 
-
+extern int wifi_is_ready_to_transceive(rtw_interface_t interface);
 #ifdef HTTPS_OTA_UPDATE
 void https_update_ota_task(void *param){
 	(void)param;

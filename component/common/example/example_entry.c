@@ -184,6 +184,10 @@
 #include <wlan_scenario/example_wlan_scenario.h>
 #endif
 
+#if defined(CONFIG_EXAMPLE_WLAN_REPEATER) && CONFIG_EXAMPLE_WLAN_REPEATER
+#include <wlan_repeater/example_wlan_repeater.h>
+#endif
+
 #if defined(CONFIG_EXAMPLE_BCAST) && CONFIG_EXAMPLE_BCAST
 #include <bcast/example_bcast.h>
 #endif
@@ -280,6 +284,14 @@
 #include <wifi_roaming_plus/example_wifi_roaming_plus.h>
 #endif
 
+#if defined(CONFIG_EXAMPLE_TICKLESS_WIFI_ROAMING) && CONFIG_EXAMPLE_TICKLESS_WIFI_ROAMING
+#include <tickless_wifi_roaming/example_tickless_wifi_roaming.h>
+#endif
+
+#if defined(CONFIG_EXAMPLE_CONN_PRI_COND) && CONFIG_EXAMPLE_CONN_PRI_COND
+#include "wifi_connection_priority/example_wifi_conn_pri_cond.h"
+#endif
+
 #if defined(CONFIG_EXAMPLE_FLASH_MP3) && CONFIG_EXAMPLE_FLASH_MP3
 #include <flash_mp3/example_flash_mp3.h>
 #endif
@@ -356,12 +368,24 @@
 #include <usbd_vendor/example_usbd_vendor.h>
 #endif
 
+#if defined(CONFIG_EXAMPLE_USBD_HID) && CONFIG_EXAMPLE_USBD_HID
+#include <usbd_hid_mouse/example_usbd_hid_mouse.h>
+#endif
+
 #if defined(CONFIG_EXAMPLE_USBH_MSC) && CONFIG_EXAMPLE_USBH_MSC
 #include <usbh_msc/example_usbh_msc.h>
 #endif
 
+#if defined(CONFIG_EXAMPLE_USBH_UVC) && CONFIG_EXAMPLE_USBH_UVC
+#include <usbh_uvc/example_usbh_uvc.h>
+#endif
+
 #if defined(CONFIG_EXAMPLE_USBH_VENDOR) && CONFIG_EXAMPLE_USBH_VENDOR
 #include <usbh_vendor/example_usbh_vendor.h>
+#endif
+
+#if defined(CONFIG_EXAMPLE_USBH_CDC_ACM) && CONFIG_EXAMPLE_USBH_CDC_ACM
+#include <usbh_cdc_acm/example_usbh_cdc_acm.h>
 #endif
 
 #if (CONFIG_EXAMPLE_AMAZON_FREERTOS)
@@ -375,7 +399,7 @@ void pre_example_entry(void)
 {
 
 #if defined(CONFIG_EXAMPLE_CM_BACKTRACE) && CONFIG_EXAMPLE_CM_BACKTRACE
-	cm_backtrace_init("application", "HW v1.0", "SW v1.0");
+	cm_backtrace_init("target_img2", "HW v1.0", "SW v1.0");
 #endif
 
 #if ATCMD_VER == ATVER_2
@@ -407,6 +431,9 @@ void pre_example_entry(void)
 #if defined(CONFIG_EXAMPLE_WIFI_ROAMING_PLUS) && CONFIG_EXAMPLE_WIFI_ROAMING_PLUS
 	example_wifi_roaming_plus_init();
 #endif
+#if defined(CONFIG_EXAMPLE_TICKLESS_WIFI_ROAMING) && CONFIG_EXAMPLE_TICKLESS_WIFI_ROAMING
+	example_tickless_wifi_roaming_init();
+#endif
 
 #if defined(FREERTOS_PMU_TICKLESS_PLL_RESERVED) && (FREERTOS_PMU_TICKLESS_PLL_RESERVED==1)
     pmu_set_pll_reserved(1);
@@ -426,6 +453,10 @@ void pre_example_entry(void)
 
 }
 
+#if ((defined CONFIG_BT_MESH_PROVISIONER_RTK_DEMO && CONFIG_BT_MESH_PROVISIONER_RTK_DEMO) || (defined CONFIG_BT_MESH_DEVICE_RTK_DEMO && CONFIG_BT_MESH_DEVICE_RTK_DEMO))
+extern void example_bt_mesh(void);
+#endif
+
 /*
   	All of the examples are disabled by default for code size consideration
    	The configuration is enabled in platform_opts.h
@@ -443,7 +474,6 @@ void example_entry(void)
 #if CONFIG_EXAMPLE_MCAST
 	example_mcast();
 #endif
-
 #if CONFIG_EXAMPLE_XML
 	example_xml();
 #endif
@@ -591,6 +621,7 @@ void example_entry(void)
 	example_eap("tls");
 	//example_eap("peap");
 	//example_eap("ttls");
+	//example_eap("fast");
 #endif
 
 #if defined(CONFIG_EXAMPLE_AJ_BASIC) && CONFIG_EXAMPLE_AJ_BASIC
@@ -627,6 +658,10 @@ void example_entry(void)
 	example_wlan_scenario("S");
 #endif
 	
+#if defined(CONFIG_EXAMPLE_WLAN_REPEATER) && CONFIG_EXAMPLE_WLAN_REPEATER
+	example_wlan_repeater();
+#endif
+
 #if defined(CONFIG_EXAMPLE_BCAST) && CONFIG_EXAMPLE_BCAST
 	example_bcast();
 #endif
@@ -653,6 +688,10 @@ void example_entry(void)
 /*To ensure the application has enough heap size, please goto FreeRTOSConfig.h to change configTOTAL_HEAP_SIZE at least to 270*1024 and ENABLE WIFI*/
 	example_audio_m4a_selfparse();
 #endif 
+
+#if defined(CONFIG_EXAMPLE_AUDIO_OPUS) && CONFIG_EXAMPLE_AUDIO_OPUS
+	example_audio_opus();
+#endif
 
 #if defined(CONFIG_EXAMPLE_AUDIO_M4A_MP3) && CONFIG_EXAMPLE_AUDIO_M4A_MP3
 	example_audio_m4a_mp3();
@@ -767,6 +806,14 @@ example_hilink();
 	example_wifi_roaming_plus();
 #endif
 
+#if defined(CONFIG_EXAMPLE_TICKLESS_WIFI_ROAMING) && CONFIG_EXAMPLE_TICKLESS_WIFI_ROAMING
+	example_tickless_wifi_roaming();
+#endif
+
+#if defined(CONFIG_EXAMPLE_CONN_PRI_COND) && CONFIG_EXAMPLE_CONN_PRI_COND
+	example_init_conn_pri_cond();
+#endif
+
 #if defined(CONFIG_EXAMPLE_FLASH_MP3) && CONFIG_EXAMPLE_FLASH_MP3
 	example_flash_mp3();
 #endif
@@ -807,13 +854,6 @@ example_hilink();
         example_duer();
 #endif
 
-#if defined(CONFIG_BT) && CONFIG_BT
-	// do not start example if defined BT MP or WIFI MP
-	#if !(defined(CONFIG_MP_INCLUDED))
-	bt_example_init();
-	#endif
-#endif
-
 #if defined(CONFIG_EXAMPLE_USB_MASS_STORAGE) && CONFIG_EXAMPLE_USB_MASS_STORAGE
 	example_mass_storage();
 #endif
@@ -838,6 +878,10 @@ example_hilink();
 	example_usbd_cdc_acm();
 #endif
 
+#if defined(CONFIG_EXAMPLE_USBD_HID) && CONFIG_EXAMPLE_USBD_HID
+	example_usbd_hid_mouse();
+#endif
+
 #if defined(CONFIG_EXAMPLE_USBD_VENDOR) && CONFIG_EXAMPLE_USBD_VENDOR
 	example_usbd_vendor();
 #endif
@@ -846,8 +890,16 @@ example_hilink();
 	example_usbh_msc();
 #endif
 
+#if defined(CONFIG_EXAMPLE_USBH_UVC) && CONFIG_EXAMPLE_USBH_UVC	        
+	example_usbh_uvc();
+#endif
+
 #if defined(CONFIG_EXAMPLE_USBH_VENDOR) && CONFIG_EXAMPLE_USBH_VENDOR	        
 	example_usbh_vendor();
+#endif
+
+#if defined(CONFIG_EXAMPLE_USBH_CDC_ACM) && CONFIG_EXAMPLE_USBH_CDC_ACM
+	example_usbh_cdc_acm();
 #endif
 
 #if defined(CONFIG_EXAMPLE_COMPETITIVE_HEADPHONES) && CONFIG_EXAMPLE_COMPETITIVE_HEADPHONES

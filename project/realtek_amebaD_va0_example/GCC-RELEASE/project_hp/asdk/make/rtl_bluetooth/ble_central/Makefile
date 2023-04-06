@@ -7,20 +7,14 @@ include ../amebad_bsp/Makefile
 
 # board-specific
 MODULE_IFLAGS += \
-   -I$(DIR)/sdk/example/ble_central \
-   -I$(DIR)/sdk/example/ble_scatternet \
-   -I$(DIR)/sdk/board/amebad/src/data_uart \
-   -I$(DIR)/sdk/src/mcu/module/data_uart_cmd
+   -I$(DIR)/sdk/example/ble_central
 
 CSRC += \
     $(DIR)/sdk/src/ble/profile/client/gcs_client.c \
-    $(DIR)/sdk/src/mcu/module/data_uart_cmd/user_cmd_parse.c \
-    $(DIR)/sdk/board/amebad/src/data_uart/data_uart.c \
     $(DIR)/sdk/example/ble_central/ble_central_app_main.c \
     $(DIR)/sdk/example/ble_central/ble_central_app_task.c \
     $(DIR)/sdk/example/ble_central/ble_central_client_app.c \
     $(DIR)/sdk/example/ble_central/ble_central_link_mgr.c \
-    $(DIR)/sdk/example/ble_central/user_cmd.c \
     $(DIR)/sdk/example/ble_central/ble_central_at_cmd.c
 
 OBJS = $(CSRC:.c=.o)

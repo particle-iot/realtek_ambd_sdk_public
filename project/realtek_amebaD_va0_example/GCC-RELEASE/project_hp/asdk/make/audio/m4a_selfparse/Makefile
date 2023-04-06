@@ -7,14 +7,14 @@ include $(MAKE_INCLUDE_GEN)
 #                               VARIABLES	                              #
 #*****************************************************************************#
 DIR = $(BASEDIR)/component/common/audio
-AAC_DIR = $(DIR)/fdk-aac
+AAC_DIR = $(DIR)/fdk-aac_m4a
 AV_DIR = $(DIR)/libav
 
 
-vpath %.cpp $(DIR) $(shell find $(DIR) -type d)
-vpath %.c $(AV_DIR) $(shell find $(AV_DIR) -type d)
-
-
+#vpath %.cpp $(DIR) $(shell find $(DIR) -type d)
+#vpath %.c $(AV_DIR) $(shell find $(AV_DIR) -type d)
+#vpath %.c $(AAC_DIR) $(shell find $(AAC_DIR) -type d)
+vpath %.cpp $(AAC_DIR) $(shell find $(AAC_DIR) -type d)
 #*****************************************************************************#
 #                          Header FILE Directory LIST                         #
 #*****************************************************************************#
@@ -25,8 +25,8 @@ MODULE_IFLAGS += -I$(AAC_DIR)/libMpegTPEnc/include
 MODULE_IFLAGS += -I$(AAC_DIR)/libPCMutils/include
 MODULE_IFLAGS += -I$(AAC_DIR)/libSBRdec/include
 MODULE_IFLAGS += -I$(AAC_DIR)/libSBRenc/include
-
-MODULE_IFLAGS += -I$(AV_DIR)/compat/atomics/dummy
+MODULE_IFLAGS += -I$(AAC_DIR)/libSYS/include
+#MODULE_IFLAGS += -I$(AV_DIR)/compat/atomics/dummy
 #MODULE_IFLAGS += -I$(AV_DIR)/libavcodec
 #MODULE_IFLAGS += -I$(AV_DIR)/libavformat
 #MODULE_IFLAGS += -I$(AV_DIR)/libavutil
@@ -203,18 +203,21 @@ CPPOBJS = $(notdir $(CPPSRC:.cpp=.o))
 COBJS = $(notdir $(CSRC:.c=.o))
 OBJS = $(CPPOBJS)
 OBJS += $(COBJS)
-
+STATIC_LIB = lib_m4a_self.a
 #*****************************************************************************#
 #                        RULES TO GENERATE TARGETS                            #
 #*****************************************************************************#
 
 # Define the Rules to build the core targets
-all: CORE_TARGETS COPY_RAM_OBJS
+all: CORE_TARGETS
 	
 #*****************************************************************************#
 #              GENERATE OBJECT FILE 
 #*****************************************************************************#
-CORE_TARGETS:	$(CPPOBJS) $(COBJS)
+CORE_TARGETS:	$(OBJS) $(STATIC_LIB)
+$(STATIC_LIB):$(OBJS) 
+	$(AR) rvs $@ $^
+	$(MOVE) -f $@ $(ROOTDIR)/lib/application
 
 
 #*****************************************************************************#

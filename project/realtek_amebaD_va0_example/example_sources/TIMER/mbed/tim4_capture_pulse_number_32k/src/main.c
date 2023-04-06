@@ -21,12 +21,12 @@ void tim5_gen_pwm_32k()
 
 	RTIM_TimeBaseStructInit(&TIM_InitStruct_temp);
 	TIM_InitStruct_temp.TIM_Idx = 5;
-	TIM_InitStruct_temp.TIM_Period = PWM_PERIOD;
+	TIM_InitStruct_temp.TIM_Period = PWM_PERIOD - 1;
 	RTIM_TimeBaseInit(TIM5, &TIM_InitStruct_temp, TIMER5_IRQ, NULL, 0);
 
 	RTIM_CCStructInit(&TIM_CCInitStruct);
+	TIM_CCInitStruct.TIM_OCPulse = PWM_PERIOD / 2;
 	RTIM_CCxInit(TIM5, &TIM_CCInitStruct, pwm_chan);
-	RTIM_CCRxSet(TIM5, PWM_PERIOD / 2 + 1, pwm_chan);
 	RTIM_CCxCmd(TIM5, pwm_chan, TIM_CCx_Enable);
 
 	Pinmux_Config(_PA_12, PINMUX_FUNCTION_PWM_LP);

@@ -6,9 +6,8 @@ include $(MAKE_INCLUDE_GEN)
 #*****************************************************************************#
 #                               VARIABLES	                              #
 #*****************************************************************************#
-DIR_OTG = $(BASEDIR)/component/soc/realtek/amebad/fwlib/usb_otg/host
-DIR = $(DIR_OTG)/src
-IFLAGS += -I$(DIR)/inc
+DIR = $(BASEDIR)/component/soc/realtek/amebad/fwlib/usb_otg/host/src
+IFLAGS += -I$(DIR)/../inc
 
 vpath %.c $(DIR)
 
@@ -40,8 +39,9 @@ OBJS = $(notdir $(CSRC:.c=.o))
 #*****************************************************************************#
 
 # Define the Rules to build the core targets
-all: CORE_TARGETS
+all: CORE_TARGETS COPY_RAM_OBJS
 	$(AR) rvs lib_usbh.a $(OBJS)
+	$(FROMELF) --strip-debug lib_usbh.a
 	$(MOVE) -f lib_usbh.a $(ROOTDIR)/lib/application
 	
 #*****************************************************************************#

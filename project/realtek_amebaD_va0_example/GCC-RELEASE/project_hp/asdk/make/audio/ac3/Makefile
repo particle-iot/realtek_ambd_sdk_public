@@ -22,7 +22,7 @@ MODULE_IFLAGS += -I$(BASEDIR)/component/common/audio/a52dec/liba52
 #*****************************************************************************#
 #                               Source FILE LIST                              #
 #*****************************************************************************#
-CSRC = $(DIR)/src/a52dec.c
+#CSRC = $(DIR)/src/a52dec.c
 #CSRC += $(DIR)/src/getopt.c
 CSRC += $(DIR)/src/gettimeofday.c
 CSRC += $(DIR)/lib52/bit_allocate.c

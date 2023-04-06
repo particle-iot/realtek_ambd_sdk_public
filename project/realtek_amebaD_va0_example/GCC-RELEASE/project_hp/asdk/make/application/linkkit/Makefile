@@ -110,7 +110,7 @@ IFLAGS               += -I$(BASEDIR)/component/common/api/wifi/rtw_wpa_supplican
 IFLAGS               += -I$(BASEDIR)/component/common/api/wifi/rtw_wpa_supplicant/src/crypto
 IFLAGS               += -I$(BASEDIR)/component/os/os_dep/include/
 #IFLAGS               += -I$(BASEDIR)/component/common/network/http2/nghttp2-1.31.0/includes
-
+IFLAGS               += -I$(BASEDIR)/component/common/file_system/dct
 #IFLAGS               += -I$(BASEDIR)/component/soc/realtek/8710c/misc/platform
 
 .PHONY: all clean

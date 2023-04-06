@@ -84,8 +84,8 @@
 #define BKUP_REG3				((u32)0x00000003)	/*!< all bits can be used by user */
 #define BKUP_REG4				((u32)0x00000004)	/*!< all bits can be used by user */
 #define BKUP_REG5				((u32)0x00000005)	/*!< all bits can be used by user */
-#define BKUP_REG6				((u32)0x00000006)	/*!< all bits are used by system*/
-#define BKUP_REG7				((u32)0x00000007)	/*!< all bits are used by system */
+#define BKUP_REG6				((u32)0x00000006)	/*!< all bits can be used by user */
+#define BKUP_REG7				((u32)0x00000007)	/*!< all bits can be used by user */
 #define IS_BKUP_REG(IDX)	(((IDX) == BKUP_REG0) || \
 							((IDX) == BKUP_REG1) ||\
 							((IDX) == BKUP_REG2) ||\
@@ -133,6 +133,8 @@ _LONG_CALL_ u32 BOOT_Reason(void);
  * @defgroup BKUP_REG_WDORD0 REG_LP_BOOT_REASON0
  * @{
  *****************************************************************************/
+#define BIT_RESVED_BIT17					BIT(17)	/*!<  RESVED */
+#define BIT_RESVED_BIT16					BIT(16)	/*!<  RESVED */
 #define BIT_CAPTOUCH_ENABLE				BIT(15)	/*!<  KM4 captouch init controlled by this bit*/
 #define BIT_KEY_ENABLE						BIT(14)	/*!<  KM4 key init controlled by this bit*/
 #define BIT_KM4_WAKE_DELAY				BIT(13)	/*!<  km4 wakeup should be delayed if wakeup happend when km4 suspend */

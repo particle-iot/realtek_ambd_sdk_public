@@ -10,6 +10,9 @@
 * @version  v0.1
 *************************************************************************************************************
 */
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
+
 #include <string.h>
 #include "trace_app.h"
 #if F_BT_LE_GATT_CLIENT_SUPPORT
@@ -109,6 +112,6 @@ const T_USER_CMD_TABLE_ENTRY user_cmd_table[] =
         0
     }
 };
-
+#endif
 
 

@@ -40,7 +40,7 @@ typedef struct
 /** @addtogroup  CENTRAL_CLIENT_SCAN_MGR
     * @{
     */
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 typedef struct
 {
 	uint8_t 	 is_exist;
@@ -58,7 +58,7 @@ extern T_APP_LINK ble_central_app_link_table[BLE_CENTRAL_APP_MAX_LINKS];
 /*============================================================================*
  *                              Functions
  *============================================================================*/
-#if F_BT_LE_USE_STATIC_RANDOM_ADDR
+#if F_BT_LE_USE_RANDOM_ADDR
 uint32_t ble_central_app_save_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_addr);
 uint32_t ble_central_app_load_static_random_address(T_APP_STATIC_RANDOM_ADDR *p_addr);
 #endif

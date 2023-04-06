@@ -22,6 +22,7 @@
 #include <lwip_netconf.h>
 
 extern struct netif xnetif[NET_IF_NUM];
+extern u32 g_reconnect_delay;
 
 write_reconnect_ptr p_write_reconnect_ptr;
 
@@ -150,6 +151,7 @@ WIFI_RETRY_LOOP:
 			case RTW_SECURITY_WPA2_AES_PSK:
 #ifdef CONFIG_SAE_SUPPORT
 			case RTW_SECURITY_WPA3_AES_PSK:
+			case RTW_SECURITY_WPA2_WPA3_MIXED:
 #endif
 				wifi.password = (unsigned char*) psk_passphrase;
 				wifi.password_len = strlen((char*)psk_passphrase);
@@ -164,14 +166,26 @@ WIFI_RETRY_LOOP:
 
 		ret = wifi_connect((char*)wifi.ssid.val, wifi.security_type, (char*)wifi.password, wifi.ssid.len,
 			wifi.password_len, wifi.key_id, NULL);
-                if(ret != RTW_SUCCESS){
-                  wifi_retry_connect--;
-                  if(wifi_retry_connect > 0){
-                      printf("wifi retry\r\n");
-                      goto WIFI_RETRY_LOOP;
-                  }
-                  
-                }
+		if (ret != RTW_SUCCESS) {
+			wifi_retry_connect--;
+			if (wifi_retry_connect > 0) {
+				/* Add the delay to wait for the _rtw_join_timeout_handler
+				 * If there is no this delay, there are some error when rhe AP
+				 * send the disassociation frame. It will cause the connection
+				 * to be failed at first time after resetting. So keep 300ms delay
+				 * here. For the detail about this error, please refer to
+				 * [RSWLANDIOT-1954].
+				 */
+				vTaskDelay(300);
+				if (g_reconnect_delay > 0) {
+					vTaskDelay(g_reconnect_delay);
+					g_reconnect_delay = 0;
+				}
+				printf("wifi retry\r\n");
+				goto WIFI_RETRY_LOOP;
+			}
+		}
+
 		if(ret == RTW_SUCCESS){
 			LwIP_DHCP(0, DHCP_START);
 		}

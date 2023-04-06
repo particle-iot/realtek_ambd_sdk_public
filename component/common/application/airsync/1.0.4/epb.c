@@ -6,7 +6,8 @@
 //
 
 //  Version : 1.0.2
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_AIRSYNC_CONFIG) && CONFIG_BT_AIRSYNC_CONFIG
 #include <string.h>
 #include "epb.h"
 
@@ -452,3 +453,4 @@ int epb_length_delimited_pack_size(uint16_t tag, int len)
 {
     return epb_varint32_pack_size(tag, len, false) + len;
 }
+#endif

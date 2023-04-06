@@ -145,12 +145,12 @@ VOID SOCPS_SYSIrq_HP(VOID *Data)
 
 	SOCPS_SleepDeInit_HP();
 
-	//if (tickless_debug) {
+	if (tickless_debug) {
 		DBG_8195A("SOCPS_SYSIrq_HP %x\n", Rtemp);
 		if (WakeEventFlag_HP == _FALSE) {
 			DBG_8195A("Oops: SOCPS_SYSIrq_HP Error %x !!!!!\n", Rtemp);
 		}
-	//}
+	}
 }
 
 _OPTIMIZE_NONE_
@@ -164,9 +164,13 @@ VOID SOCPS_SleepPG(VOID)
 	nDeviceIdOffset = pmu_exec_sleep_hook_funs();
 	if (nDeviceIdOffset != PMU_MAX) {
 		pmu_exec_wakeup_hook_funs(nDeviceIdOffset);
-		DBG_8195A("DBG: Sleep blocked because Dev %x  busy\n", nDeviceIdOffset);
+		if (tickless_debug) {
+			DBG_8195A("DBG: Sleep blocked because Dev %x  busy\n", nDeviceIdOffset);
+		}
+		
 		return;
 	}
+	pmu_set_max_sleep_time(0);
 
 	/*Backup KM4 IPC configuration*/
 	PMC_BK.IPCbackup_HP = IPC_IERGet(IPCM4_DEV);
@@ -377,7 +381,10 @@ VOID SOCPS_CPUReset(VOID)
 	nDeviceIdOffset = pmu_exec_sleep_hook_funs();
 	if (nDeviceIdOffset != PMU_MAX) {
 		pmu_exec_wakeup_hook_funs(nDeviceIdOffset);
-		DBG_8195A("Oops: Sleep Fail %x !!!!!\n", nDeviceIdOffset);
+		if (tickless_debug) {
+			DBG_8195A("Oops: Sleep Fail %x !!!!!\n", nDeviceIdOffset);
+		}
+		
 		return;
 	}
 
@@ -415,12 +422,16 @@ VOID SOCPS_CPUReset(VOID)
 	/* Enable low power mode:  */
 	if (WakeEventFlag_HP != _TRUE){		
 		WakeEventFlag_HP = _TRUE;
-		DBG_8195A("SOCPS_CPUReset reset \n");
+		if (tickless_debug) {
+			DBG_8195A("SOCPS_CPUReset reset \n");
+		}
 
 		Img2EntryFun0.RamWakeupFun = SOCPS_WakeFromReset;
 		NVIC_SystemReset();
 	} else {
-		DBG_8195A("SOCPS_CPUReset wakeup \n");
+		if (tickless_debug) {
+			DBG_8195A("SOCPS_CPUReset wakeup \n");
+		}
 		
 		/*Refill KM4 IPC configuration*/
 		IPC_IERSet(IPCM4_DEV, PMC_BK.IPCbackup_HP);		
@@ -455,9 +466,13 @@ void SOCPS_SleepCG(void)
 	nDeviceIdOffset = pmu_exec_sleep_hook_funs();
 	if (nDeviceIdOffset != PMU_MAX) {
 		pmu_exec_wakeup_hook_funs(nDeviceIdOffset);
-		DBG_8195A("Oops: Sleep Fail %x !!!!!\n", nDeviceIdOffset);
+		if (tickless_debug) {
+			DBG_8195A("Oops: Sleep Fail %x !!!!!\n", nDeviceIdOffset);
+		}
+		
 		return;
 	}
+	pmu_set_max_sleep_time(0);
 
 	ipc_send_message(IPC_INT_KM4_TICKLESS_INDICATION, (u32)&sleep_param);
 

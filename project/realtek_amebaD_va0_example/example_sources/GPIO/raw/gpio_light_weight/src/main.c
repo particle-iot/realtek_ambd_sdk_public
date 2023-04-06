@@ -54,11 +54,11 @@ void gpio_demo_raw(void)
 		}
 #else
 		if (GPIO_ReadDataBit(GPIO_PUSHBT_PIN)) {
-			// turn on LED
-			GPIO_WriteBit(GPIO_LED_PIN, 1);
-		} else {
 			// turn off LED
 			GPIO_WriteBit(GPIO_LED_PIN, 0);
+		} else {
+			// turn on LED
+			GPIO_WriteBit(GPIO_LED_PIN, 1);
 		}
 #endif
 	}

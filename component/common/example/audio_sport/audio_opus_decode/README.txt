@@ -5,7 +5,7 @@
     2. In Cygwin terminal, change to the directory ”project/realtek_amebaD_va0_example/GCC-RELEASE/project_hp”, 
        type ”make menuconfig”, and enable audio related configurations (MENUCONFIG FOR CHIP CONFIG -> Audio Config -> Enable Audio).
        
-    3. The file to be played is "ready_to_convert0.h", which containes 1000Hz audio data in ogg container.
+    3. The file to be played is "ready_to_convert0.h", which containes 1000Hz audio data in an ogg container.
        
     4. Build and flash the binary to test
 
@@ -16,12 +16,12 @@
 	Source code not in project:
 
 [Compilation Tips]
-    1. When WI-FI and Network are off,   you need to call “example_audio_opus_decode()” on your own because the “example_entry()” function will not be called automatically. In this situation, 
-	   the program may not run in a normal way due to the default small heap size. You can set configTOTAL_HEAP_SIZE to ( ( size_t ) ( 250 * 1024 ) ) to make sure that ram allocated is enough to run this example(refer to project/realtek_amebaD_va0_example/inc/inc_hp/FreeRTOSConfig.h).
-       
-    2. This example needs a big memory space, or hardfault may happen. You can choose to use RAM only or RAM with PSRAM to run this example.
-       In "/component/common/audio/libogg-1.3.3/include/ogg/os_types.h", you can choose either mode by changing macro values on line 20, 21.
-       If you "#define RAM  1", set configTOTAL_HEAP_SIZE to ( ( size_t ) ( 400 * 1024 ) ) is enough to run this example.
-       If you "#define PSRAM 1", set configTOTAL_HEAP_SIZE to ( ( size_t ) ( 250 * 1024 ) ) is enough to run this example. In this case, remember to enable psram use in rtl8721dhp_intfcfg.c. Since our ram is not big enough, we advise to use PSRAM.
+	1. You need to turn WI-FI and Network on to make sure the entry of this example will be called automatically. If not, you need to 
+	call it on your own.
+	
+	2. You may need to change the value of configTOTAL_HEAP_SIZE  defined in project\realtek_amebaD_va0_example\inc\inc_hp\FreeRTOSConfig.h 
+	to make sure that ram allocated is enough to run this example.
+	
+	3. Psram is needed to run this example. Enable psram use in rtl8721dhp_intfcfg.c.
 
-	3. In IAR, you need to include lib_opus.a lib_libogg.a lib_opusfile.a under "km4_application/lib" and .c files in this folder under "km4_application/utilities/example".
+	3. In IAR, you need to include lib_opus.a lib_libogg.a lib_opusfile.a under "km4_application/lib", example_audio_opus_decode.c and Psram_realloc.c files in this folder under "km4_application/utilities/example".

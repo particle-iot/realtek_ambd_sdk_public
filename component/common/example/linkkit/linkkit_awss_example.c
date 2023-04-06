@@ -33,7 +33,9 @@ int HAL_SetProductSecret(char *product_secret);
 int HAL_SetFirmwareVersion();
 int HAL_GetFirmwareVersion(char *version);
 
-
+extern int HAL_Kv_Get(const char *key, void *val, int *buffer_len);
+extern int HAL_Kv_Set(const char *key, const void *val, int len, int sync);
+extern int HAL_Kv_Del(const char *key);
 
 extern int wlan_write_reconnect_data_to_flash(u8 *data, uint32_t len);
 
@@ -86,6 +88,10 @@ iotx_linkkit_dev_meta_info_t master_meta_info;
 static user_example_ctx_t g_user_example_ctx;
 
 extern char  _firmware_version[IOTX_FIRMWARE_VER_LEN];
+char example_dct_variable0[] = "variable0";
+char example_dct_variable1[] = "variable1";
+char example_dct_value0[] = "value0";
+char example_dct_value1[] = "value1";
 
 /** cloud connected event callback */
 static int user_connected_event_handler(void)
@@ -886,6 +892,120 @@ END:
 	HAL_ThreadDelete(NULL);
 }
 
+
+xTaskHandle xTask2Handle;
+
+void kv_test1_thread(int argc,char *argv[])
+{	
+	unsigned portBASE_TYPE uxPriority;
+	uxPriority = uxTaskPriorityGet( NULL );
+
+
+	int 			ret = -1;
+	char			value[16];
+	dct_handle_t	dct_handle;
+
+	/**************************** DCT ************************************************************/	
+		// set test variable 0
+		ret = HAL_Kv_Set(example_dct_variable0, example_dct_value0, sizeof(example_dct_value0), 0);
+		link_printf(LINK_INFO, "[%d] ret:%d \n", __LINE__, ret);
+			
+		// get value of test variable 0		
+		len_variable = sizeof(value);
+		memset(value, 0, sizeof(value));
+		ret = HAL_Kv_Get(example_dct_variable0, value, &len_variable);
+		if(ret == DCT_SUCCESS)
+			printf("%s: %s\n", example_dct_variable0, value);
+					
+		// delete test variable 0
+		//ret = HAL_Kv_Del(example_dct_variable0);
+		// get value of test variable 1
+		memset(value, 0, sizeof(value));
+		len_variable = sizeof(value);
+		ret = HAL_Kv_Get(example_dct_variable1, value, &len_variable);
+		if(ret == DCT_ERR_NOT_FIND)
+			printf("Delete %s success.\n", example_dct_variable1);				
+	/*****************************************************************************************************/	
+	vTaskPrioritySet( xTask2Handle, ( uxPriority + 1 ) );
+	HAL_ThreadDelete(NULL);
+}
+
+void kv_test2_thread(int argc,char *argv[])
+{
+	unsigned portBASE_TYPE uxPriority;
+	uxPriority = uxTaskPriorityGet( NULL );
+
+	link_printf(LINK_INFO, "[%d] in kv_test2_thread \n", __LINE__);
+
+	int 			ret = -1;
+	char			value[16];
+	dct_handle_t	dct_handle;
+	/**************************** DCT ************************************************************/	
+		// set test variable 1
+		ret = HAL_Kv_Set(example_dct_variable1, example_dct_value1, sizeof(example_dct_value1), 0);
+		link_printf(LINK_INFO, "[%d] ret:%d \n", __LINE__, ret);
+					
+		// get value of test variable 1		
+		len_variable = sizeof(value);
+		memset(value, 0, sizeof(value));
+		ret = HAL_Kv_Get(example_dct_variable1, value, &len_variable);
+		if(ret == DCT_SUCCESS)
+			printf("%s: %s\n", example_dct_variable1, value);
+
+		// get value of test variable 0
+		memset(value, 0, sizeof(value));
+		len_variable = sizeof(value);
+		ret = HAL_Kv_Get(example_dct_variable0, value, &len_variable);
+		if(ret == DCT_SUCCESS)
+			printf("%s: %s\n", example_dct_variable0, value);
+
+		// delete test variable 1
+		ret = HAL_Kv_Del(example_dct_variable1);
+				
+		// get value of test variable 1
+		memset(value, 0, sizeof(value));
+		len_variable = sizeof(value);
+		ret = HAL_Kv_Get(example_dct_variable1, value, &len_variable);
+		if(ret == DCT_ERR_NOT_FIND)
+			printf("Delete %s success.\n", example_dct_variable1);		
+			
+		//aliyun_deinit_dct();
+		ret = dct_close_module(&aliyun_kv_handle);
+		printf("dct close success.\n");
+	/*****************************************************************************************************/
+	vTaskPrioritySet( xTask2Handle, ( uxPriority - 2 ) );
+	HAL_ThreadDelete(NULL);
+}
+
+void test_linkkit_kv_thread()
+{
+	int 			ret = -1;
+	// initial DCT
+	ret = dct_init(KV_BEGIN_ADDR, KV_MODULE_NUM, KV_VARIABLE_NAME_SIZE, KV_VARIABLE_VALUE_SIZE, 0, 0);	
+	link_printf(LINK_INFO, "[%d] ret:%d \n", __LINE__, ret);
+	
+	// register module
+	ret = dct_register_module(KV_MODULE_NAME);	
+	link_printf(LINK_INFO, "[%d] ret:%d \n", __LINE__, ret);
+	
+	// open module
+	ret = dct_open_module(&aliyun_kv_handle, KV_MODULE_NAME);
+	link_printf(LINK_INFO, "[%d] ret:%d \n", __LINE__, ret);	
+
+	link_printf(LINK_INFO, "before create task heap size:%d\n", HAL_get_free_heap_size());
+
+	p_wlan_init_done_callback=NULL;
+	if(xTaskCreate((TaskFunction_t)kv_test1_thread, (char const *)"kv_test1", 1024, NULL, tskIDLE_PRIORITY + 6, NULL) != pdPASS) {
+		link_err_printf("xTaskCreate failed\n");	
+	}
+
+	if(xTaskCreate((TaskFunction_t)kv_test2_thread, (char const *)"kv_test2", 1024, NULL, tskIDLE_PRIORITY + 5, &xTask2Handle) != pdPASS) {
+		link_err_printf("xTaskCreate failed\n");	
+	}
+
+	link_printf(LINK_INFO, "after create task heap size:%d\n", HAL_get_free_heap_size());
+}
+
 int start_linkkit_thread()
 {
 	link_printf(LINK_INFO, "before create task heap size:%d\n", HAL_get_free_heap_size());
@@ -904,4 +1024,5 @@ int start_linkkit_thread()
 void example_ali_awss()
 {
 	p_wlan_init_done_callback = start_linkkit_thread;
+	//p_wlan_init_done_callback = test_linkkit_kv_thread;
 }

@@ -1,5 +1,7 @@
-
+#include <platform_opts_bt.h>
+#if defined(CONFIG_BT_THROUGHPUT_TEST) && CONFIG_BT_THROUGHPUT_TEST
 #include <string.h>
+#include <stdio.h>
 #include "app_msg.h"
 #include "trace_app.h"
 #include "gap_scan.h"
@@ -7,11 +9,6 @@
 #include "gap_msg.h"
 #include "gap_bond_le.h"
 #include "ble_throughput_app.h"
-
-#include "ble_throughput_user_cmd.h"
-#include "user_cmd_parse.h"
-
-
 #include "os_sched.h"
 #include <os_mem.h>
 #include <ble_throughput_test_case.h>
@@ -21,7 +18,7 @@
 #include <ble_throughput_vendor_tp_client.h>
 #include <ble_throughput_vendor_tp_config.h>
 
-#include "osdep_service.h"
+#include "os_timer.h"
 #include "os_msg.h"
 
 extern void *ble_throughput_evt_queue_handle;
@@ -30,34 +27,12 @@ extern void *ble_throughput_io_queue_handle;
 typedef void(*P_FUN_TC_RESULT_CB)(uint16_t case_id, uint16_t result, void *p_cb_data);
 P_FUN_TC_RESULT_CB p_tc_result_cb = NULL;
 
-typedef struct
-{
-    uint8_t initial_value;
-    uint32_t total_test_count;
-    uint8_t remote_bd[6];
-    uint32_t total_notify_rx_count;
-    uint32_t begin_time;
-    uint32_t end_time;
-    uint32_t elapsed_time;
-    uint32_t data_rate;
-} TC_206_SUT_MGR;
-
 TC_206_SUT_MGR *p_tc_206_sut_mgr = NULL;
+TC_206_SUT_MGR tc_206_sut_mgr;
 TTP_PERFER_PARAM g_206_sut_prefer_param;
 
-typedef struct
-{
-    uint8_t initial_value;
-    uint32_t total_test_count;
-    uint8_t remote_bd[6];
-    uint32_t count_remain;
-    uint32_t begin_time;
-    uint32_t end_time;
-    uint32_t elapsed_time;
-    uint32_t data_rate;
-} TC_207_SUT_MGR;
-
 TC_207_SUT_MGR *p_tc_207_sut_mgr = NULL;
+TC_207_SUT_MGR tc_207_sut_mgr;
 TTP_PERFER_PARAM g_207_sut_prefer_param;
 
 void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_data)
@@ -130,7 +105,7 @@ void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_d
                                              i, p_value[i],
                                              p_tc_206_sut_mgr->initial_value,
                                              p_tc_206_sut_mgr->total_notify_rx_count);
-                            data_uart_print("[206 SUT][RX]: data check failed\r\n");
+                            printf("[206 SUT][RX]: data check failed\r\n");
                             le_disconnect(conn_id);
                             break;
                         }
@@ -141,7 +116,7 @@ void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_d
             {
                 APP_PRINT_ERROR1("[206 SUT][RX]: Len check failed: length %d",
                                  p_cb->cb_content.notif_ind_data.value_size);
-                data_uart_print("[206 SUT][RX]: Len check failed: length %d\r\n",
+                printf("[206 SUT][RX]: Len check failed: length %d\r\n",
                                 p_cb->cb_content.notif_ind_data.value_size);
                 le_disconnect(conn_id);
                 break;
@@ -183,7 +158,7 @@ void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_d
                                     g_206_sut_prefer_param.length, g_206_sut_prefer_param.mode,
                                     g_206_sut_prefer_param.count, g_206_sut_prefer_param.data_check);
 
-                    data_uart_print("TP_READ_PREFER_PARAM: interval 0x%x, latency 0x%x, length %d, mode %d, count %d, check %d\r\n",
+                    printf("TP_READ_PREFER_PARAM: interval 0x%x, latency 0x%x, length %d, mode %d, count %d, check %d\r\n",
                                     g_206_sut_prefer_param.con_interval, g_206_sut_prefer_param.conn_slave_latency,
                                     g_206_sut_prefer_param.length, g_206_sut_prefer_param.mode,
                                     g_206_sut_prefer_param.count, g_206_sut_prefer_param.data_check);
@@ -197,12 +172,12 @@ void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_d
                         if (g_206_sut_prefer_param.mode % 2 == 0)
                         {
                             op = TP_CONFIG_OP_SET_LL_DATA_LEN_27;
-                            data_uart_print("Off data length extension\r\n");
+                            printf("Off data length extension\r\n");
                         }
                         else if (g_206_sut_prefer_param.mode % 2 == 1)
                         {
                             op = TP_CONFIG_OP_SET_LL_DATA_LEN_251;
-                            data_uart_print("On data length extension\r\n");
+                            printf("On data length extension\r\n");
                         }
                         tp_client_write_value(conn_id, 1, &op);
                     }
@@ -232,7 +207,7 @@ void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_d
                                     g_207_sut_prefer_param.length, g_207_sut_prefer_param.mode,
                                     g_207_sut_prefer_param.count, g_207_sut_prefer_param.data_check);
 
-                    data_uart_print("TP_READ_PREFER_PARAM: interval 0x%x, latency 0x%x, length %d, mode %d, count %d, check %d\r\n",
+                    printf("TP_READ_PREFER_PARAM: interval 0x%x, latency 0x%x, length %d, mode %d, count %d, check %d\r\n",
                                     g_207_sut_prefer_param.con_interval, g_207_sut_prefer_param.conn_slave_latency,
                                     g_207_sut_prefer_param.length, g_207_sut_prefer_param.mode,
                                     g_207_sut_prefer_param.count, g_207_sut_prefer_param.data_check);
@@ -245,12 +220,12 @@ void ble_throughput_20x_sut_client_result_callback(uint8_t conn_id, void *p_cb_d
                         if (g_207_sut_prefer_param.mode % 2 == 0)
                         {
                             le_set_data_len(0, 27, 0x0848);
-                            data_uart_print("Off data length extension\r\n");
+                            printf("Off data length extension\r\n");
                         }
                         else if (g_207_sut_prefer_param.mode % 2 == 1)
                         {
                             le_set_data_len(0, 251, 0x0848);
-                            data_uart_print("On data length extension\r\n");
+                            printf("On data length extension\r\n");
                         }
                     }
                     else
@@ -292,7 +267,7 @@ void ble_throughput_206_sut_start(uint8_t remote_bd[6])
 
     if (NULL == p_tc_206_sut_mgr)
     {
-        p_tc_206_sut_mgr = (TC_206_SUT_MGR *)os_mem_zalloc(RAM_TYPE_DATA_ON, sizeof(TC_206_SUT_MGR));
+        p_tc_206_sut_mgr = &tc_206_sut_mgr;
     }
     else
     {
@@ -308,7 +283,7 @@ void ble_throughput_206_sut_start(uint8_t remote_bd[6])
 
 void ble_throughput_206_sut_link_disconnected(uint8_t conn_id, uint16_t reason)
 {
-    data_uart_print("Disc reason 0x%04x\r\n", reason);
+    printf("Disc reason 0x%04x\r\n", reason);
 
     ble_throughput_206_sut_dump_result();
     if (p_tc_result_cb != NULL)
@@ -347,7 +322,7 @@ void ble_throughput_206_sut_conn_param_update_event(uint8_t conn_id)
     APP_PRINT_INFO3("ble_throughput_206_sut_conn_param_update_event: interval = 0x%x, latency = 0x%x, timeout = 0x%x",
                     con_interval, conn_slave_latency, conn_supervision_timeout);
 
-    data_uart_print("ble_throughput_206_sut_conn_param_update_event: interval = 0x%x, latency = 0x%x, timeout = 0x%x\r\n",
+    printf("ble_throughput_206_sut_conn_param_update_event: interval = 0x%x, latency = 0x%x, timeout = 0x%x\r\n",
                     con_interval, conn_slave_latency, conn_supervision_timeout);
 
 
@@ -427,7 +402,7 @@ void ble_throughput_206_sut_notification_phy_update_event(uint8_t conn_id, uint1
     {
         APP_PRINT_ERROR0("[206 SUT]: Update phy failed");
 
-        data_uart_print("[206 SUT]: Update phy failed\r\n");
+        printf("[206 SUT]: Update phy failed\r\n");
         le_disconnect(0);
     }
     else
@@ -450,7 +425,7 @@ void ble_throughput_206_sut_dump_result(void)
                          p_tc_206_sut_mgr->end_time,
                          p_tc_206_sut_mgr->elapsed_time,
                          p_tc_206_sut_mgr->data_rate);
-        data_uart_print("[206 SUT][RX]: conn_interval %d, latency %d, length %d, count = %d,  begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
+        printf("[206 SUT][RX]: conn_interval %d, latency %d, length %d, count = %d,  begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
                         g_206_sut_prefer_param.con_interval,
                         g_206_sut_prefer_param.conn_slave_latency,
                         g_206_sut_prefer_param.length,
@@ -463,14 +438,14 @@ void ble_throughput_206_sut_dump_result(void)
                          p_tc_206_sut_mgr->total_test_count, p_tc_206_sut_mgr->total_notify_rx_count,
                          p_tc_206_sut_mgr->initial_value);
 
-        data_uart_print("[206 SUT][RX]: total_test_count %d total_notify_rx_count %d, initial_value 0x%x\r\n",
+        printf("[206 SUT][RX]: total_test_count %d total_notify_rx_count %d, initial_value 0x%x\r\n",
                         p_tc_206_sut_mgr->total_test_count, p_tc_206_sut_mgr->total_notify_rx_count,
                         p_tc_206_sut_mgr->initial_value);
 
     }
     else
     {
-        data_uart_print("Not running\r\n");
+        printf("Not running\r\n");
     }
 }
 
@@ -492,7 +467,7 @@ void ble_throughput_207_sut_start(uint8_t remote_bd[6])
 
     if (NULL == p_tc_207_sut_mgr)
     {
-        p_tc_207_sut_mgr = (TC_207_SUT_MGR *)os_mem_zalloc(RAM_TYPE_DATA_ON, sizeof(TC_207_SUT_MGR));
+        p_tc_207_sut_mgr = &tc_207_sut_mgr;
     }
     else
     {
@@ -508,7 +483,7 @@ void ble_throughput_207_sut_start(uint8_t remote_bd[6])
 
 void ble_throughput_207_sut_link_disconnected(uint8_t conn_id, uint16_t reason)
 {
-    data_uart_print("Disc reason 0x%04x\r\n", reason);
+    printf("Disc reason 0x%04x\r\n", reason);
 
     ble_throughput_207_sut_dump_result();
     if (p_tc_result_cb != NULL)
@@ -568,7 +543,7 @@ void ble_throughput_207_sut_start_send_write_command(uint8_t conn_id)
     }
 }
 
-_timer ble_throughput_207_timer;
+void *ble_throughput_207_timer = NULL;
 void ble_throughput_207_timer_handler_func(void *context)
 {
 	uint8_t event = EVENT_IO_TO_APP;
@@ -578,11 +553,12 @@ void ble_throughput_207_timer_handler_func(void *context)
 	
 	if (ble_throughput_evt_queue_handle != NULL && ble_throughput_io_queue_handle != NULL) {
 		if (os_msg_send(ble_throughput_io_queue_handle, &io_msg, 0) == false) {
-			data_uart_print("ble throughput 207 timer handler func send msg fail");
+			printf("ble throughput 207 timer handler func send msg fail\r\n");
 		} else if (os_msg_send(ble_throughput_evt_queue_handle, &event, 0) == false) {
-			data_uart_print("ble throughput 207 timer handler func send event fail");
+			printf("ble throughput 207 timer handler func send event fail\r\n");
 		}
 	}
+	os_timer_delete(&ble_throughput_207_timer);	
 }
 
 void ble_throughput_207_sut_tx_data_complete(uint8_t credits)
@@ -618,8 +594,8 @@ void ble_throughput_207_sut_tx_data_complete(uint8_t credits)
                     (p_tc_207_sut_mgr->elapsed_time);
                 APP_PRINT_ERROR1("[207 SUT]:end time = %dms",
                                  p_tc_207_sut_mgr->end_time);
-				rtw_init_timer(&ble_throughput_207_timer, NULL, &ble_throughput_207_timer_handler_func, NULL, "207_timer");
-				rtw_set_timer(&ble_throughput_207_timer, 5000);
+				os_timer_create(&ble_throughput_207_timer, "ble_throughput_207_timer", 1, 5000, false, ble_throughput_207_timer_handler_func);
+				os_timer_start(&ble_throughput_207_timer);
             }
             break;
         }
@@ -639,7 +615,7 @@ void ble_throughput_207_sut_conn_param_update_event(uint8_t conn_id)
     APP_PRINT_INFO3("ble_throughput_207_sut_conn_param_update_event: interval = 0x%x, latency = 0x%x, timeout = 0x%x",
                     con_interval, conn_slave_latency, conn_supervision_timeout);
 
-    data_uart_print("ble_throughput_207_sut_conn_param_update_event: interval = 0x%x, latency = 0x%x, timeout = 0x%x\r\n",
+    printf("ble_throughput_207_sut_conn_param_update_event: interval = 0x%x, latency = 0x%x, timeout = 0x%x\r\n",
                     con_interval, conn_slave_latency, conn_supervision_timeout);
 
     if (g_207_sut_prefer_param.con_interval ==  con_interval &&
@@ -650,7 +626,7 @@ void ble_throughput_207_sut_conn_param_update_event(uint8_t conn_id)
     }
     else
     {
-        data_uart_print("[207 SUT] error: Invalid conn parameter\r\n");
+        printf("[207 SUT] error: Invalid conn parameter\r\n");
         le_disconnect(0);
     }
 }
@@ -729,7 +705,7 @@ void ble_throughput_207_sut_notification_phy_update_event(uint8_t conn_id, uint1
     {
         APP_PRINT_INFO0("[207 SUT]: Update phy failed");
 
-        data_uart_print("[207 SUT]: Update phy failed\r\n");
+        printf("[207 SUT]: Update phy failed\r\n");
         le_disconnect(0);
     }
     else
@@ -752,7 +728,7 @@ void ble_throughput_207_sut_dump_result(void)
                          p_tc_207_sut_mgr->end_time,
                          p_tc_207_sut_mgr->elapsed_time,
                          p_tc_207_sut_mgr->data_rate);
-        data_uart_print("[207 SUT][TX]: conn_interval %d, latency %d, length %d, count = %d, begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
+        printf("[207 SUT][TX]: conn_interval %d, latency %d, length %d, count = %d, begin time = %dms, end time = %dms, elapsed time = %dms, data rate(Bytes/s) %d\r\n",
                         g_207_sut_prefer_param.con_interval,
                         g_207_sut_prefer_param.conn_slave_latency,
                         g_207_sut_prefer_param.length,
@@ -765,13 +741,13 @@ void ble_throughput_207_sut_dump_result(void)
                          p_tc_207_sut_mgr->total_test_count, p_tc_207_sut_mgr->count_remain,
                          p_tc_207_sut_mgr->initial_value);
 
-        data_uart_print("[207 SUT][TX]: total_test_count %d count_remain %d, initial_value %d\r\n",
+        printf("[207 SUT][TX]: total_test_count %d count_remain %d, initial_value %d\r\n",
                         p_tc_207_sut_mgr->total_test_count, p_tc_207_sut_mgr->count_remain,
                         p_tc_207_sut_mgr->initial_value);
     }
     else
     {
-        data_uart_print("Not running\r\n");
+        printf("Not running\r\n");
     }
 }
-
+#endif

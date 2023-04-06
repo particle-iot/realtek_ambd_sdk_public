@@ -1,8 +1,8 @@
 #include <platform_opts.h>
 #if defined(CONFIG_EXAMPLE_USBD_CDC_ACM) && CONFIG_EXAMPLE_USBD_CDC_ACM
-#include <platform/platform_stdlib.h>
+#include <platform_stdlib.h>
 #include "usb.h"
-#include "usbd_cdc_acm_if.h"
+#include "usbd_cdc_acm.h"
 #include "osdep_service.h"
 
 // This configuration is used to enable a thread to check hotplug event
@@ -20,13 +20,24 @@
 // USBD CDC ACM applications
 #define ACM_APP_ECHO_SYNC                     0     // Echo synchronously in USB IRQ thread, for ACM_BULK_XFER_SIZE <= ACM_BULK_IN_BUF_SIZE
 #define ACM_APP_ECHO_ASYNC                    1     // Echo asynchronously in dedicated USB CDC ACM bulk in thread (USBD_CDC_ACM_USE_BULK_IN_THREAD == 1), for ACM_BULK_XFER_SIZE > ACM_BULK_IN_BUF_SIZE
+#define ACM_APP_LOOPBACK				2 	//loopback with AmebD usb cdc acm host
 
 #define CONFIG_USDB_CDC_ACM_APP              (ACM_APP_ECHO_SYNC)
 
-#define ACM_BULK_IN_BUF_SIZE                  1024  // Bulk in buffer size, i.e. the transfer bytes of single bulk in transfer, should be <= 65535, limited by USBD core lib
-#define ACM_BULK_OUT_BUF_SIZE                 1024  // Bulk out buffer size, i.e. the transfer bytes of single bulk out transfer, should be <= 65535, limited by USBD core lib
+// USB speed
+#define CONFIG_CDC_ACM_SPEED					USB_SPEED_HIGH
+
+// transfer length should equal to max packet length in ep descriptor because host will not send
+// zlp packet after send packet that length equal to max packet length
+#if defined(CONFIG_CDC_ACM_SPEED) && (CONFIG_CDC_ACM_SPEED == USB_SPEED_HIGH)
+#define ACM_BULK_BUF_SIZE                  USBD_CDC_ACM_HS_BULK_MAX_PACKET_SIZE
+#else
+#define ACM_BULK_BUF_SIZE                  USBD_CDC_ACM_FS_BULK_MAX_PACKET_SIZE
+#endif
 
 #define ACM_BULK_XFER_SIZE                    2048  // Data size to be TX, i.e. the transfer bytes each time we want to send to host via TX API
+
+#define ACM_LOOPBACK_BULK_SIZE	8192  //it should match with host loopback bulk size
 
 #if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_ECHO_ASYNC)
 // ACM bulk transfer buffer, which buffers the received bulk out data and transmit back to host.
@@ -37,13 +48,21 @@ static u16 acm_bulk_xfer_buf_pos = 0;
 static volatile int acm_bulk_xfer_busy = 0;
 #endif
 
+
+#if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_LOOPBACK)
+u8 acm_loopback_bulk_buf[ACM_LOOPBACK_BULK_SIZE];
+u32 acm_loopback_bulk_pos = 0;
+_sema LoopbackTxSema;
+struct task_struct loopback_task;
+#endif
+
 static int acm_init(void)
 {
 #if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_ECHO_ASYNC)
     acm_bulk_xfer_buf_pos = 0;
     acm_bulk_xfer_busy = 0;
 #endif
-    return ESUCCESS;
+    return USB_ESUCCESS;
 }
 
 static int acm_deinit(void)
@@ -52,28 +71,28 @@ static int acm_deinit(void)
     acm_bulk_xfer_buf_pos = 0;
     acm_bulk_xfer_busy = 0;
 #endif
-    return ESUCCESS;
+    return USB_ESUCCESS;
 }
 
 // This callback function will be invoked in USB IRQ task,
 // it is not suggested to do time consuming jobs here.
 static int acm_receive(void *buf, u16 length)
 {
-    int ret = ESUCCESS;
+    int ret = USB_ESUCCESS;
     u16 len = length;
     
 #if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_ECHO_SYNC)
 
-    if (len >= ACM_BULK_IN_BUF_SIZE) {
-        len = ACM_BULK_IN_BUF_SIZE;  // extra data discarded
+	if (len >= ACM_BULK_BUF_SIZE) {
+		len = ACM_BULK_BUF_SIZE;  // extra data discarded
     }
 
     ret = usbd_cdc_acm_sync_transmit_data(buf, len);
-    if (ret != ESUCCESS) {
+    if (ret != USB_ESUCCESS) {
         printf("\nFail to transmit data: %d\n", ret);
     }
 
-#else // CONFIG_USDB_CDC_ACM_APP == ACM_APP_ECHO_ASYNC
+#elif (CONFIG_USDB_CDC_ACM_APP == ACM_APP_ECHO_ASYNC)
 
     if (!acm_bulk_xfer_busy) {
 
@@ -86,20 +105,29 @@ static int acm_receive(void *buf, u16 length)
         if (acm_bulk_xfer_buf_pos >= ACM_BULK_XFER_SIZE) {
             acm_bulk_xfer_buf_pos = 0;
             ret = usbd_cdc_acm_async_transmit_data((void *)acm_bulk_xfer_buf, ACM_BULK_XFER_SIZE);
-            if (ret == ESUCCESS) {
+            if (ret == USB_ESUCCESS) {
                 acm_bulk_xfer_busy = 1;
             } else {
                 printf("\nFail to transmit data: %d\n", ret);
-                if (ret != -EBUSY) {
+                if (ret != -USB_EBUSY) {
                     acm_bulk_xfer_busy = 0;
                 }
             }
         }
     } else {
         printf("\nBusy, discarded %d bytes\n", length);
-        ret = -EBUSY;
+        ret = -USB_EBUSY;
     }
-    
+
+#elif (CONFIG_USDB_CDC_ACM_APP == ACM_APP_LOOPBACK)
+	rtw_memcpy(acm_loopback_bulk_buf + acm_loopback_bulk_pos, buf, length);
+	acm_loopback_bulk_pos += length;
+	
+	if(acm_loopback_bulk_pos >= ACM_LOOPBACK_BULK_SIZE){
+		acm_loopback_bulk_pos = 0;
+		rtw_up_sema(&LoopbackTxSema);
+	}
+   
 #endif
 
     return ret;
@@ -109,7 +137,7 @@ static int acm_receive(void *buf, u16 length)
 static void acm_transmit_complete(int status)
 {
     acm_bulk_xfer_busy = 0;
-    if (status != ESUCCESS) {
+    if (status != USB_ESUCCESS) {
         printf("\nTransmit error: %d\n", status);
     }
 }
@@ -123,6 +151,38 @@ usbd_cdc_acm_usr_cb_t cdc_acm_usr_cb = {
     .transmit_complete = acm_transmit_complete,
 #endif
 };
+
+#if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_LOOPBACK)
+static void acm_loopback_tx_thread(void *param)
+{	
+	UNUSED(param);
+	int ret;
+	u32 tx_len;
+	
+	while(1){
+		if(rtw_down_sema(&LoopbackTxSema)){
+			tx_len = ACM_LOOPBACK_BULK_SIZE;
+			while(1){
+				if (tx_len > ACM_BULK_BUF_SIZE) {
+					ret = usbd_cdc_acm_sync_transmit_data(acm_loopback_bulk_buf, ACM_BULK_BUF_SIZE);
+					if (ret != USB_ESUCCESS) {
+					        printf("\nFail to transmit data: %d\n", ret);
+					}
+					tx_len -= ACM_BULK_BUF_SIZE;
+				}else{
+					ret = usbd_cdc_acm_sync_transmit_data(acm_loopback_bulk_buf, tx_len);
+					if (ret != USB_ESUCCESS) {
+					        printf("\nFail to transmit data: %d\n", ret);
+					}
+					tx_len = 0;
+					break;
+				}
+			}
+		}
+	}
+}
+#endif
+
     
 #if CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS
 static void cdc_check_usb_status_thread(void *param)
@@ -140,6 +200,10 @@ static void cdc_check_usb_status_thread(void *param)
             old_usb_status = usb_status;
             if (usb_status == USB_STATUS_DETACHED) {
                 printf("\nUSB DETACHED\n");
+#if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_LOOPBACK)
+                rtw_delete_task(&loopback_task);
+                rtw_free_sema(&LoopbackTxSema);
+#endif
                 usbd_cdc_acm_deinit();
                 usb_deinit();
                 ret = usb_init(USB_SPEED_HIGH);
@@ -147,12 +211,22 @@ static void cdc_check_usb_status_thread(void *param)
                     printf("\nFail to re-init USBD driver\n");
                     break;
                 }
-                ret = usbd_cdc_acm_init(ACM_BULK_IN_BUF_SIZE, ACM_BULK_OUT_BUF_SIZE, &cdc_acm_usr_cb);
+				ret = usbd_cdc_acm_init(CONFIG_CDC_ACM_SPEED, &cdc_acm_usr_cb);
                 if (ret != 0) {
                     printf("\nFail to re-init USB CDC ACM class\n");
                     usb_deinit();
                     break;
                 }
+#if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_LOOPBACK)
+                rtw_init_sema(&LoopbackTxSema, 0);
+                ret = rtw_create_task(&loopback_task, "acm_loopback_tx_thread", 512, tskIDLE_PRIORITY + 2, acm_loopback_tx_thread, NULL);
+                if (ret != pdPASS) {
+                    printf("\nFail to create USBD CDC ACM status check thread\n");
+                    usbd_cdc_acm_deinit();
+                    usb_deinit();
+        		break;
+                }
+#endif
             } else if (usb_status == USB_STATUS_ATTACHED) {
                 printf("\nUSB ATTACHED\n");
             } else {
@@ -174,13 +248,13 @@ static void example_usbd_cdc_acm_thread(void *param)
     
     UNUSED(param);
     
-    ret = usb_init(USB_SPEED_HIGH);
+	ret = usb_init(CONFIG_CDC_ACM_SPEED);
     if (ret != 0) {
         printf("\nFail to init USBD controller\n");
         goto example_usbd_cdc_acm_thread_fail;
     }
 
-    ret = usbd_cdc_acm_init(ACM_BULK_IN_BUF_SIZE, ACM_BULK_OUT_BUF_SIZE, &cdc_acm_usr_cb);
+	ret = usbd_cdc_acm_init(CONFIG_CDC_ACM_SPEED, &cdc_acm_usr_cb);
     if (ret != 0) {
         printf("\nFail to init USBD CDC ACM class\n");
         usb_deinit();
@@ -196,6 +270,17 @@ static void example_usbd_cdc_acm_thread(void *param)
         goto example_usbd_cdc_acm_thread_fail;
     }
 #endif // CONFIG_USDB_CDC_ACM_CHECK_USB_STATUS
+
+#if (CONFIG_USDB_CDC_ACM_APP == ACM_APP_LOOPBACK)
+    rtw_init_sema(&LoopbackTxSema, 0);
+    ret = rtw_create_task(&loopback_task, "acm_loopback_tx_thread", 512, tskIDLE_PRIORITY + 2, acm_loopback_tx_thread, NULL);
+    if (ret != pdPASS) {
+        printf("\nFail to create USBD CDC ACM status check thread\n");
+        usbd_cdc_acm_deinit();
+        usb_deinit();
+        goto example_usbd_cdc_acm_thread_fail;
+    }
+#endif
 
     rtw_mdelay_os(100);
     

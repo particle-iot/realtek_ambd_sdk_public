@@ -73,7 +73,7 @@ static void example_audio_dac_thread(void *param)
 
 static int audio_init(void)
 {
-    int status = ESUCCESS;
+    int status = USB_ESUCCESS;
     int ret;
     
     rtw_init_sema(&recv_sema, 0);
@@ -90,7 +90,7 @@ static int audio_init(void)
     ret = rtw_create_task(&dacTask, "example_audio_dac_thread", 512, tskIDLE_PRIORITY + 1, example_audio_dac_thread, (void *)(&sp_obj));
     if (ret != pdPASS) {
         printf("\n\rUSBD audio create DAC thread fail\n\r");
-        status = -EINVAL;
+        status = -USB_EINVAL;
     }
 
     return status;

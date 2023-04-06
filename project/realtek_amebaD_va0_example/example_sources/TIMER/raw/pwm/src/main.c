@@ -57,14 +57,14 @@ void raw_pwm_demo(void)
 	RTIM_TimeBaseStructInit(&RTIM_InitStruct);
 	RTIM_InitStruct.TIM_Idx = PWM_TIMER;
 	RTIM_InitStruct.TIM_Prescaler = PWM_PRESCALER;
-	RTIM_InitStruct.TIM_Period = PWM_PERIOD;
+	RTIM_InitStruct.TIM_Period = PWM_PERIOD - 1;
 
 	RTIM_TimeBaseInit(TIM5, (&RTIM_InitStruct), TIMx_irq[5], NULL, NULL);
 
 	for(pwm_chan=0; pwm_chan<4; pwm_chan++){
 		RTIM_CCStructInit(&TIM_CCInitStruct);
+		TIM_CCInitStruct.TIM_OCPulse = pwms[pwm_chan];
 		RTIM_CCxInit(TIM5, &TIM_CCInitStruct, PWM_pin2chan[pwm_chan][1]);
-		RTIM_CCRxSet(TIM5, pwms[pwm_chan], PWM_pin2chan[pwm_chan][1]);
 		RTIM_CCxCmd(TIM5, PWM_pin2chan[pwm_chan][1], TIM_CCx_Enable);
 
 		Pinmux_Config(PWM_pin2chan[pwm_chan][0], PINMUX_FUNCTION_PWM_HS);

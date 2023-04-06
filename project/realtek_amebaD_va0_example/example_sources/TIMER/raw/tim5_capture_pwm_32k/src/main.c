@@ -29,7 +29,7 @@ VOID tim5_capture_ISR(u32 channel)
 		if(value2 > value1)
 			DBG_8195A("frequency: %d\n", 40000000/(value2 - value1));
 		else
-			DBG_8195A("frequency: %d\n", 40000000/(PWM_PERIOD + 1 - value1 + value2));
+			DBG_8195A("frequency: %d\n", 40000000/(PWM_PERIOD - value1 + value2));
 	}
 
 	RTIM_INTClear(TIM5);
@@ -43,13 +43,13 @@ void tim5_gen_pwm_32k(void)
 
 	RTIM_TimeBaseStructInit(&TIM_InitStruct_temp);
 	TIM_InitStruct_temp.TIM_Idx = 5;
-	TIM_InitStruct_temp.TIM_Period = PWM_PERIOD;
+	TIM_InitStruct_temp.TIM_Period = PWM_PERIOD - 1;
 	RTIM_TimeBaseInit(TIM5, &TIM_InitStruct_temp, TIMER5_IRQ, (IRQ_FUN)tim5_capture_ISR, capture_chn);
 
 	/* channel 0 output 32KHz pwm*/
 	RTIM_CCStructInit(&TIM_CCInitStruct);
+	TIM_CCInitStruct.TIM_OCPulse = PWM_PERIOD / 2;
 	RTIM_CCxInit(TIM5, &TIM_CCInitStruct, pwm_chan);
-	RTIM_CCRxSet(TIM5, PWM_PERIOD / 2 + 1, pwm_chan);
 	RTIM_CCxCmd(TIM5, pwm_chan, TIM_CCx_Enable);
 
 	Pinmux_Config(_PA_13, PINMUX_FUNCTION_PWM_HS);
