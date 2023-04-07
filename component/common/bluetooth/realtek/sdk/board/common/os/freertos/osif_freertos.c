@@ -1113,7 +1113,7 @@ bool osif_timer_start(void **pp_handle)
     }
     else
     {
-        printf("%s fail!\r\n", __FUNCTION__, ret);
+        // printf("%s fail!\r\n", __FUNCTION__, ret);
         return false;
     }
 }

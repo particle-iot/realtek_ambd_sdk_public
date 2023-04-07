@@ -27,7 +27,6 @@
 #define UART_SEND_DONE_TASK_STACK_SIZE           512
 
 #define TX_TRASMIT_COUNT 16
-#define hci_board_debug DBG_8195A
 
 #define HCI_UART_IDX    1    //(only 0, 1, 3)
 

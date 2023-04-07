@@ -59,10 +59,11 @@ extern int rtw_chip_band_type_check(void);
 /******************************************************
  *               Variables Declarations
  ******************************************************/
-
+#if defined(CONFIG_LWIP_LAYER) && CONFIG_LWIP_LAYER
 #if !defined(CONFIG_MBED_ENABLED)
 extern struct netif xnetif[NET_IF_NUM];
 #endif
+#endif // defined(CONFIG_LWIP_LAYER) && CONFIG_LWIP_LAYER
 
 /******************************************************
  *               Variables Definitions
@@ -394,6 +395,7 @@ extern void dhcp_stop(struct netif *netif);
 #endif
 #endif
 extern u32 rltk_wlan_get_link_err(void);
+extern void rltk_wlan_set_link_err(u32);
 static void wifi_link_err_parse(u16 reason_code)
 {
 	u32 link_err;
@@ -3378,7 +3380,7 @@ char wps_profile_ssid[33]={'\0'};
 char wps_profile_password[65]={'\0'};
 #endif
 
-#if WIFI_LOGO_CERTIFICATION_CONFIG
+#if defined(WIFI_LOGO_CERTIFICATION_CONFIG) && WIFI_LOGO_CERTIFICATION_CONFIG
 extern u8 use_static_ip;
 extern struct ip_addr g_ipaddr;
 extern struct ip_addr g_netmask;
