@@ -101,8 +101,13 @@ extern "C" {
 #define EFUSE_SW_RSVD2               BIT7
 
 
+#ifdef REALTEK_AMBD_SDK
+// Particle: This flash page is not unsed in our builds and we don't want direct flash
+// access due to broken XIP. Stub out with default 0xffffffff reads
+#define CHECK_SW(x) (0xffffffff & x)
+#else
 #define CHECK_SW(x)                  (HAL_READ32(SPI_FLASH_BASE, FLASH_SYSTEM_DATA_ADDR + 0x28) & x)
-
+#endif // REALTEK_AMBD_SDK
 
 extern uint8_t rltk_wlan_is_mp(void);
 
