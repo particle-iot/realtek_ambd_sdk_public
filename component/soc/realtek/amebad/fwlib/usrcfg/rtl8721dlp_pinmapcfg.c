@@ -56,7 +56,7 @@ const PMAP_TypeDef pmap_func[]=
     {_PA_24,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PA_25,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //keyscan
     {_PA_26,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //keyscan
-    {_PA_27,        GPIO_PuPd_KEEP,             GPIO_PuPd_KEEP,        GPIO_PuPd_NOPULL,      FALSE}, //SWD_DATA or normal_mode_sel
+    {_PA_27,        GPIO_PuPd_KEEP,             GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //SWD_DATA or normal_mode_sel
     {_PA_28,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PA_29,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PA_30,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
