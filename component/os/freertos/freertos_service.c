@@ -742,7 +742,7 @@ static u32 _freertos_GetFreeHeapSize(void)
 	return (u32)xPortGetFreeHeapSize();
 }
 void *tcm_heap_malloc(int size);
-static int _freertos_create_task(struct task_struct *ptask, const char *name,
+__weak int _freertos_create_task(struct task_struct *ptask, const char *name,
 	u32  stack_size, u32 priority, thread_func_t func, void *thctx)
 {
 	thread_func_t task_func = NULL;
@@ -805,7 +805,7 @@ static int _freertos_create_task(struct task_struct *ptask, const char *name,
 	return ret;
 }
 	
-static void _freertos_delete_task(struct task_struct *ptask)
+__weak void _freertos_delete_task(struct task_struct *ptask)
 {
 	if (!ptask->task){
 		printf("_freertos_delete_task(): ptask is NULL!\n");
@@ -1000,6 +1000,11 @@ u8 _freertos_get_scheduler_state(void)
 	return state;
 }
 
+// For some WPA stuff
+void forced_memzero(void *ptr, size_t len)
+{
+	rtw_memset(ptr, 0, len);
+}
 
 void _freertos_create_secure_context(u32 secure_stack_size)
 {

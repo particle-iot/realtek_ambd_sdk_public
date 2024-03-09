@@ -270,6 +270,23 @@ int wext_get_enc_ext(const char *ifname, __u16 *alg, __u8 *key_idx, __u8 *passph
 	return ret;
 }
 
+int wext_get_auth_type(const char *ifname, __u32 *auth_type)
+{
+	struct rtwreq iwr;
+	int ret = 0;
+
+	memset(&iwr, 0, sizeof(iwr));
+
+	if (iw_ioctl(ifname, RTKIOCGIWAUTH, &iwr) < 0) {
+		RTW_API_INFO("\n\rioctl[RTKIOCGIWAUTH] error");
+		ret = -1;
+	} else {
+		*auth_type = (__u32) iwr.u.param.value;
+	}
+
+	return ret;
+}
+
 int wext_set_passphrase(const char *ifname, const __u8 *passphrase, __u16 passphrase_len)
 {
 	struct rtwreq iwr;
@@ -759,19 +776,21 @@ int wext_get_tx_power(const char *ifname, __u8 *poweridx)
 	return ret;
 }
 
-#if 0
+
+#ifdef CONFIG_MP_INCLUDED
 int wext_set_txpower(const char *ifname, int poweridx)
 {
 	int ret = 0;
-	char buf[24];
+	char buf[30];
 	
 	rtw_memset(buf, 0, sizeof(buf));
-	snprintf(buf, 24, "txpower patha=%d", poweridx);
+	snprintf(buf, 30, "mp_txpower patha=%d", poweridx);
 	ret = wext_private_command(ifname, buf, 0);
 
 	return ret;
 }
-
+#endif
+#if 0
 int wext_get_associated_client_list(const char *ifname, void * client_list_buffer, uint16_t buffer_length)
 {
 	int ret = 0;
@@ -901,6 +920,13 @@ int wext_get_bcn_rssi(const char *ifname, int *rssi)
 	} else {
 		*rssi = 0 - iwr.u.bcnsens.value;
 	}
+	return ret;
+}
+
+int wext_set_bcn_period(__u16 period){
+	int ret = 0;
+	extern u16 custom_beacon_period;
+	custom_beacon_period = period;
 	return ret;
 }
 
@@ -1153,9 +1179,8 @@ void wext_wlan_indicate(unsigned int cmd, union rtwreq_data *wrqu, char *extra)
 		case RTKIOCGIWSCAN:
 			if(wrqu->data.pointer == NULL)
 				wifi_indication(WIFI_EVENT_SCAN_DONE, NULL, 0, 0);
-			else {
+			else
 				wifi_indication(WIFI_EVENT_SCAN_RESULT_REPORT, wrqu->data.pointer, wrqu->data.length, 0);
-			}
 			break;
 		case RTWEVMGNTRECV:
 			wifi_indication(WIFI_EVENT_RX_MGNT, wrqu->data.pointer, wrqu->data.length, wrqu->data.flags);
@@ -1565,6 +1590,14 @@ int wext_set_bw40_enable(__u8 enable)
     return 0;
 }
 
+
+int wext_set_uapsd_enable(__u8 enable){
+	int ret = 0;
+	extern u8 custom_uapsd;
+	custom_uapsd = enable;
+	return ret;
+}
+
 extern int rltk_get_auto_chl(const char *ifname, unsigned char *channel_set, unsigned char channel_num);
 int wext_get_auto_chl(const char *ifname, unsigned char *channel_set, unsigned char channel_num)
 {
@@ -1672,6 +1705,17 @@ void wext_set_indicate_mgnt(int enable)
 	return;
 }
 
+void wext_set_softap_gkey_rekey(__u8 mode)
+{
+	extern uint8_t gk_rekey;
+	extern uint32_t gk_rekey_time;
+	gk_rekey = mode;
+	if (gk_rekey == ENABLE){
+		RTW_API_INFO("\n\rSoftAP:Group key rotation enabled");
+		RTW_API_INFO("\n\rCurrent key update interval: %dms",gk_rekey_time);
+	}
+}
+
 #ifdef CONFIG_AP_MODE
 extern void rltk_suspend_softap(const char *ifname);
 extern void rltk_suspend_softap_beacon(const char *ifname);
@@ -1685,7 +1729,6 @@ void wext_suspend_softap_beacon(const char *ifname)
 	rltk_suspend_softap_beacon(ifname);
 }
 extern int rtw_ap_switch_chl_and_inform(unsigned char new_channel);
-
 int wext_ap_switch_chl_and_inform(unsigned char new_channel)
 {
 	if(rtw_ap_switch_chl_and_inform(new_channel))
@@ -1812,6 +1855,14 @@ int wext_wlan_redl_fw(const char *ifname){
 	rtw_free(para);
 
 	return ret;
+}
+#endif
+
+#ifdef CONFIG_IEEE80211K
+extern u8 rtw_enable_80211k;
+void wext_set_enable_80211k(__u8 enable)
+{
+	rtw_enable_80211k = enable;
 }
 #endif
 

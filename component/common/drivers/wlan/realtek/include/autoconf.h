@@ -14,9 +14,9 @@
  * limitations under the License.
  ******************************************************************************/
 
-
 #ifndef WLANCONFIG_H
 #define WLANCONFIG_H
+
 
 /*
  * Include user defined options first. Anything not defined in these files
@@ -224,7 +224,9 @@
 #endif
 
 #define CONFIG_PMKSA_CACHING
-
+#ifdef CONFIG_PMKSA_CACHING
+//#define CONFIG_PMKSA_CACHING_RECONNECT
+#endif
 /* For WPA3 */
 #define CONFIG_IEEE80211W
 #define CONFIG_SAE_SUPPORT
@@ -264,6 +266,7 @@
 #define CONFIG_CONCURRENT_MODE
 #ifdef CONFIG_CONCURRENT_MODE
 //#define CONFIG_MCC_MODE
+//#define MAC_CARRY // customize for telit, change mac calculation for softap under concurrent
   #if defined(CONFIG_PLATFORM_8195A) || defined(CONFIG_PLATFORM_8195BHP) || defined(CONFIG_PLATFORM_8710C)
     #define CONFIG_RUNTIME_PORT_SWITCH
   #endif
@@ -313,7 +316,7 @@
 #define EAP_TTLS_MSCHAPv2
 //#define EAP_TTLS_EAP
 //#define EAP_TTLS_MSCHAP
-//#define EAP_TTLS_PAP
+#define EAP_TTLS_PAP
 //#define EAP_TTLS_CHAP
 #endif
 /****************** End of EAP configurations *******************/
@@ -333,6 +336,10 @@
 
 /* For AP_MODE */
 #define CONFIG_AP_MODE
+//#define UAPSD
+#ifdef UAPSD
+#define TX_CHECK_DSEC_ALWAYS
+#endif
 extern unsigned char g_user_ap_sta_num;
 #define USER_AP_STA_NUM g_user_ap_sta_num
 #if (CONFIG_PLATFORM_AMEBA_X == 1)
@@ -362,7 +369,7 @@ extern unsigned int g_ap_sta_num;
 		//#define CONFIG_INTERRUPT_BASED_TXBCN_EARLY_INT
 		#define CONFIG_INTERRUPT_BASED_TXBCN_BCN_OK_ERR
 	#endif
-//	#define CONFIG_GK_REKEY
+//	#define CONFIG_GK_REKEY //removed, use wext_set_softap_gkey_rekey() in wifi_set_mib() to configure gk rekey
 #if (CONFIG_PLATFORM_AMEBA_X == 0)
 	#define USE_DEDICATED_BCN_TX	1
 #endif
@@ -375,7 +382,7 @@ extern unsigned int g_ap_sta_num;
 #endif
 #endif
 
-#if defined(CONFIG_AP_MODE) && defined(CONFIG_GK_REKEY) && !defined(CONFIG_MULTIPLE_WPA_STA)
+#if defined(CONFIG_AP_MODE) && !defined(CONFIG_MULTIPLE_WPA_STA)
 #error "If CONFIG_GK_REKEY when CONFIG_AP_MODE, need to CONFIG_MULTIPLE_WPA_STA"
 #endif
 
@@ -534,6 +541,8 @@ extern unsigned int g_ap_sta_num;
 	#define CONFIG_WLAN_SWITCH_MODE         //save memory while switching mode without driver re-init
 	//#define LOW_POWER_WIFI_CONNECT
 	//#define LONG_PERIOD_TICKLESS
+
+	#define RA_ANTI_INTERF 0		// when set to 1, please also set CONFIG_TPBASE_RA to 1
 	#endif
 	#if defined(CONFIG_PLATFORM_8195BHP)
 		#define CONFIG_RTL8195B
@@ -740,6 +749,7 @@ extern unsigned int g_ap_sta_num;
 #define CONFIG_RTW_ADAPTIVITY_MODE			RTW_ADAPTIVITY_MODE_CARRIER_SENSE
 #define CONFIG_RTW_ADAPTIVITY_DML			0
 
+#define CONFIG_RTW_REGULATION_SRRC_EN		1
 
 #if (CONFIG_PLATFORM_AMEBA_X == 1)
 	#define CONFIG_POWER_TRAINING_WIL 0 // in RA
@@ -863,9 +873,11 @@ extern unsigned int g_ap_sta_num;
 
 #define TIME_THRES	20
 
+#ifndef LONG_PERIOD_TICKLESS
 /* 80211 - K V R */
 #define CONFIG_IEEE80211K
 #define CONFIG_LAYER2_ROAMING
+#endif
 #ifdef CONFIG_LAYER2_ROAMING
     #define CONFIG_RTW_WNM
     #define CONFIG_IEEE80211R

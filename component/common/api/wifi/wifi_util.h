@@ -68,6 +68,7 @@ int wext_set_lps_thresh(const char *ifname, __u8 low_thresh);
 #ifdef LONG_PERIOD_TICKLESS
 int wext_set_lps_smartps(const char *ifname, __u8 smart_ps);
 #endif
+int wext_get_auth_type(const char *ifname, __u32 *auth_type);
 int wext_set_beacon_mode(const char *ifname, __u8 mode);
 int wext_set_lps_level(const char *ifname, __u8 lps_level);
 int wext_get_tx_power(const char *ifname, __u8 *poweridx);
@@ -94,9 +95,15 @@ int wext_add_mac_filter(unsigned char* hwaddr);
 int wext_del_mac_filter(unsigned char* hwaddr);
 void wext_set_indicate_mgnt(int enable);
 int wext_get_bcn_rssi(const char *ifname, int *rssi);
+int wext_set_bcn_period(__u16 period);
+#if defined(CONFIG_IEEE80211K)
+void wext_set_enable_80211k(__u8 enable);
+#endif
 void wext_set_powersave_mode(__u8 ps_mode);
 int wext_set_ant_div_gpio(__u8 type);
 int wext_set_bw40_enable(__u8 enable);
+int wext_set_uapsd_enable(__u8 enable);
+void wext_set_softap_gkey_rekey(__u8 mode);
 #ifdef CONFIG_SW_MAILBOX_EN
 int wext_mailbox_to_wifi(const char *ifname, char *buf, __u16 buf_len);
 #endif
@@ -124,11 +131,6 @@ int wext_wlan_redl_fw(const char *ifname);
 
 extern int (*p_wlan_mgmt_filter)(__u8 *ie, __u16 ie_len, __u16 frame_type);
 extern int (*p_wlan_action_filter)(__u8 *ie, __u16 ie_len, __u16 frame_type);
-
-int wext_get_bcn_rssi(const char *ifname, int *rssi);
-int wext_set_bw40_enable(__u8 enable);
-int wext_set_ant_div_gpio(__u8 type);
-void wext_set_powersave_mode(__u8 ps_mode);
 
 #ifdef	__cplusplus
 }

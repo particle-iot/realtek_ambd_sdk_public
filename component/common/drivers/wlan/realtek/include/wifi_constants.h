@@ -159,12 +159,24 @@ enum {
 
     RTW_SECURITY_WPA3_AES_PSK 	           = ( WPA3_SECURITY | AES_ENABLED ),                                                    /**< WPA3-SAE with AES security                                  */
     RTW_SECURITY_WPA2_WPA3_MIXED           = ( WPA2_SECURITY | WPA3_SECURITY | AES_ENABLED ),                                    /**< WPA3-SAE/WPA2 with AES security                             */
+    RTW_SECURITY_WPA3_ENTERPRISE           = ( WPA3_SECURITY | ENTERPRISE_ENABLED ),                                             /**< WPA3 Security via 802.1X authentication                     */
 
     RTW_SECURITY_UNKNOWN        = -1,                                               /**< May be returned by scan function if security is unknown. Do not pass this to the join function! */
 
     RTW_SECURITY_FORCE_32_BIT   = 0x7fffffff                                        /**< Exists only to force rtw_security_t type to 32 bits */
 };
 typedef unsigned long rtw_security_t;
+
+enum
+{
+	WPA_AUTO_MODE,
+	WPA_ONLY_MODE,
+	WPA2_ONLY_MODE,
+	WPA3_ONLY_MODE,
+	WPA_WPA2_MIXED_MODE,
+	WPA2_WPA3_MIXED_MODE
+};
+typedef unsigned long rtw_wpa_mode;
 
 enum {
     RTW_ENCRYPTION_UNKNOWN = 0,                 
@@ -509,7 +521,8 @@ typedef unsigned long rtw_wps_type_t;
 enum {
     RTW_NETWORK_B   = 1,
 	RTW_NETWORK_BG  = 3,
-	RTW_NETWORK_BGN = 11
+	RTW_NETWORK_BGN = 11,
+	RTW_NETWORK_ABGN = 31
 };
 typedef unsigned long rtw_network_mode_t;
 

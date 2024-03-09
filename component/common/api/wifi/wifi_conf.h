@@ -74,7 +74,7 @@ extern void rtl_wifi_log(const char *fmt, ...);
 /******************************************************
  *                    Constants
  ******************************************************/
-#define SCAN_LONGEST_WAIT_TIME  (4500)
+#define SCAN_LONGEST_WAIT_TIME  (12000)
 
 
 #define MAC_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
@@ -235,6 +235,13 @@ int wifi_disconnect(void);
 int wifi_is_connected_to_ap(void);
 
 /**
+* @brief  Set partial scan retry times when PSCAN_FAST_SURVEY is set. Default is 7.
+* @param[in]  partial scan retry times
+* @return  None.
+*/
+void wifi_set_partial_scan_retry_times(unsigned char times);
+
+/**
   * @brief  Check if the specified interface is up.
   * @param[in]  interface: The interface can be set as RTW_STA_INTERFACE or RTW_AP_INTERFACE. (@ref rtw_interface_t)
   * @return  If the function succeeds, the return value is 1. Otherwise, return 0.
@@ -253,19 +260,56 @@ int wifi_is_up(rtw_interface_t interface);
 int wifi_is_ready_to_transceive(rtw_interface_t interface);
 
 /**
- * @brief  This function sets the current Media Access Control (MAC) address of the 802.11 device.
+ * @brief  This function sets the current Media Access Control (MAC) address of the 802.11 device but don't 
+ *			write to efuse or flash, it is to modify the MAC temporarily in RAM.
+ *			Only call this API BEFORE connecting to a network, BEFORE fast connect and BEFORE starting SoftAP(For AP mode).
+ *      Example:
+ *      u8 mac[ETH_ALEN] = {0x00, 0xe0, 0x4c, 0x87, 0x12, 0x34};
+ *      ret = wifi_change_mac_address_from_ram(0,mac); 
+ * @param[in] idx: 0=> wlan0, 1=>wlan1.
+ * @param[in] mac: Wi-Fi MAC address.
+ * @return    RTW_SUCCESS or RTW_ERROR
+ */
+int wifi_change_mac_address_from_ram(int idx, u8 *mac);
+
+/**
+ * @brief  This function sets the current Media Access Control (MAC) address of the 802.11 device in Efuse.
+ *      Example:
+ *      #define MAC_VALID		"ecf00e4e751c"
+ *      ret = wifi_set_mac_address((char *)MAC_VALID);
  * @param[in] mac: Wi-Fi MAC address.
  * @return    RTW_SUCCESS or RTW_ERROR
  */
 int wifi_set_mac_address(char * mac);
 
 /**
- * @brief  Retrieves the current Media Access Control (MAC) address
+ * @brief  Retrieves from RAM space WLAN0's current Media Access Control (MAC) address
  *			(or Ethernet hardware address) of the 802.11 device.
- * @param[in]  mac: Point to the result of the mac address will be get.
+ *      Example:
+ *      char *mac;
+ *      mac = (char*)malloc(18*sizeof(char));
+ *      ret = wifi_get_mac_address(mac);
+ *      printf("\nGet MAC address: %s\n", mac);
+ *      free(mac);
+ * @param[in]  mac: Pointer to the result of the mac address,it must be at least 18 bytes long.
  * @return    RTW_SUCCESS or RTW_ERROR
  */
 int wifi_get_mac_address(char * mac);
+
+/**
+ * @brief  Retrieves from RAM space the selected interface's current Media Access Control (MAC) address
+ *			(or Ethernet hardware address) of the 802.11 device.
+  *     Example:
+ *      char *mac;
+ *      mac = (char*)malloc(18*sizeof(char));
+ *      ret = wifi_get_interface_mac_address(0,mac);
+ *      printf("\nGet MAC address of wlan0: %s\n", mac);
+ *      free(mac);
+ *  @param[in] idx: 0=> wlan0, 1=>wlan1.
+ *  @param[in]  mac: Pointer to the result of the mac address, it must be at least 18 bytes long.
+ * @return    RTW_SUCCESS or RTW_ERROR
+ */
+int wifi_get_interface_mac_address(int idx, char * mac);
 
 /**
  * @brief Enable Wi-Fi powersave mode.
@@ -273,6 +317,13 @@ int wifi_get_mac_address(char * mac);
  * @return RTW_SUCCESS or RTW_ERROR.
  */
 int wifi_enable_powersave(void);
+
+/**
+ * @brief Enable Wi-Fi powersave mode for coexistence.
+ * @param  None
+ * @return RTW_SUCCESS or RTW_ERROR.
+ */
+int wifi_enable_powersave_for_coex(void);
 
 /**
  * @brief Resume Wi-Fi powersave mode.
@@ -493,6 +544,14 @@ int wifi_set_mode(rtw_mode_t mode);
  *  	   RTW_ERROR otherwise
  */
 int wifi_off_fastly(void);
+
+/**
+ * @brief  Specify wpa mode for wifi connection.
+ * @param[in] wpa_mode: The desired wpa mode. It is defined as enum rtw_wpa_mode.
+ * @return  RTW_SUCCESS if setting wpa mode successful.
+ * @return  RTW_ERROR otherwise.
+ */
+int wifi_set_wpa_mode(rtw_wpa_mode wpa_mode);
 
 /**
  * @brief  Set IPS/LPS mode.
@@ -778,6 +837,20 @@ int wifi_set_network_mode(rtw_network_mode_t mode);
  * @return  RTW_SUCCESS or RTW_ERROR.
  */
 int wifi_get_network_mode(rtw_network_mode_t *pmode);
+
+/**
+ * @brief	Get the current network mode the network interface is using against the wireless AP.
+ *			Driver will match its supported network mode with AP's supported network mode when connecting
+ *			and choose the best network mode. This function will get the network mode used to connect to AP.
+ * @param[in]  pmode: Current network mode to get.
+ * @return  the current network mode used.
+ * 	1) WIRELESS_11B: using 802.11b.
+ * 	2) WIRELESS_11G: using 802.11g.
+ * 	8) WIRELESS_11_24N: using 802.11n.
+ * 	40) WIRELESS_11AC: using 802.11ac.
+ * 	-1) RTW_ERROR: get fails.
+ */
+int wifi_get_cur_network_mode(void);
 
 /**
  * @brief  Set the chip to start or stop the promiscuous mode.
@@ -1167,6 +1240,40 @@ int wifi_ap_switch_chl_and_inform(unsigned char new_channel);
  * @return -1: fail.
  */
 int wifi_set_igi(uint8_t igi, uint8_t enable);
+
+/**
+ * @brief  Set softap uapsd feature.
+ * @param[in]  enable: 1, enable uapsd; 0, disable uapsd.
+ * @return 0: success.
+ */
+int wifi_set_ap_uapsd(uint8_t enable);
+
+/**
+ * @brief  Set softap bcn period, need do wifi off and on again to write the new value into register.
+ * @param[in]  period: default 100ms.
+ * @return 0: success.
+ */
+int wifi_set_bcn_period(uint16_t period);
+
+/**
+* @brief  Set tx power percentage.
+* @param[in] power percentage idx 0 to 4.
+* 0, 100%, default target output power.
+* 1, 75% 
+* 2, 50%
+* 3, 25%
+* 4, 12.5%
+* @return 0: success.
+*/
+int wifi_set_tx_power_percentage(unsigned long power_percentage_idx);
+
+/**
+* @brief  Set interval for SoftAP group key rotation.
+*         Can be used to adjust interval while SoftAP is running and connected to STA.
+* @param[in] interval: time interval in minutes, 1 min to 1440 min(1 day)
+* @return RTW_SUCCESS or RTW_ERROR
+*/
+int wifi_set_softap_gkey_interval(uint32_t interval);
 
 #ifdef __cplusplus
   }

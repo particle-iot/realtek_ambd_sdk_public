@@ -465,6 +465,7 @@ bool hci_uart_init(P_UART_RX_CB rx_ind)
     pUARTStruct->FlowControl = ENABLE;
 
     UART_Init(HCI_UART_DEV, pUARTStruct);
+    UART_ClearTxFifo(HCI_UART_DEV);
     UART_SetBaud(HCI_UART_DEV, 115200);
 
     InterruptDis(HCI_UART_IRQ);

@@ -25,6 +25,13 @@
 #if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD)
 #include "at_cmd/atcmd_wifi.h"
 #endif
+
+#if defined(CONFIG_IPCAM_SDIO) && (CONFIG_IPCAM_SDIO == 1)
+#include "spdio_api.h"
+#define	_AT_WLAN_SCAN_              "ASWS"
+extern struct spdio_t ipcam_sdio_dev;
+#endif
+
 #if CONFIG_INIC_EN
 extern int inic_start(void);
 extern int inic_stop(void);
@@ -36,7 +43,9 @@ extern int rtw_chip_band_type_check(void);
 /******************************************************
  *                    Constants
  ******************************************************/
+#ifndef SCAN_USE_SEMAPHORE
 #define SCAN_USE_SEMAPHORE	0
+#endif // SCAN_USE_SEMAPHORE
 
 #define RTW_JOIN_TIMEOUT 20000
 
@@ -79,6 +88,8 @@ static void* disconnect_sema = NULL;
 rtw_mode_t wifi_mode = RTW_MODE_STA;
 #endif
 extern rtw_mode_t wifi_mode;
+static rtw_wpa_mode wifi_wpa_mode = WPA_AUTO_MODE;
+
 int error_flag = RTW_UNKNOWN;
 uint32_t rtw_join_status;
 #if ATCMD_VER == ATVER_2
@@ -209,15 +220,17 @@ static int wifi_connect_local(rtw_network_info_t *pWifi)
 			break;
 		case RTW_SECURITY_WPA_TKIP_PSK:
 		case RTW_SECURITY_WPA2_TKIP_PSK:
-		case RTW_SECURITY_WPA_MIXED_PSK:
 		case RTW_SECURITY_WPA_WPA2_TKIP_PSK:
 			ret = wext_set_auth_param(WLAN0_NAME, RTW_AUTH_80211_AUTH_ALG, RTW_AUTH_ALG_OPEN_SYSTEM);
 			if(ret == 0)
 				ret = wext_set_key_ext(WLAN0_NAME, RTW_ENCODE_ALG_TKIP, NULL, 0, 0, 0, 0, NULL, 0);
 			if(ret == 0)
 				ret = wext_set_passphrase(WLAN0_NAME, pWifi->password, pWifi->password_len);
+			if(ret == 0)
+				ret = rltk_wlan_set_wpa_mode(WLAN0_NAME,wifi_wpa_mode);
 			break;
 		case RTW_SECURITY_WPA_AES_PSK:
+		case RTW_SECURITY_WPA_MIXED_PSK:
 		case RTW_SECURITY_WPA2_AES_PSK:
 		case RTW_SECURITY_WPA2_MIXED_PSK:
 		case RTW_SECURITY_WPA_WPA2_AES_PSK:
@@ -231,6 +244,8 @@ static int wifi_connect_local(rtw_network_info_t *pWifi)
 				ret = wext_set_key_ext(WLAN0_NAME, RTW_ENCODE_ALG_CCMP, NULL, 0, 0, 0, 0, NULL, 0);
 			if(ret == 0)
 				ret = wext_set_passphrase(WLAN0_NAME, pWifi->password, pWifi->password_len);
+			if(ret == 0)
+				ret = rltk_wlan_set_wpa_mode(WLAN0_NAME,wifi_wpa_mode);
 			break;
 		default:
 			ret = -1;
@@ -266,15 +281,17 @@ static int wifi_connect_bssid_local(rtw_network_info_t *pWifi)
 			break;
 		case RTW_SECURITY_WPA_TKIP_PSK:
 		case RTW_SECURITY_WPA2_TKIP_PSK:
-		case RTW_SECURITY_WPA_MIXED_PSK:
 		case RTW_SECURITY_WPA_WPA2_TKIP_PSK:
 			ret = wext_set_auth_param(WLAN0_NAME, RTW_AUTH_80211_AUTH_ALG, RTW_AUTH_ALG_OPEN_SYSTEM);
 			if(ret == 0)
 				ret = wext_set_key_ext(WLAN0_NAME, RTW_ENCODE_ALG_TKIP, NULL, 0, 0, 0, 0, NULL, 0);
 			if(ret == 0)
 				ret = wext_set_passphrase(WLAN0_NAME, pWifi->password, pWifi->password_len);
+			if(ret == 0)
+				ret = rltk_wlan_set_wpa_mode(WLAN0_NAME,wifi_wpa_mode);
 			break;
 		case RTW_SECURITY_WPA_AES_PSK:
+		case RTW_SECURITY_WPA_MIXED_PSK:
 		case RTW_SECURITY_WPA2_AES_PSK:
 		case RTW_SECURITY_WPA2_MIXED_PSK:
 		case RTW_SECURITY_WPA_WPA2_AES_PSK:
@@ -288,6 +305,8 @@ static int wifi_connect_bssid_local(rtw_network_info_t *pWifi)
 				ret = wext_set_key_ext(WLAN0_NAME, RTW_ENCODE_ALG_CCMP, NULL, 0, 0, 0, 0, NULL, 0);
 			if(ret == 0)
 				ret = wext_set_passphrase(WLAN0_NAME, pWifi->password, pWifi->password_len);
+			if(ret == 0)
+				ret = rltk_wlan_set_wpa_mode(WLAN0_NAME,wifi_wpa_mode);
 			break;
 		default:
 			ret = -1;
@@ -324,7 +343,6 @@ static void wifi_no_network_hdl(char* buf, int buf_len, int flags, void* userdat
 	( void ) buf_len;
 	( void ) flags;
 	( void ) userdata;
-	RTW_API_INFO("\r\nno network!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\b");
 	
   if(join_user_data!=NULL)
  	 rtw_join_status = JOIN_NO_NETWORKS | JOIN_CONNECTING;
@@ -380,13 +398,121 @@ static void wifi_handshake_done_hdl( char* buf, int buf_len, int flags, void* us
 	if(join_user_data != NULL)
 		rtw_up_sema(&join_user_data->join_sema);
 }
+
 #if CONFIG_LWIP_LAYER
 #if !defined(CONFIG_MBED_ENABLED) && !defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)
 extern void dhcp_stop(struct netif *netif);
 #endif
 #endif
+
+extern u32 rltk_wlan_get_link_err(void);
+extern void rltk_wlan_set_link_err(u32 errbit);
+static void wifi_link_err_parse(u16 reason_code)
+{
+	u32 link_err;
+	link_err = rltk_wlan_get_link_err();
+
+	if(link_err != 0U){
+		//RTW_API_INFO("wifi link err:%08x\r\n", rltk_wlan_get_link_err());
+	}
+
+	RTW_API_INFO("dissconn reason code: %d\n", reason_code);
+
+	if(link_err & BIT(0)) {
+		printf("receive deauth\n");
+	} else if(link_err & BIT(1)) {
+		printf("receive deassoc\n");
+	} else if (link_err & BIT(2)) {
+		printf("scan stage, no beacon while connecting\n");
+	} else if(link_err & BIT(3)) {
+		printf("auth stage, auth timeout\n");
+		if(reason_code == 65531) {
+			printf("request has been declined\n");
+		}
+	} else if(link_err & BIT(4)) {
+		printf("assoc stage, assoc timeout\n");
+	} else if(link_err & (BIT(5) | BIT(6) | BIT(7))) {
+		printf("4handshake stage, 4-way waiting timeout\n");
+	} else if(link_err & BIT(8)) {
+		printf("assoc stage, assoc reject (assoc rsp status > 0)\n");
+	} else if(link_err & BIT(9)) {
+		printf("auth stage, auth fail (auth rsp status > 0)\n");
+	} else if(link_err & BIT(10)){
+		printf("scan stage, scan timeout\n");
+	} else if(link_err & BIT(11)) {
+		printf("auth stage, WPA3 auth fail, ");
+		if(reason_code == 65531) {
+			printf("request has been declined\n");
+		} else {
+			printf("password error\n");
+		}
+	}
+
+	if(link_err & (BIT(0) | BIT(1))) {
+		if(link_err & BIT(20)) {
+			printf("handshake done, connected stage, recv deauth/deassoc\n");
+		} else if(link_err & BIT(19)) {
+			printf("handshake processing, 4handshake stage, recv deauth/deassoc\n");
+		} else if(link_err & BIT(18)) {
+			printf("assoc successed, 4handshake stage, recv deauth/deassoc\n");
+		} else if(link_err & BIT(17)) {
+			printf("auth successed, assoc stage, recv deauth/deassoc\n");
+		} else if(link_err & BIT(16)) {
+			printf("scan done, found ssid, auth stage, recv deauth/deassoc\n");
+		} else {
+			printf("connected stage, recv deauth/deassoc\n");
+		}
+	}
+
+	switch(reason_code) {
+		case 17:
+			printf("auth stage, ap auth full\n");
+			break;
+		case 65530:
+			printf("SA query timeout\n");
+			break;
+		case 65534:
+			printf("connected stage, ap changed\n");
+			break;
+		case 65535:
+			printf("connected stage, loss beacon\n");
+			break;
+		default:
+			break;
+	}
+
+	rltk_wlan_set_link_err(0);
+}
+
+/*
+ * rltk_wlan_get_link_err(): check wifi link error
+ *******************************************************
+ * err bit:
+ * bit  0: recved deauth
+ * bit  1: recved disassoc
+ * bit  2: no beacon while connecting
+ * bit  3: auth timeout
+ * bit  4: assoc timeout
+ * bit  5: waiting 4-1 timeout
+ * bit  6: waiting 4-3 timeout
+ * bit  7: waiting 2-1 timeout (WPA needs GTK handshake after 4-way immediately)
+ * bit  8: assoc reject (assoc rsp status > 0)
+ * bit  9: auth reject (auth rsp status > 0)
+ * bit  10: scan timeout
+ * bit  11: WPA3 auth fail
+ *******************************************************
+ * link status bit:
+ * bit 16: found ssid
+ * bit 17: auth success
+ * bit 18: assoc success
+ * bit 19: recved 4-1
+ * bit 20: recved 4-3
+ *******************************************************
+ */
 static void wifi_disconn_hdl( char* buf, int buf_len, int flags, void* userdata)
 {
+	/*In WPA3 mode, disconnection may happen if the connection link in the last time does not disconnect properly.*/
+
 	/* To avoid gcc warnings */
 	( void ) buf_len;
 	( void ) flags;
@@ -396,7 +522,9 @@ static void wifi_disconn_hdl( char* buf, int buf_len, int flags, void* userdata)
 	if (buf != NULL){
 		/* buf detail: mac addr + disconn_reason, buf_len = ETH_ALEN+2*/
 		disconn_reason =*(u16*)(buf+6);
+		wifi_link_err_parse(disconn_reason);
 	}
+
 	if(join_user_data != NULL){
 		if(join_user_data->network_info.security_type == RTW_SECURITY_OPEN){
 
@@ -620,7 +748,7 @@ static int _get_ap_security_mode(IN char * ssid, OUT rtw_security_t *security_mo
 		return 0;
 	}
 
-	if(strcmp(wifi.ssid, ssid) == 0){
+	if(strcmp((const char *)wifi.ssid, ssid) == 0){
 		//printf("Wifi scanned !\n");
 		*security_mode = wifi.security_type;
 		*channel = wifi.channel;
@@ -644,6 +772,7 @@ int wifi_connect_simple(
 	//unsigned long tick2, tick3;
 	int ssid_len,password_len;
 
+
 	ssid_len = strlen(ssid);
 	password_len = strlen(password);	
 	connect_channel = channel;
@@ -660,7 +789,7 @@ int wifi_connect_simple(
 	if(password == NULL)
 		security_type = RTW_SECURITY_OPEN;
 		
-	if(security_type == RTW_SECURITY_UNKNOWN){
+	if(security_type == (rtw_security_t)RTW_SECURITY_UNKNOWN){
 		int security_retry_count = 0;
 		while (1) {
 			if (_get_ap_security_mode((char*)ssid, &security_type, &connect_channel))
@@ -1102,6 +1231,12 @@ int wifi_is_connected_to_ap( void )
 }
 
 //----------------------------------------------------------------------------//
+void wifi_set_partial_scan_retry_times(unsigned char times)
+{
+	rltk_wlan_set_partial_scan_retry_times(times);
+}
+
+//----------------------------------------------------------------------------//
 int wifi_is_up(rtw_interface_t interface)
 {
     switch (interface)
@@ -1150,6 +1285,37 @@ int wifi_is_ready_to_transceive(rtw_interface_t interface)
     }
 }
 
+/**
+Example:
+u8 mac[ETH_ALEN] = {0x00, 0xe0, 0x4c, 0x87, 0x12, 0x34};
+wifi_change_mac_address_from_ram(mac);  
+This method is to modify the mac and don't write to efuse.
+**/
+extern int rltk_change_mac_address_from_ram(int idx, u8 *mac);
+int wifi_change_mac_address_from_ram(int idx, u8 *mac)
+{	
+	int ret = 0;
+	int ret_ps = 0;
+	const char * ifname = WLAN0_NAME;
+	if ((0 != idx) && (1 != idx)) {
+		RTW_API_INFO("\n\rInvalid interface selected");
+		return RTW_ERROR;
+	}
+	if (1 == idx) {
+		ifname = WLAN1_NAME;
+	}
+	ret_ps = wext_disable_powersave(ifname);
+	if (RTW_SUCCESS != ret_ps) {
+		RTW_API_INFO("\n\rFailed to disable powersave");
+	}
+	ret = rltk_change_mac_address_from_ram(idx, mac);
+	ret_ps = wext_resume_powersave(ifname);
+	if (RTW_SUCCESS != ret_ps) {
+		RTW_API_INFO("\n\rFailed to resume powersave");
+	}
+	return ret;
+}
+
 //----------------------------------------------------------------------------//
 int wifi_set_mac_address(char * mac)
 {
@@ -1170,10 +1336,44 @@ int wifi_get_mac_address(char * mac)
 	return ret;
 }
 
+int wifi_get_interface_mac_address(int idx, char * mac)
+{
+	int ret = 0;
+	char buf[32];
+	rtw_memset(buf, 0, sizeof(buf));
+	rtw_memcpy(buf, "read_mac", 8);
+
+	if (WLAN0_IDX == idx) {
+		ret = wext_private_command_with_retval(WLAN0_NAME, buf, buf, 32);
+	}
+	else if (WLAN1_IDX == idx) {
+		if (wifi_mode == RTW_MODE_STA_AP) {
+		ret = wext_private_command_with_retval(WLAN1_NAME, buf, buf, 32);
+		}
+		else {
+		RTW_API_INFO("\n\rInvalid interface selected");
+		ret = RTW_ERROR;
+		return ret;
+		}
+	}
+	else {
+		RTW_API_INFO("\n\rInvalid interface selected");
+		ret = RTW_ERROR;
+		return ret;
+	}
+	strcpy(mac, buf);
+	return ret;
+}
+
 //----------------------------------------------------------------------------//
 int wifi_enable_powersave(void)
 {
 	return wext_enable_powersave(WLAN0_NAME, 1, 1);
+}
+
+int wifi_enable_powersave_for_coex(void)
+{
+	return wext_enable_powersave(WLAN0_NAME, 0, 1);
 }
 
 int wifi_resume_powersave(void)
@@ -1412,6 +1612,9 @@ _WEAK void wifi_set_mib(void)
 	//trp tis
 	wext_set_trp_tis(RTW_TRP_TIS_DISABLE);
 	wext_set_anti_interference(DISABLE);
+#if defined(CONFIG_IEEE80211K)
+	wext_set_enable_80211k(1);
+#endif
 #ifdef CONFIG_POWER_SAVING
 	//PS_MODE_MIN:1(default), PS_MODE_MAX:2
 	wext_set_powersave_mode(1);
@@ -1422,13 +1625,14 @@ _WEAK void wifi_set_mib(void)
 #endif	
 	wext_set_ant_div_gpio(0);
     wext_set_bw40_enable(0);    //default disable 40m
+	wext_set_softap_gkey_rekey(DISABLE);
 }
 
 //----------------------------------------------------------------------------//
 _WEAK void wifi_set_country_code(void)
 {
-	// wifi_set_country(RTW_COUNTRY_WORLD1); // 2.4G only
-	// wifi_change_channel_plan(0x79); // Support 2.4G and 5G, ex: 0x25 = 2G_FCC1, 5G_FCC1
+	//wifi_set_country(RTW_COUNTRY_US); // 2.4G only
+	//wifi_change_channel_plan(0x25); // Support 2.4G and 5G, ex: 0x25 = 2G_FCC1, 5G_FCC1
 }
 
 //----------------------------------------------------------------------------//
@@ -1610,16 +1814,18 @@ int wifi_off_fastly(void)
 int wifi_set_mode(rtw_mode_t mode)
 {
 	int ret = 0;
-#ifdef CONFIG_WLAN_SWITCH_MODE	
+#ifdef CONFIG_WLAN_SWITCH_MODE
 	rtw_mode_t curr_mode, next_mode;
 #if defined(CONFIG_AUTO_RECONNECT) && CONFIG_AUTO_RECONNECT
 	u8 autoreconnect_mode;
 #endif
 #endif
+	device_mutex_lock(RT_DEV_LOCK_WLAN);
 
 	if((rltk_wlan_running(WLAN0_IDX) == 0) &&
 		(rltk_wlan_running(WLAN1_IDX) == 0)) {
 		RTW_API_INFO("\n\r[%s] WIFI is not running",__FUNCTION__);
+		device_mutex_unlock(RT_DEV_LOCK_WLAN);
 		return -1;
 	}
 
@@ -1628,9 +1834,9 @@ int wifi_set_mode(rtw_mode_t mode)
 	wifi_get_autoreconnect(&autoreconnect_mode);
 	if(autoreconnect_mode != RTW_AUTORECONNECT_DISABLE){
 		wifi_set_autoreconnect(RTW_AUTORECONNECT_DISABLE);
-		
+
 		// if set to AP mode, delay until the autoconnect task is finished
-		if(mode == RTW_MODE_AP){
+		if((mode == RTW_MODE_AP)||(mode == RTW_MODE_STA_AP)){
 			while(param_indicator != NULL){
 				rtw_msleep_os(2);
 			}
@@ -1642,43 +1848,44 @@ int wifi_set_mode(rtw_mode_t mode)
 	ret = rltk_set_mode_prehandle(curr_mode, next_mode, WLAN0_NAME);
 	if(ret < 0) goto Exit;
 #endif
+
 	if((wifi_mode == RTW_MODE_STA) && (mode == RTW_MODE_AP)){
 		RTW_API_INFO("\n\r[%s] WIFI Mode Change: STA-->AP",__FUNCTION__);
-		
+
 		wifi_disconnect();
 		//must add this delay, because this API may have higher priority, wifi_disconnect will rely RTW_CMD task, may not be excuted immediately.	
-		rtw_msleep_os(50);	
+		rtw_msleep_os(50);
 
-#if CONFIG_LWIP_LAYER	
-		netif_set_link_up(&xnetif[0]);	
-#endif	
+#if CONFIG_LWIP_LAYER
+		netif_set_link_up(&xnetif[0]);
+#endif
 
 		wifi_mode = mode;
 #ifdef CONFIG_PMKSA_CACHING
-			wifi_set_pmk_cache_enable(0);
+		wifi_set_pmk_cache_enable(0);
 #endif
 	}else if((wifi_mode == RTW_MODE_AP) && (mode ==RTW_MODE_STA)){
 		RTW_API_INFO("\n\r[%s] WIFI Mode Change: AP-->STA",__FUNCTION__);
-	
+
 		ret = wext_set_mode(WLAN0_NAME, RTW_MODE_INFRA);
 		if(ret < 0) goto Exit;
 
-		rtw_msleep_os(50);	
-		
-#if CONFIG_LWIP_LAYER			
-		netif_set_link_down(&xnetif[0]);	
-#endif	
+		rtw_msleep_os(50);
+
+#if CONFIG_LWIP_LAYER
+		netif_set_link_down(&xnetif[0]);
+#endif
 
 		wifi_mode = mode;
 #ifdef CONFIG_PMKSA_CACHING
-			wifi_set_pmk_cache_enable(1);
+		wifi_set_pmk_cache_enable(1);
 #endif
 	}else if ((wifi_mode == RTW_MODE_AP) && (mode == RTW_MODE_AP)){
 		RTW_API_INFO("\n\rWIFI Mode Change: AP-->AP");
 		ret = wext_set_mode(WLAN0_NAME, RTW_MODE_INFRA);
 		if(ret < 0) goto Exit;
-		
-		vTaskDelay(50);	
+
+		vTaskDelay(50);
 
 	}else if ((wifi_mode == RTW_MODE_STA) && (mode == RTW_MODE_STA)){
 		RTW_API_INFO("\n\rWIFI Mode No Need To Change: STA -->STA");
@@ -1691,12 +1898,33 @@ int wifi_set_mode(rtw_mode_t mode)
 		RTW_API_INFO("\n\rWIFI Mode Change: AP-->PROMISC");//Same as AP--> STA
 		ret = wext_set_mode(WLAN0_NAME, RTW_MODE_INFRA);
 		if(ret < 0) goto Exit;
-		rtw_msleep_os(50);	
-#if CONFIG_LWIP_LAYER			
-		netif_set_link_down(&xnetif[0]);	
-#endif	
+		rtw_msleep_os(50);
+#if CONFIG_LWIP_LAYER
+		netif_set_link_down(&xnetif[0]);
+#endif
 		wifi_mode = mode;
-	}else{
+	}
+#ifdef CONFIG_CONCURRENT_MODE
+#ifdef CONFIG_WLAN_SWITCH_MODE
+	else if((wifi_mode == RTW_MODE_STA_AP) && (mode == RTW_MODE_STA)){
+		RTW_API_INFO("\n\rWIFI Mode Change: CONCURRENT-->STA");
+#if CONFIG_LWIP_LAYER
+		dhcps_deinit();
+		netif_set_down(&xnetif[1]);
+		netif_set_link_down(&xnetif[1]);
+#endif
+	}else if((wifi_mode == RTW_MODE_STA) && (mode == RTW_MODE_STA_AP)){
+		RTW_API_INFO("\n\rWIFI Mode Change: STA-->CONCURRENT");
+#if CONFIG_LWIP_LAYER
+		dhcps_init(&xnetif[1]);
+		netif_set_up(&xnetif[1]);
+		netif_set_link_up(&xnetif[1]);
+#endif
+		wifi_mode = mode;
+	}
+#endif
+#endif
+	else{
 		RTW_API_INFO("\n\rWIFI Mode Change: not support");
 		goto Exit;
 	}
@@ -1704,15 +1932,22 @@ int wifi_set_mode(rtw_mode_t mode)
 #ifdef CONFIG_WLAN_SWITCH_MODE
 	ret = rltk_set_mode_posthandle(curr_mode, next_mode, WLAN0_NAME);
 	if(ret < 0) goto Exit;
+#ifdef CONFIG_CONCURRENT_MODE
+	if((wifi_mode == RTW_MODE_STA_AP) && (mode == RTW_MODE_STA)){
+		wifi_mode = RTW_MODE_STA;
+	}
+#endif
 #if defined(CONFIG_AUTO_RECONNECT) && CONFIG_AUTO_RECONNECT
 	/* enable auto reconnect */
 	if(autoreconnect_mode != RTW_AUTORECONNECT_DISABLE){
 		wifi_set_autoreconnect(autoreconnect_mode);
-	}	
+	}
 #endif
 #endif
 
+	device_mutex_unlock(RT_DEV_LOCK_WLAN);
 	return 0;
+
 Exit:
 #ifdef CONFIG_WLAN_SWITCH_MODE
 #if defined(CONFIG_AUTO_RECONNECT) && CONFIG_AUTO_RECONNECT
@@ -1722,7 +1957,18 @@ Exit:
 	}
 #endif
 #endif
+	device_mutex_unlock(RT_DEV_LOCK_WLAN);
 	return -1;
+}
+
+int wifi_set_wpa_mode(rtw_wpa_mode wpa_mode)
+{
+	if(wpa_mode > WPA2_WPA3_MIXED_MODE)
+		return -1;
+	else{
+		wifi_wpa_mode = wpa_mode;
+		return 0;
+	}
 }
 
 int wifi_set_power_mode(unsigned char ips_mode, unsigned char lps_mode)
@@ -1828,7 +2074,6 @@ int wifi_set_group_id(unsigned char value)
 #endif
 
 #ifdef CONFIG_PMKSA_CACHING
-extern int wext_set_pmk_cache_enable(const char *ifname, __u8 value);
 int wifi_set_pmk_cache_enable(unsigned char value)
 {
 	return wext_set_pmk_cache_enable(WLAN0_NAME, value);
@@ -1925,6 +2170,15 @@ int wifi_start_ap(
 			if(ret == 0)
 				ret = wext_set_passphrase(ifname, (u8*)password, password_len);
 			break;
+#ifdef CONFIG_SAE_SUPPORT
+		case RTW_SECURITY_WPA3_AES_PSK:
+			ret = wext_set_auth_param(ifname, RTW_AUTH_80211_AUTH_ALG, RTW_AUTH_ALG_SAE);
+			if(ret == 0)
+				ret = wext_set_key_ext(ifname, RTW_ENCODE_ALG_CCMP, NULL, 0, 0, 0, 0, NULL, 0);
+			if(ret == 0)
+				ret = wext_set_passphrase(ifname, (u8*)password, password_len);
+			break;
+#endif
 #ifdef CONFIG_IEEE80211W
 		case RTW_SECURITY_WPA2_AES_CMAC:
 			ret = wext_set_auth_param(ifname, RTW_AUTH_80211_AUTH_ALG, RTW_AUTH_ALG_OPEN_SYSTEM);
@@ -2062,8 +2316,6 @@ void wifi_scan_each_report_hdl( char* buf, int buf_len, int flags, void* userdat
 	( void ) buf_len;
 	( void ) flags;
 	( void ) userdata;
-
-	RTW_API_INFO("WIFICONF: report");
 	
 	int i =0;
 	int j =0;
@@ -2130,9 +2382,32 @@ void wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
 	( void ) buf_len;
 	( void ) flags;
 	( void ) userdata;
-
-	RTW_API_INFO("WIFICONF: scan done");
 	
+#if defined(CONFIG_IPCAM_SDIO) && (CONFIG_IPCAM_SDIO == 1)
+	u32 pktsize = 11 + scan_result_handler_ptr.scan_cnt * sizeof(rtw_scan_result_t);
+	struct spdio_buf_t *tx_buf;
+	u8 *bufbody = NULL;
+
+	tx_buf = sdio_buf_alloc(pktsize);
+	if (!tx_buf)
+	{
+		printf("%s(%d) malloc fail\n", __FUNCTION__, __LINE__);
+		return;
+	}
+
+	rtw_memset((void *)tx_buf->buf_addr, 0, pktsize);
+	
+	bufbody = (u8 *)tx_buf->buf_addr;
+	bufbody += 2;
+	rtw_memcpy(bufbody, _AT_WLAN_SCAN_, 4);
+
+	bufbody += 6;
+	*bufbody = RTW_SUCCESS;
+
+	bufbody += 3;
+#endif
+
+
 	int i = 0;
 	rtw_scan_handler_result_t scan_result_report;
 
@@ -2141,8 +2416,23 @@ void wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
 		scan_result_report.scan_complete = scan_result_handler_ptr.scan_complete;
 		scan_result_report.user_data = scan_result_handler_ptr.user_data;
 		(*scan_result_handler_ptr.gscan_result_handler)(&scan_result_report);
+
+#if defined(CONFIG_IPCAM_SDIO) && (CONFIG_IPCAM_SDIO == 1)
+		rtw_memcpy((rtw_scan_result_t*)bufbody, &scan_result_report.ap_details, sizeof(rtw_scan_result_t));
+
+		bufbody += sizeof(rtw_scan_result_t);
+#endif
 	}
 	
+#if defined(CONFIG_IPCAM_SDIO) && (CONFIG_IPCAM_SDIO == 1)
+		tx_buf->buf_size = pktsize;
+		tx_buf->type = SPDIO_TX_DATA_ATCMDRSP;
+
+		if(spdio_tx(&ipcam_sdio_dev, tx_buf) != _TRUE) {
+			sdio_buf_free(tx_buf);
+		}
+#endif
+
 	scan_result_handler_ptr.scan_complete = RTW_TRUE;
 	scan_result_report.scan_complete = RTW_TRUE;
 	scan_result_report.user_data = scan_result_handler_ptr.user_data;
@@ -2162,6 +2452,12 @@ void wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
 
 void wifi_scan_done_hdl_mcc( char* buf, int buf_len, int flags, void* userdata)
 {
+	/* To avoid gcc warnings */
+	( void ) buf;
+	( void ) buf_len;
+	( void ) flags;
+	( void ) userdata;
+
 #if SCAN_USE_SEMAPHORE
 	rtw_up_sema(&scan_result_handler_ptr.scan_semaphore);
 #else
@@ -2303,7 +2599,7 @@ int wifi_scan_networks_with_ssid(int (results_handler)(char*buf, int buflen, cha
 #define P2P_ROLE_CLIENT  2
 #define P2P_ROLE_GO      3 
 #endif
-
+extern void rltk_wlan_enable_scan_with_ssid_by_extended_security(BOOL);
 int wifi_scan_networks_with_ssid_by_extended_security(int (results_handler)(char*buf, int buflen, char *ssid, void *user_data), 
 	OUT void* user_data, IN int scan_buflen, IN char* ssid, IN int ssid_len)
 {
@@ -2435,8 +2731,12 @@ int wifi_scan_networks_with_ssid_by_extended_security(int (results_handler)(char
 						break;
 					case RTW_SECURITY_WPA3_AES_PSK:
 						RTW_API_INFO("sec = RTW_SECURITY_WPA3_AES_PSK,\t");
+						break;
 					case RTW_SECURITY_WPA2_WPA3_MIXED:
 						RTW_API_INFO("sec = RTW_SECURITY_WPA2_WPA3_MIXED,\t");
+						break;
+					case RTW_SECURITY_WPA3_ENTERPRISE:
+						RTW_API_INFO("sec = RTW_SECURITY_WPA3_ENTERPRISE,\t");
 						break;
 				}
 				// password id
@@ -2730,6 +3030,7 @@ int wifi_get_setting(const char *ifname, rtw_wifi_setting_t *pSetting)
 #ifdef CONFIG_SAE_SUPPORT
 //	unsigned short auth_alg = 0;
 #endif
+	unsigned int auth_type = 0;
 
 	memset(pSetting, 0, sizeof(rtw_wifi_setting_t));
 	if(wext_get_mode(ifname, &mode) < 0)
@@ -2754,6 +3055,9 @@ int wifi_get_setting(const char *ifname, rtw_wifi_setting_t *pSetting)
 		ret = -1;
 	if(wext_get_enc_ext(ifname, &security, &pSetting->key_idx, pSetting->password) < 0)
 		ret = -1;
+	if (wext_get_auth_type(ifname, &auth_type) < 0) {
+		ret = -1;
+	}
 
 	switch(security){
 		case RTW_ENCODE_ALG_NONE:
@@ -2763,11 +3067,21 @@ int wifi_get_setting(const char *ifname, rtw_wifi_setting_t *pSetting)
 			pSetting->security_type = RTW_SECURITY_WEP_PSK;
 			break;
 		case RTW_ENCODE_ALG_TKIP:
-			pSetting->security_type = RTW_SECURITY_WPA_TKIP_PSK;
+			if(auth_type == WPA_SECURITY)
+				pSetting->security_type = RTW_SECURITY_WPA_TKIP_PSK;
+			else if(auth_type == WPA2_SECURITY)
+				pSetting->security_type = RTW_SECURITY_WPA2_TKIP_PSK;
 			break;
 		case RTW_ENCODE_ALG_CCMP:
-			pSetting->security_type = RTW_SECURITY_WPA2_AES_PSK;
-			
+			if(auth_type == WPA_SECURITY)
+				pSetting->security_type = RTW_SECURITY_WPA_AES_PSK;
+			else if(auth_type == WPA2_SECURITY)
+				pSetting->security_type = RTW_SECURITY_WPA2_AES_PSK;
+			else if(auth_type == WPA3_SECURITY)
+				pSetting->security_type = RTW_SECURITY_WPA3_AES_PSK;
+			break;
+		case RTW_ENCODE_ALG_GCMP_256:
+			pSetting->security_type = RTW_SECURITY_WPA3_ENTERPRISE;
 			break;
 		default:
 			break;
@@ -2829,16 +3143,134 @@ int wifi_show_setting(const char *ifname, rtw_wifi_setting_t *pSetting)
 			break;
 		case RTW_SECURITY_WPA_TKIP_PSK:
 #if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
-			at_printf("TKIP,");
+			at_printf("WPA TKIP,");
 #endif
-			RTW_API_INFO("\n\r  SECURITY => TKIP");
+			RTW_API_INFO("\n\r  SECURITY => WPA TKIP");
+			break;
+		case RTW_SECURITY_WPA_AES_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA AES,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA AES");
+			break;
+		case RTW_SECURITY_WPA_MIXED_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA MIXED,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA MIXED");
 			break;
 		case RTW_SECURITY_WPA2_AES_PSK:
 #if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
-			at_printf("AES,");
+			at_printf("WPA2 AES,");
 #endif
-			RTW_API_INFO("\n\r  SECURITY => AES");
+			RTW_API_INFO("\n\r  SECURITY => WPA2 AES");
 			break;
+		case RTW_SECURITY_WPA2_TKIP_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA2 TKIP,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA2 TKIP");
+			break;
+		case RTW_SECURITY_WPA2_MIXED_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA2 MIXED,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA2 MIXED");
+			break;
+		case RTW_SECURITY_WPA_WPA2_TKIP_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA/WPA2 TKIP,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA/WPA2 TKIP");
+			break;
+		case RTW_SECURITY_WPA_WPA2_AES_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA/WPA2 AES,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA/WPA2 AES");
+			break;
+		case RTW_SECURITY_WPA_WPA2_MIXED_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA/WPA2 MIXED,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA/WPA2 MIXED");
+			break;
+		case RTW_SECURITY_WPA_TKIP_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA TKIP ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA TKIP ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA_AES_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA AES ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA AES ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA_MIXED_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA MIXED ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA MIXED ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA2_TKIP_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA2 TKIP ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA2 TKIP ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA2_AES_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA2 AES ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA2 AES ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA2_MIXED_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA2 MIXED ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA2 MIXED ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA_WPA2_TKIP_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA/WPA2 TKIP ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA/WPA2 TKIP ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA_WPA2_AES_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA/WPA2 AES ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA/WPA2 AES ENTERPRISE");
+			break;
+		case RTW_SECURITY_WPA_WPA2_MIXED_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA/WPA2 MIXED ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA/WPA2 MIXED ENTERPRISE");
+			break;
+
+#ifdef CONFIG_SAE_SUPPORT
+			case RTW_SECURITY_WPA3_AES_PSK:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA3-SAE AES,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA3-SAE AES");
+			break;
+			case RTW_SECURITY_WPA2_WPA3_MIXED:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
+			at_printf("WPA2/WPA3-SAE AES,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA2/WPA3-SAE AES");
+			break;
+			case RTW_SECURITY_WPA3_ENTERPRISE:
+#if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD)
+			at_printf("WPA3 ENTERPRISE,");
+#endif
+			RTW_API_INFO("\n\r  SECURITY => WPA3 ENTERPRISE");
+			break;
+#endif
+
 		default:
 #if (defined(CONFIG_EXAMPLE_UART_ATCMD) && CONFIG_EXAMPLE_UART_ATCMD) || (defined(CONFIG_EXAMPLE_SPI_ATCMD) && CONFIG_EXAMPLE_SPI_ATCMD) 
 			at_printf("UNKNOWN,");
@@ -2858,7 +3290,7 @@ int wifi_show_setting(const char *ifname, rtw_wifi_setting_t *pSetting)
 //----------------------------------------------------------------------------//
 int wifi_set_network_mode(rtw_network_mode_t mode)
 {
-	if((mode == RTW_NETWORK_B) || (mode == RTW_NETWORK_BG) || (mode == RTW_NETWORK_BGN))
+	if((mode == RTW_NETWORK_B) || (mode == RTW_NETWORK_BG) || (mode == RTW_NETWORK_BGN) || (mode == RTW_NETWORK_ABGN))
 		return rltk_wlan_wireless_mode((unsigned char) mode);
 
 	return -1;
@@ -2870,6 +3302,11 @@ int wifi_get_network_mode(rtw_network_mode_t *pmode)
 		return rltk_wlan_get_wireless_mode((unsigned char *) pmode);
 
 	return -1;
+}
+
+int wifi_get_cur_network_mode(void)
+{
+	return rltk_wlan_get_cur_wireless_mode();
 }
 
 int wifi_set_wps_phase(unsigned char is_trigger_wps)
@@ -3051,6 +3488,13 @@ char wps_profile_ssid[33]={'\0'};
 char wps_profile_password[65]={'\0'};
 #endif
 
+#if defined(WIFI_LOGO_CERTIFICATION_CONFIG) && WIFI_LOGO_CERTIFICATION_CONFIG
+extern u8 use_static_ip;
+extern struct ip_addr g_ipaddr;
+extern struct ip_addr g_netmask;
+extern struct ip_addr g_gw;
+#endif
+
 #if defined(CONFIG_MBED_ENABLED) || defined(CONFIG_PLATFOMR_CUSTOMER_RTOS)
 void wifi_autoreconnect_hdl(rtw_security_t security_type,
                             char *ssid, int ssid_len,
@@ -3076,8 +3520,7 @@ static void wifi_autoreconnect_thread(void *param)
 		assoc_by_bssid = 1;
 	}
 
-#ifdef CONFIG_SAE_SUPPORT
-#if CONFIG_ENABLE_WPS
+#if defined(CONFIG_SAE_SUPPORT) && (CONFIG_ENABLE_WPS==1)
 	unsigned char is_wpa3_disable=0;
 	if((strncmp(wps_profile_ssid, reconnect_param->ssid, reconnect_param->ssid_len) == 0) &&
 		(strncmp(wps_profile_password, reconnect_param->password, reconnect_param->password_len) == 0) &&
@@ -3086,14 +3529,6 @@ static void wifi_autoreconnect_thread(void *param)
 		is_wpa3_disable=1;
 	}
 #endif
-#ifdef CONFIG_PMKSA_CACHING
-	unsigned char is_pmk_disable=0;
-	if(reconnect_param->security_type == RTW_SECURITY_WPA3_AES_PSK) {
-		wifi_set_pmk_cache_enable(DISABLE);
-		is_pmk_disable=1;
-	}
-#endif
-#endif //CONFIG_SAE_SUPPORT
 	
 	if(assoc_by_bssid){
 		ret = wifi_connect_bssid(saved_bssid, reconnect_param->ssid, reconnect_param->security_type,
@@ -3104,16 +3539,10 @@ static void wifi_autoreconnect_thread(void *param)
 							reconnect_param->ssid_len, reconnect_param->password_len, reconnect_param->key_id, NULL);
 	}
 
-#ifdef CONFIG_SAE_SUPPORT
-#if CONFIG_ENABLE_WPS
+#if defined(CONFIG_SAE_SUPPORT) && (CONFIG_ENABLE_WPS==1)
 	if(is_wpa3_disable)
 		wext_set_support_wpa3(ENABLE);
 #endif
-#ifdef CONFIG_PMKSA_CACHING
-	if(is_pmk_disable)
-		wifi_set_pmk_cache_enable(ENABLE);
-#endif
-#endif //CONFIG_SAE_SUPPORT
 
 #if CONFIG_LWIP_LAYER
 	if(ret == RTW_SUCCESS) {
@@ -3126,18 +3555,26 @@ static void wifi_autoreconnect_thread(void *param)
 		else
 #endif
 		{
-			LwIP_DHCP(0, DHCP_START);
+#if defined(WIFI_LOGO_CERTIFICATION_CONFIG) && WIFI_LOGO_CERTIFICATION_CONFIG
+			if(use_static_ip){
+				netif_set_addr(&xnetif[0], ip_2_ip4(&g_ipaddr), ip_2_ip4(&g_netmask),ip_2_ip4(&g_gw));
+			}
+			else
+#endif
+			{
+				LwIP_DHCP(0, DHCP_START);
 #if LWIP_AUTOIP
 #if CONFIG_BRIDGE
-			uint8_t *ip = LwIP_GetIP(&xnetif[NET_IF_NUM - 1]);
+				uint8_t *ip = LwIP_GetIP(&xnetif[NET_IF_NUM - 1]);
 #else
-			uint8_t *ip = LwIP_GetIP(&xnetif[0]);
+				uint8_t *ip = LwIP_GetIP(&xnetif[0]);
 #endif
-			if((ip[0] == 0) && (ip[1] == 0) && (ip[2] == 0) && (ip[3] == 0)) {
-				RTW_API_INFO("\n\nIPv4 AUTOIP ...");
-				LwIP_AUTOIP(&xnetif[0]);
+				if((ip[0] == 0) && (ip[1] == 0) && (ip[2] == 0) && (ip[3] == 0)) {
+					RTW_API_INFO("\n\nIPv4 AUTOIP ...");
+					LwIP_AUTOIP(&xnetif[0]);
+				}
+#endif
 			}
-#endif
 		}
 	}
 #endif //#if CONFIG_LWIP_LAYER
@@ -3679,13 +4116,12 @@ int wifi_set_psk_eap_interval(uint16_t psk_interval, uint16_t eap_interval)
 {
 	return rltk_set_psk_eap_interval(psk_interval, eap_interval);
 }
+#endif
 
 int wifi_set_null1_param(uint8_t check_period, uint8_t pkt_num, uint8_t limit, uint8_t interval)
 {
 	return rltk_set_null1_param(check_period, pkt_num, limit, interval);
 }
-#endif
-
 
 #if defined(WIFI_LOGO_CERTIFICATION_CONFIG) && WIFI_LOGO_CERTIFICATION_CONFIG
 #ifdef CONFIG_IEEE80211W
@@ -3703,11 +4139,87 @@ int wifi_ap_switch_chl_and_inform(unsigned char new_channel)
 	return wext_ap_switch_chl_and_inform(new_channel);
 }
 
-extern int rltk_wlan_set_igi(uint8_t, uint8_t);
-
 int wifi_set_igi(uint8_t igi, uint8_t enable)
 {
 	return rltk_wlan_set_igi(igi, enable);
 }
 
+int wifi_set_ap_uapsd(uint8_t enable){
+	return wext_set_uapsd_enable(enable);
+}
+
+int wifi_set_bcn_period(uint16_t period){
+	return wext_set_bcn_period(period);
+}
+/*
+Data rate input table
+0x00->1M
+0x01->2M
+0x02->5.5M
+0x03->11M
+0x04->6M
+0x05->9M
+0x06->12M
+0x07->18M
+0x08->24M
+0x09->36M
+0x0a->48M
+0x0b->54M
+0x0c->6.5M
+0x0d->13M
+0x0e->19.5M
+0x0f->26M
+0x10->39M
+0x11->52M
+0x12->58.5M
+0x13->65M
+0xFF->back to auto data rate adaptation
+*/
+int wifi_set_tx_data_rate(uint8_t data_rate)
+{
+	return rltk_wlan_set_tx_data_rate(data_rate);
+}
+
+int wifi_set_tx_power_percentage(unsigned long power_percentage_idx)
+{
+	return rltk_set_tx_power_percentage(power_percentage_idx);
+}
+
+extern int rltk_wlan_set_customized_channel_plan(customized_chl_cfg_t* chnlplan2_4, u8 chnlnum2_4, customized_chl_cfg_t* chnlplan5, u8 chnlnum5, u8 regulation2_4, u8 regulation5);
+int wifi_set_customized_channel_plan(customized_chl_cfg_t* chnlplan2_4, u8 chnlnum2_4, customized_chl_cfg_t* chnlplan5, u8 chnlnum5, u8 regulation2_4, u8 regulation5)
+{
+	return rltk_wlan_set_customized_channel_plan(chnlplan2_4, chnlnum2_4, chnlplan5, chnlnum5, regulation2_4, regulation5);
+}
+
+int wifi_set_softap_gkey_interval(uint32_t interval)
+{
+	extern uint8_t gk_rekey;
+	u8 wlan_idx;
+
+	if (gk_rekey == DISABLE){
+		RTW_API_INFO("\n\rUnable to set interval, GK Rekey is disabled");
+		return RTW_ERROR;
+	}
+
+	if (wifi_is_up(RTW_AP_INTERFACE)){
+		switch (wifi_mode)
+			{
+				case RTW_MODE_AP:
+					wlan_idx = WLAN0_IDX;
+					break;
+				case RTW_MODE_STA_AP:
+					wlan_idx = WLAN1_IDX;
+					break;
+				default:
+					RTW_API_INFO("\n\rUnable to set interval, AP interface not up");
+					return RTW_ERROR;
+			}
+	}
+	else{
+		RTW_API_INFO("\n\rUnable to set interval, AP interface not up");
+		return RTW_ERROR;
+	}
+
+	return rltk_wlan_set_softap_gkey_interval(wlan_idx, interval);
+}
 #endif	//#if CONFIG_WLAN

@@ -21,6 +21,8 @@
 #include "build_info.h"
 #include "bt_intf.h"
 #include "wifi_conf.h" //for wifi_disable_powersave and wifi_resume_powersave
+#include "device_lock.h"
+#include "efuse_api.h"
 
 #define hci_board_32reg_set(addr, val) HAL_WRITE32(addr, 0, val)
 #define hci_board_32reg_read(addr) HAL_READ32(addr, 0)
@@ -172,29 +174,20 @@ extern uint32_t bt_flatk_8721d(uint16_t txgain_flatk);
         case 0x0030:
             if (entry_len == 6)
             {
-                if ((efuse_buf[0] != 0xff) && (efuse_buf[1] != 0xff))
+                if ((efuse_buf[0] != 0xff) || (efuse_buf[1] != 0xff) || (efuse_buf[2] != 0xff) || \
+                    (efuse_buf[3] != 0xff) || (efuse_buf[4] != 0xff) || (efuse_buf[5] != 0xff))
                 {
-                    //memcpy(p,&efuse_buf[0],6);
-                    /*
-                    hci_board_debug("\r\nBT ADDRESS:\r\n");
-                    for(int i = 0 ;i <6;i ++)
-                    {
-						p[i] = efuse_buf[5-i];
-                        hci_board_debug("%02x:",efuse_buf[i]);
-                    }
-                    hci_board_debug("\r\n");*/
-                    for(int i = 0 ;i <6;i ++)
+                    for (int i = 0; i < 6; i++)
                     { 
                         p[i] = efuse_buf[5-i]; 
                     }
 
-                    hci_board_debug("\nBT ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\r\n",
-                        efuse_buf[0], efuse_buf[1], efuse_buf[2],
-                        efuse_buf[3], efuse_buf[4], efuse_buf[5]);
-				}
+                    hci_board_debug("BT ADDRESS: %02x:%02x:%02x:%02x:%02x:%02x\r\n",
+                        efuse_buf[0], efuse_buf[1], efuse_buf[2], efuse_buf[3], efuse_buf[4], efuse_buf[5]);
+                }
                 else
                 {
-                    hci_board_debug("hci_rtk_parse_config: BT ADDRESS  %02x %02x %02x %02x %02x %02x, use the defaut config\n",
+                    hci_board_debug("hci_rtk_parse_config: BT ADDRESS %02x %02x %02x %02x %02x %02x, use the default config\r\n",
                               p[0], p[1], p[2], p[3], p[4], p[5]);
                 }
             }
@@ -363,7 +356,7 @@ uint8_t *hci_rtk_combine_config(void)
 
     HCI_PRINT_WARN1("hci_rtk_combine_config: invalid len, calculated %u",   config_length);
 
-    LE_UINT16_TO_STREAM(p_len, config_length);  //just avoid the length is not coreect
+    LE_UINT16_TO_STREAM(p_len, config_length - HCI_CONFIG_HEAD);  //just avoid the length is not coreect
     if(!CHECK_SW(EFUSE_SW_DRIVER_DEBUG_LOG))
     {
         hci_board_debug("hci_rtk_combine_config: all config length is %x\r\n",config_length);
@@ -523,7 +516,9 @@ void bt_read_efuse(void)
 
     //read logic efuse
     p_buf = os_mem_zalloc(RAM_TYPE_DATA_ON, 1024);
+    device_mutex_lock(RT_DEV_LOCK_EFUSE);
     ret = EFUSE_LMAP_READ(p_buf);
+    device_mutex_unlock(RT_DEV_LOCK_EFUSE);
     if (ret == _FAIL)
     {
         hci_board_debug("EFUSE_LMAP_READ fail \n");
@@ -544,15 +539,19 @@ void bt_read_efuse(void)
     //read physical efuse
     for (Idx = 0; Idx < 16; Idx++)
     {
+        device_mutex_lock(RT_DEV_LOCK_EFUSE);
         EFUSE_PMAP_READ8(0, 0x120 + Idx, hci_tp_phy_efuse + Idx, L25EOUTVOLTAGE);
+        device_mutex_unlock(RT_DEV_LOCK_EFUSE);
         if ((Idx == 7) && (hci_tp_phy_efuse[Idx] == 0))
         {
             hci_tp_phy_efuse[Idx] = 0x13;
         }
     }
+    device_mutex_lock(RT_DEV_LOCK_EFUSE);
     EFUSE_PMAP_READ8(0, 0x1FD, hci_tp_phy_efuse + 16, L25EOUTVOLTAGE);
     EFUSE_PMAP_READ8(0, 0x1FE, hci_tp_phy_efuse + 17, L25EOUTVOLTAGE);
     EFUSE_PMAP_READ8(0, 0x1FF, hci_tp_phy_efuse + 18, L25EOUTVOLTAGE);
+    device_mutex_unlock(RT_DEV_LOCK_EFUSE);
 
     if(!CHECK_SW(EFUSE_SW_DRIVER_DEBUG_LOG))
     {
@@ -596,10 +595,15 @@ void bt_change_gnt_wifi_only(void)
     set_reg_value(0x40080764, BIT9 | BIT10,1);
 }
 
+extern u8 rltk_wlan_btcoex_lps_enabled(void);
 void bt_reset(void)
 {
     if(!rltk_wlan_is_mp()) {
-        wifi_disable_powersave();
+		if (rltk_wlan_btcoex_lps_enabled()){
+			wifi_enable_powersave_for_coex();
+		} else {
+            wifi_disable_powersave();
+        }
     }
 
     if(!CHECK_SW(EFUSE_SW_BT_FW_LOG))
@@ -687,7 +691,9 @@ void bt_write_phy_efuse_value(void)
     for(int i=0;i<0x10; i++)
     {
         hci_board_debug("\r\n write physical efuse 0x%x =0x%02x",0x120+i, hci_tp_phy_efuse[i]);
+        device_mutex_lock(RT_DEV_LOCK_EFUSE);
         EFUSE_PMAP_WRITE8(0, 0x120 + i, hci_tp_phy_efuse[i], L25EOUTVOLTAGE);
+        device_mutex_unlock(RT_DEV_LOCK_EFUSE);
     }
 }
 
@@ -715,70 +721,6 @@ bool hci_board_complete(void)
 
     if(rltk_wlan_is_mp())
     {
-#ifdef FT_MODE
-        uint8_t TestItem;
-        static bool write_efuse_ok=false;
-        hci_board_debug("\r\n=================original ========================\r\n");
-        for (int Idx = 0; Idx < 16; Idx++)
-        {
-            EFUSE_PMAP_READ8(0, 0x120 + Idx, orignal_hci_tp_phy_efuse + Idx, L25EOUTVOLTAGE);
-            hci_board_debug("\r\n original physical efuse 0x%x =0x%02x",0x120+Idx, orignal_hci_tp_phy_efuse[Idx]);
-            if(orignal_hci_tp_phy_efuse[Idx] != 0xff)
-            {
-                write_efuse_ok = true;
-            }
-        }
-
-        hci_board_debug("\r\n=================will write physical efuse ========================\r\n");
-        for(int i=0;i<0x10; i++)
-        {
-            hci_board_debug("\r\n 0x%x =0x%02x",0x120+i, hci_tp_phy_efuse[i]);
-            //EFUSE_PMAP_WRITE8(0, 0x120 + i, hci_tp_phy_efuse[i], L25EOUTVOLTAGE);
-        }
-
-        /*TODO:GNT_BT TO WIFI */
-        bt_change_gnt_wifi_only();
-        hci_board_debug("EFUSE_SW_MP_MODE: UPPERSTACK NOT UP \r\nGNT_BT %x...\n", HAL_READ32(0x40080000, 0x0764));
-      	while ( 1 )
-        {
-            if ( GPIO_ReadDataBit( _PA_5 ) )
-            {
-                os_delay(2);
-                if ( GPIO_ReadDataBit( _PA_5 ) )                                 /* still input high */
-                {
-                    GPIO_WriteBit( _PA_13, 0 );
-                    TestItem	= 0;
-                    TestItem	= GPIO_ReadDataBit( _PB_7 );             /* bit0 */
-                    TestItem	|= (GPIO_ReadDataBit( _PA_17 ) << 1);   /* bit1 */
-                    TestItem	|= (GPIO_ReadDataBit( _PA_19 ) << 2);    /* bit2 */
-                    TestItem	|= (GPIO_ReadDataBit( _PA_20 ) << 3);    /* bit3 */
-                    TestItem	|= (GPIO_ReadDataBit( _PA_6 ) << 4);     /* bit4 */
-                    hci_board_debug( "TestItem is %d!!!\n", TestItem );
-                    switch ( TestItem )
-                    {
-                        case 13:
-                            if(write_efuse_ok == false)
-                            {
-                                bt_write_phy_efuse_value();
-                                write_efuse_ok=true;
-                            }
-                            else
-                            {
-                                hci_board_debug("ERROR:phy_efuse has been write!!!,please check the  phyfuse value\n");
-                                /*TODO, tell the GPIO*/
-                            }
-                            break;
-
-                        default:
-                            break;
-                    }
-                    hci_board_debug( "trx done\n" );
-                    GPIO_WriteBit( _PA_13, 1);
-                }
-            }
-            os_delay(15);
-        }
-#endif
         return false;
     }
 
@@ -998,5 +940,37 @@ void bt_show_efuse_value(void)
     }
 }
 
+int bt_get_mac_address(uint8_t *mac)
+{
+    uint8_t addr_size = 6;
+    uint8_t read_ddr[6];
 
+    //Check BT address
+    device_mutex_lock(RT_DEV_LOCK_EFUSE);
+    efuse_logical_read(0x190, addr_size, read_ddr);
+    device_mutex_unlock(RT_DEV_LOCK_EFUSE);
 
+    memcpy(mac, read_ddr, addr_size);
+
+    return 0;
+}
+
+int bt_set_mac_address(uint8_t *mac)
+{
+    uint8_t addr_size = 6;
+    int ret = 0;
+    uint8_t read_ddr[6];
+
+    device_mutex_lock(RT_DEV_LOCK_EFUSE);
+    efuse_logical_write(0x190, addr_size, mac);
+
+    //Check BT address
+    efuse_logical_read(0x190, addr_size, read_ddr);
+    device_mutex_unlock(RT_DEV_LOCK_EFUSE);
+
+    if (memcmp(read_ddr, mac, addr_size)) {
+            ret = -1;
+    }
+
+    return ret;
+}
