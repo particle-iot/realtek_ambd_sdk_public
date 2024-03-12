@@ -137,8 +137,8 @@ static void app_dslp_wake(void)
 //default main
 int main(void)
 {
-	if (wifi_config.wifi_ultra_low_power &&
-		wifi_config.wifi_app_ctrl_tdma == FALSE) {
+	if (rtk_wifi_config.wifi_ultra_low_power &&
+		rtk_wifi_config.wifi_app_ctrl_tdma == FALSE) {
 		SystemSetCpuClk(CLK_KM4_100M);
 	}	
 	InterruptRegister(IPC_INTHandler, IPC_IRQ, (u32)IPCM0_DEV, 5);

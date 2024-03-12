@@ -75,7 +75,7 @@ VOID app_audio_pad_enable(VOID)
 	temp |= BIT_SYS_AMACRO_EN;
 	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_FUNC_EN0, temp);
 
-	//0x4800_0344[9] = 1'b1: £¨1: Enable Audio pad function, 0: disable£©
+	//0x4800_0344[9] = 1'b1: ï¿½ï¿½1: Enable Audio pad function, 0: disableï¿½ï¿½
 	temp = HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_AUDIO_SHARE_PAD_CTRL);
 	temp |= BIT_LSYS_AC_ANA_PORB;
 	HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_AUDIO_SHARE_PAD_CTRL, temp);
@@ -121,7 +121,7 @@ VOID app_pmu_init(VOID)
 
 	/* Set SWR ZCD & Voltage */
 	Temp=HAL_READ32(SYSTEM_CTRL_BASE_LP, REG_SYS_EFUSE_SYSCFG1);
-	if (wifi_config.wifi_ultra_low_power) {
+	if (rtk_wifi_config.wifi_ultra_low_power) {
 		Temp &= ~(0x0f);//SWR @ 1.05V
 		Temp |= (0x07);
 		Temp &= ~BIT_MASK_SWR_REG_ZCDC_H; /* reg_zcdc_H: EFUSE[5]BIT[6:5] 00 0.1u@PFM */ /* 4uA @ sleep mode */

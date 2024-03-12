@@ -310,7 +310,7 @@ CmdCloseUltraLowPower(
 	( void ) argc;
 	( void ) argv;
 	
-	wifi_config.wifi_ultra_low_power = FALSE;
+	rtk_wifi_config.wifi_ultra_low_power = FALSE;
 
 	return _TRUE;
 }

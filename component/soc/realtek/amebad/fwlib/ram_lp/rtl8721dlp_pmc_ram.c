@@ -128,7 +128,7 @@ void SOCPS_AudioLDO(u32 NewStatus)
 		HAL_WRITE32(SYSTEM_CTRL_BASE_LP, REG_LP_SYSPLL_CTRL0, temp);
 	
 	} else {
-		if (wifi_config.wifi_ultra_low_power) {
+		if (rtk_wifi_config.wifi_ultra_low_power) {
 			return;
 		}
 	
