@@ -889,7 +889,7 @@ int wifi_connect(
 
 				u32 p[5] = {0};
 				u8 i = 0; 
-				sscanf((const char*)password, "%02x%02x%02x%02x%02x", &p[0], &p[1], &p[2], &p[3], &p[4]);
+				sscanf((const char*)password, "%02lx%02lx%02lx%02lx%02lx", &p[0], &p[1], &p[2], &p[3], &p[4]);
 				for(i=0; i< 5; i++)
 					wep_pwd[i] = (u8)p[i];
 				wep_pwd[5] = '\0';
@@ -898,8 +898,8 @@ int wifi_connect(
 			} else if (password_len == 26) {
 				u32 p[13] = {0};
 				u8 i = 0;
-				sscanf((const char*)password, "%02x%02x%02x%02x%02x%02x%02x"\
-					 "%02x%02x%02x%02x%02x%02x", &p[0], &p[1], &p[2], &p[3], &p[4],\
+				sscanf((const char*)password, "%02lx%02lx%02lx%02lx%02lx%02lx%02lx"\
+					 "%02lx%02lx%02lx%02lx%02lx%02lx", &p[0], &p[1], &p[2], &p[3], &p[4],\
 					  &p[5], &p[6], &p[7], &p[8], &p[9], &p[10], &p[11], &p[12]);
 				for(i=0; i< 13; i++)
 					wep_pwd[i] = (u8)p[i];
@@ -1107,7 +1107,7 @@ int wifi_connect_bssid(
 			if(password_len == 10) {
 				u32 p[5] = {0};
 				u8 i = 0; 
-				sscanf((const char*)password, "%02x%02x%02x%02x%02x", &p[0], &p[1], &p[2], &p[3], &p[4]);
+				sscanf((const char*)password, "%02lx%02lx%02lx%02lx%02lx", &p[0], &p[1], &p[2], &p[3], &p[4]);
 				for(i=0; i< 5; i++)
 					wep_pwd[i] = (u8)p[i];
 				wep_pwd[5] = '\0';
@@ -1116,8 +1116,8 @@ int wifi_connect_bssid(
 			} else if (password_len == 26) {
 				u32 p[13] = {0};
 				u8 i = 0;
-				sscanf((const char*)password, "%02x%02x%02x%02x%02x%02x%02x"\
-					 "%02x%02x%02x%02x%02x%02x", &p[0], &p[1], &p[2], &p[3], &p[4],\
+				sscanf((const char*)password, "%02lx%02lx%02lx%02lx%02lx%02lx%02lx"\
+					 "%02lx%02lx%02lx%02lx%02lx%02lx", &p[0], &p[1], &p[2], &p[3], &p[4],\
 					  &p[5], &p[6], &p[7], &p[8], &p[9], &p[10], &p[11], &p[12]);
 				for(i=0; i< 13; i++)
 					wep_pwd[i] = (u8)p[i];
@@ -1473,7 +1473,7 @@ int wifi_get_ap_info(rtw_bss_info_t * ap_info, rtw_security_t* security)
 
 	snprintf(buf, 24, "get_security");
 	ret = wext_private_command_with_retval(ifname, buf, buf, 24);
-	sscanf(buf, "%d", security);
+	sscanf(buf, "%lu", security);
 
 	return ret;
 }
@@ -2936,7 +2936,7 @@ int wifi_scan_networks_mcc(rtw_scan_result_handler_t results_handler, void* user
 				count --;
 			}
 			if(count == 0){
-				printf("\n\r[%d]WiFi: Scan is running. Wait 1s timeout.", rtw_get_current_time());
+				printf("\n\r[%lu]WiFi: Scan is running. Wait 1s timeout.", rtw_get_current_time());
 				return RTW_TIMEOUT;
 			}
 		}
@@ -3787,7 +3787,7 @@ int wifi_get_antenna_info(unsigned char *antenna)
 	rtw_memset(buf, 0, sizeof(buf));
 	rtw_memcpy(buf, "get_ant_info", 12);
 	ret = wext_private_command_with_retval(WLAN0_NAME, buf, buf, 32);
-	sscanf(buf, "%d", antenna); // 0: main, 1: aux
+	sscanf(buf, "%c", antenna); // 0: main, 1: aux
 	return ret;
 }
 #endif
