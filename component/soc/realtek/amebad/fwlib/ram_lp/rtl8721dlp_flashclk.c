@@ -81,7 +81,7 @@ void flash_calibration_backup(u8 flash_speed, u8 read_mode)
 {
 	RRAM_TypeDef* RRAM = ((RRAM_TypeDef *) RRAM_BASE);
 
-	DBG_8195A("RRAM: %x %dB \n", RRAM_BASE, sizeof(RRAM_TypeDef));
+	// DBG_8195A("RRAM: %x %dB \n", RRAM_BASE, sizeof(RRAM_TypeDef));
 
 	RRAM->FLASH_ClockDiv = flash_speed;
 	RRAM->FLASH_ReadMode = read_mode;
@@ -112,6 +112,7 @@ u32 flash_calibration_highspeed(u8 div)
 	flash_init_para.debug = 0;
 	
 	/* SPIC clock switch to PLL */
+	FLASH_ClockSwitch(BIT_SHIFT_FLASH_CLK_XTAL, _FALSE);
 	FLASH_ClockDiv(div);
 	
 	if (_flash_calibration_highspeed(spic_mode, div) == _TRUE) {
@@ -122,12 +123,12 @@ u32 flash_calibration_highspeed(u8 div)
 		/* this code is rom code, so it is safe */
 		FLASH_Init(spic_mode);
 
-		DBG_8195A("FLASH CALIB[NEW OK]\n");
+		// DBG_8195A("FLASH CALIB[NEW OK]\n");
 	} else {
 		/* calibration fail, revert SPIC clock to XTAL */
 		RCC_PeriphClockSource_SPIC(BIT_SHIFT_FLASH_CLK_XTAL);
 
-		DBG_8195A("FLASH CALIB[NEW FAIL]\n");		
+		// DBG_8195A("FLASH CALIB[NEW FAIL]\n");		
 		
 		Ret = _FAIL;
 	}
@@ -186,12 +187,12 @@ static void flash_get_vendor(void)
 	/* Read flash ID */
 	FLASH_RxCmd(flash_init_para.FLASH_cmd_rd_id, 3, flash_ID);
 
-	DBG_8195A("Flash ID:%x, %x, %x\n", flash_ID[0], flash_ID[1], flash_ID[2]);
+	// DBG_8195A("Flash ID:%x, %x, %x\n", flash_ID[0], flash_ID[1], flash_ID[2]);
 
 	/* Get flash chip information */
 	current_IC = flash_get_chip_info((flash_ID[2] << 16) |(flash_ID[1] << 8) |flash_ID[0]);
 	if(current_IC == NULL) {
-		DBG_8195A("This flash type is not supported!\n");
+		// DBG_8195A("This flash type is not supported!\n");
 		assert_param(0);
 	}
 	RRAM->FLASH_class = current_IC->flash_class;
@@ -280,13 +281,13 @@ static void flash_set_status_register(void)
 }
 
 IMAGE2_RAM_TEXT_SECTION
-u32 flash_rx_mode_switch(u8 read_mode)
+u32 flash_rx_mode_switch(u8* read_mode)
 {
 	u32 Ret = _SUCCESS;
 	u8 tmp_dc = 0, status = 0, spic_mode = 0, i;
 	u32 pdata[2];
 
-	for(i = read_mode; i < 5; i++) {
+	for(i = *read_mode; i < 5; i++) {
 		if(i == ReadQuadIOMode){
 			flash_init_para.FLASH_pseudo_prm_en = 1;
 			flash_init_para.FALSH_quad_valid_cmd = (BIT_WR_BLOCKING | BIT_RD_QUAD_IO | BIT_PRM_EN);
@@ -341,28 +342,69 @@ u32 flash_rx_mode_switch(u8 read_mode)
 			FLASH_SetStatus(0x81, 1, &status);
 		}
 
-		flash_init_para.FLASH_rd_sample_phase = SPIC_LOWSPEED_SAMPLE_PHASE;
-		FLASH_Init(spic_mode);
+		u8 allgood = 0;
 
-		DCache_Invalidate(SPI_FLASH_BASE, 8);
-		pdata[0] = HAL_READ32(SPI_FLASH_BASE, 0x00);
-		pdata[1] = HAL_READ32(SPI_FLASH_BASE, 0x04);
+		// Particle: attempt to figure out the number of dummy cycles empirically, otherwise
+		// it's somewhat impossible to know the exact value in advance.
+		const int8_t cycles[] = {0, -4, -3, -2, -1, 1, 2, 3, 4};
+		for (unsigned dummy = 0; dummy < sizeof(cycles)/sizeof(cycles[0]); dummy++) {
+			flash_init_para.FLASH_rd_sample_phase = SPIC_LOWSPEED_SAMPLE_PHASE;
+			FLASH_Init(spic_mode);
 
-		if(_memcmp(pdata, SPIC_CALIB_PATTERN, 8) == 0) {
-			DBG_8195A("read_mode:%d\n", i);
+			int cycle = ((int)SPIC->fbaudr * flash_init_para.FLASH_rd_dummy_cyle[spic_mode] * 2);
+			int val = cycles[dummy];
+			if (cycle + val >= 0) {
+				cycle += val;
+			}
+			SPIC->auto_length = (SPIC->auto_length & 0xffff0000) | ((uint16_t)cycle & 0xffff);
+
+			DCache_Invalidate(SPI_FLASH_BASE, 8);
+			pdata[0] = HAL_READ32(SPI_FLASH_BASE, 0x00);
+			pdata[1] = HAL_READ32(SPI_FLASH_BASE, 0x04);
+
+			if(_memcmp(pdata, SPIC_CALIB_PATTERN, 8) == 0) {
+				if(flash_init_para.debug) {
+					// DBG_8195A("read_mode:%d\n", i);
+				}
+				allgood = 1;
+				break;
+			} else {
+				if(flash_init_para.debug) {
+					// DBG_8195A("read mode %d fail\n", i);
+				}
+			}
+		}
+		if (allgood) {
 			break;
-		} else {
-			if(flash_init_para.debug)
-				DBG_8195A("read mode %d fail\n", i);
 		}
 	}
 
+	*read_mode = i;
+
 	if(i == 5) {
-		DBG_8195A("Flash read mode switch FAIL!\n");
+		if(flash_init_para.debug) {
+			// DBG_8195A("Flash read mode switch FAIL!\n");
+		}
 		Ret = _FAIL;
 	}
 
 	return Ret;
+}
+
+static void set_drive_strength(uint32_t rtlPin, uint32_t drvStrength) {
+	uint32_t temp = 0;
+
+	/* get PADCTR */
+	temp = PINMUX->PADCTR[rtlPin];
+
+	/* clear Pin_Num drvStrength contrl */
+	temp &= ~(PAD_BIT_MASK_DRIVING_STRENGTH << PAD_BIT_SHIFT_DRIVING_STRENGTH);
+
+	/* set needs drvStrength */
+	temp |= (drvStrength & PAD_BIT_MASK_DRIVING_STRENGTH) << PAD_BIT_SHIFT_DRIVING_STRENGTH;
+
+	/* set PADCTR register */
+	PINMUX->PADCTR[rtlPin] = temp;
 }
 
 void flash_operation_config(void)
@@ -386,10 +428,30 @@ void flash_operation_config(void)
 		flash_set_status_register();
 	}
 
+	// Particle: Higher drive strength is required for higher frequencies to work correctly
+	Pinmux_SpicCtrl(_PB_17, ON);
+	Pinmux_SpicCtrl(_PB_15, ON);
+	Pinmux_SpicCtrl(_PB_14, ON);
+	Pinmux_SpicCtrl(_PB_12, ON);
+	PAD_CMD(_PB_17, ENABLE);
+	PAD_CMD(_PB_15, ENABLE);
+	PAD_CMD(_PB_14, ENABLE);
+	PAD_CMD(_PB_12, ENABLE);
+	PAD_PullCtrl(_PB_17, GPIO_PuPd_NOPULL);
+	PAD_PullCtrl(_PB_15, GPIO_PuPd_NOPULL);
+	PAD_PullCtrl(_PB_14, GPIO_PuPd_NOPULL);
+	PAD_PullCtrl(_PB_12, GPIO_PuPd_NOPULL);
+	set_drive_strength(_PB_17, PAD_DRV_STRENGTH_2);
+	set_drive_strength(_PB_15, PAD_DRV_STRENGTH_2);
+	set_drive_strength(_PB_14, PAD_DRV_STRENGTH_2);
+	set_drive_strength(_PB_12, PAD_DRV_STRENGTH_2);
+
+
 	/* Set flash I/O mode and high-speed calibration */
-	flash_rx_mode_switch(read_mode);
+	flash_rx_mode_switch(&read_mode);
 	flash_calibration_highspeed(flash_speed);
 	flash_calibration_backup(flash_speed, read_mode);
+
 	__asm volatile( "cpsie i" );
 }
 
