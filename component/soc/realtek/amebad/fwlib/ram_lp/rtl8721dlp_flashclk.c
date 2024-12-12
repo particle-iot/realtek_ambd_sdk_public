@@ -412,22 +412,6 @@ void flash_operation_config(void)
 	u8 read_mode;
 	u8 flash_speed;
 
-	if (SOCPS_DsleepWakeStatusGet() == TRUE) {
-		return;
-	}
-
-	read_mode = flash_get_option(Flash_ReadMode, _FALSE);
-	flash_speed = flash_get_option(Flash_Speed, _TRUE);
-	//DBG_8195A("flash_speed: %d\n", flash_speed);
-	__asm volatile( "cpsid i" );
-	/* Get flash ID to reinitialize FLASH_InitTypeDef structure */
-	flash_get_vendor();
-
-	/* Set flash status register: set QE, clear protection bits */
-	if (SOCPS_DsleepWakeStatusGet() == FALSE) {
-		flash_set_status_register();
-	}
-
 	// Particle: Higher drive strength is required for higher frequencies to work correctly
 	Pinmux_SpicCtrl(_PB_17, ON);
 	Pinmux_SpicCtrl(_PB_15, ON);
@@ -446,6 +430,21 @@ void flash_operation_config(void)
 	set_drive_strength(_PB_14, PAD_DRV_STRENGTH_2);
 	set_drive_strength(_PB_12, PAD_DRV_STRENGTH_2);
 
+	if (SOCPS_DsleepWakeStatusGet() == TRUE) {
+		return;
+	}
+
+	read_mode = flash_get_option(Flash_ReadMode, _FALSE);
+	flash_speed = flash_get_option(Flash_Speed, _TRUE);
+	//DBG_8195A("flash_speed: %d\n", flash_speed);
+	__asm volatile( "cpsid i" );
+	/* Get flash ID to reinitialize FLASH_InitTypeDef structure */
+	flash_get_vendor();
+
+	/* Set flash status register: set QE, clear protection bits */
+	if (SOCPS_DsleepWakeStatusGet() == FALSE) {
+		flash_set_status_register();
+	}
 
 	/* Set flash I/O mode and high-speed calibration */
 	flash_rx_mode_switch(&read_mode);

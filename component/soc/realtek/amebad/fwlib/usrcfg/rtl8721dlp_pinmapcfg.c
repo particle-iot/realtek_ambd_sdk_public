@@ -74,7 +74,7 @@ const PMAP_TypeDef pmap_func[]=
     {_PB_9,         GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PB_10,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
     {_PB_11,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //
-    {_PB_12,        GPIO_PuPd_SHUTDOWN,         GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //SPI_DATA3
+    {_PB_12,        GPIO_PuPd_UP,               GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //SPI_DATA3
     {_PB_13,        GPIO_PuPd_UP,               GPIO_PuPd_DOWN,        GPIO_PuPd_KEEP,        FALSE}, //SPI_CLK
     {_PB_14,        GPIO_PuPd_UP,               GPIO_PuPd_DOWN,        GPIO_PuPd_KEEP,        FALSE}, //SPI_DATA0
     {_PB_15,        GPIO_PuPd_UP,               GPIO_PuPd_KEEP,        GPIO_PuPd_KEEP,        FALSE}, //SPI_DATA2
