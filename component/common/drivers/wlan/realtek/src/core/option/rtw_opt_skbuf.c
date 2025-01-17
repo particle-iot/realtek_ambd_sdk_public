@@ -2,9 +2,12 @@
 #include <osdep_service.h>
 #include <skbuff.h>
 
-#define MAX_SKB_BUF_SIZE     1650	// should >= the size in wlan driver
+#define MAX_SKB_BUF_SIZE     1658	// should >= the size in wlan driver
 #define MAX_SKB_BUF_NUM      64
 #define MAX_LOCAL_SKB_NUM    (MAX_SKB_BUF_NUM + 2)
+
+#define LIB_WLAN_SKB_DATA_SIZE 1672
+#define LIB_WLAN_SKB_BUF_SIZE 48
 
 /* DO NOT modify skb_buf and skb_data structure */
 struct skb_buf {
@@ -12,11 +15,15 @@ struct skb_buf {
 	struct sk_buff skb;
 };
 
+static_assert(sizeof(struct skb_buf) == LIB_WLAN_SKB_BUF_SIZE, "skb_buf MUST be the same size as in lib_wlan.a");
+
 struct skb_data {
 	struct list_head list;
 	unsigned char buf[MAX_SKB_BUF_SIZE];
 	atomic_t ref;
 };
+
+static_assert(sizeof(struct skb_data) == LIB_WLAN_SKB_DATA_SIZE, "skb_data MUST be the same size as in lib_wlan.a");
 
 unsigned int nr_xmitframe = MAX_SKB_BUF_NUM;
 unsigned int nr_xmitbuff = MAX_SKB_BUF_NUM;
@@ -26,11 +33,15 @@ int max_skb_buf_num = MAX_SKB_BUF_NUM;
 /* DO NOT access skb_pool and skb_data_pool out of wlan driver */
 struct skb_buf skb_pool[MAX_LOCAL_SKB_NUM];
 
+static_assert((sizeof(skb_pool) / MAX_LOCAL_SKB_NUM) == LIB_WLAN_SKB_BUF_SIZE, "skb_pool MUST be of the correct size");
+
 #define SKB_DATA_POOL_USING_GLOBAL_BUF	1
 #if SKB_DATA_POOL_USING_GLOBAL_BUF
 // SRAM_BD_DATA_SECTION default in SRAM. Can modify image2.icf to link to the end of SDRAM
 SRAM_BD_DATA_SECTION
 struct skb_data skb_data_pool[MAX_SKB_BUF_NUM];
+
+static_assert((sizeof(skb_data_pool) / MAX_SKB_BUF_NUM) == LIB_WLAN_SKB_DATA_SIZE, "skb_pool MUST be of the correct size");
 
 #else
 // Change to use heap (malloc) to save SRAM memory
