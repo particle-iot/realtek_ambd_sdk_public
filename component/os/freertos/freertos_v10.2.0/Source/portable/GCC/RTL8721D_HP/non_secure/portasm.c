@@ -554,7 +554,9 @@ void vPortSetBASEPRI( uint32_t ulNewMaskValue )
 {
     __asm volatile
     (
-        "	msr basepri, %0	" :: "r" ( ulNewMaskValue ) : "memory"
+        "	msr basepri, %0	\n" \
+		"   isb				\n" \
+		"   dsb				\n" :: "r" ( ulNewMaskValue ) : "memory"
     );
 }
 /*-----------------------------------------------------------*/
