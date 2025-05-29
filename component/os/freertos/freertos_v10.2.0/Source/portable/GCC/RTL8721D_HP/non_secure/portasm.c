@@ -77,6 +77,8 @@ void vRestoreContextOfFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_
 	"	adds r0, #32									\n" /* Discard everything up to r0. */
 	"	msr  psp, r0									\n" /* This is now the new top of stack to use in the task. */
 	"	isb												\n"
+    "   mov  r0, #0                                     \n"
+    "   msr  basepri, r0                                \n" /* Ensure that interrupts are enabled when the first task starts. */
 	"	bx   r3											\n" /* Finally, branch to EXC_RETURN. */
 	#endif /* configENABLE_MPU */
 	"													\n"
@@ -159,9 +161,13 @@ void PendSV_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
 	#endif /* configENABLE_MPU */
 	"													\n"
 	" select_next_task:									\n"
-	"	cpsid i											\n"
+	"    mov r0, %0                                   \n" /* r0 = configMAX_SYSCALL_INTERRUPT_PRIORITY */
+	"    msr basepri, r0                              \n" /* Disable interrupts up to configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+	"    dsb                                          \n"
+	"    isb                                          \n"
 	"	bl vTaskSwitchContext							\n"
-	"	cpsie i											\n"
+	"    mov r0, #0                                   \n" /* r0 = 0. */
+	"    msr basepri, r0                              \n" /* Enable interrupts. */
 	"													\n"
 	"	ldr r2, pxCurrentTCBConst						\n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
 	"	ldr r3, [r2]									\n" /* Read pxCurrentTCB. */
@@ -314,7 +320,7 @@ void vRestoreContextOfFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_
 	"xRNRConst2: .word 0xe000ed98						\n"
 	"xRBARConst2: .word 0xe000ed9c						\n"
 	#endif /* configENABLE_MPU */
-	);
+	::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ));
 }
 /*-----------------------------------------------------------*/
 
@@ -345,9 +351,13 @@ void PendSV_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
 	"	ldr r1, [r2]									\n" /* Read pxCurrentTCB. */
 	"	str r0, [r1]									\n" /* Save the new top of stack in TCB. */
 	"													\n"
-	"	cpsid i											\n"
+	"   mov r0, %0                                      \n" /* r0 = configMAX_SYSCALL_INTERRUPT_PRIORITY */
+	"   msr basepri, r0                                 \n" /* Disable interrupts up to configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+	"   dsb                                             \n"
+	"   isb                                             \n"
 	"	bl vTaskSwitchContext							\n"
-	"	cpsie i											\n"
+	"   mov r0, #0                                      \n" /* r0 = 0. */
+	"   msr basepri, r0                                 \n" /* Enable interrupts. */
 	"													\n"
 	"	ldr r2, pxCurrentTCBConst						\n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
 	"	ldr r1, [r2]									\n" /* Read pxCurrentTCB. */
@@ -393,7 +403,7 @@ void PendSV_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
 	"xMAIR0Const: .word 0xe000edc0						\n"
 	"xRNRConst: .word 0xe000ed98						\n"
 	"xRBARConst: .word 0xe000ed9c						\n"
-	);
+	::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ));
 }
 #endif
 
@@ -462,44 +472,6 @@ void vStartFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
 }
 /*-----------------------------------------------------------*/
 
-uint32_t ulSetInterruptMaskFromISR( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */
-{
-	__asm volatile
-	(
-	"	mrs r0, PRIMASK									\n"
-	"	cpsid i											\n"
-	"	bx lr											\n"
-	::: "memory"
-	);
-
-#if !(defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
-	/* To avoid compiler warnings.  The return statement will never be reached,
-	 * but some compilers warn if it is not included, while others won't compile
-	 * if it is. */
-	return 0;
-#endif
-}
-/*-----------------------------------------------------------*/
-
-void vClearInterruptMaskFromISR( __attribute__( ( unused ) ) uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */
-{
-	__asm volatile
-	(
-	"	msr PRIMASK, r0									\n"
-	"	bx lr											\n"
-	::: "memory"
-	);
-
-#if !(defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
-	/* Just to avoid compiler warning.  ulMask is used from the asm code but
-	 * the compiler can't see that.  Some compilers generate warnings without
-	 * the following line, while others generate warnings if the line is
-	 * included. */
-	( void ) ulMask;
-#endif
-}
-/*-----------------------------------------------------------*/
-
 void SVC_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
 {
 	__asm volatile
@@ -517,44 +489,34 @@ void SVC_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
 }
 /*-----------------------------------------------------------*/
 
-uint32_t ulPortRaiseBASEPRI( void )
+uint32_t ulSetInterruptMask( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */
 {
-    uint32_t ulOriginalBASEPRI, ulNewBASEPRI;
-    __asm volatile
-	(
-        "	mrs %0, basepri											\n" \
-        "	mov %1, %2												\n" \
-        "	msr basepri, %1											\n" \
-        "	isb														\n" \
-        "	dsb														\n" \
-        :"=r" (ulOriginalBASEPRI), "=r" (ulNewBASEPRI) : "i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ) : "memory"
-    );
-
-    /* This return will not be reached but is necessary to prevent compiler
-    warnings. */
-    return ulOriginalBASEPRI;
-}
-/*-----------------------------------------------------------*/
-
-void vPortRaiseBASEPRI( void )
-{
-    uint32_t ulNewBASEPRI;
     __asm volatile
     (
-        "	mov %0, %1												\n" \
-        "	msr basepri, %0											\n" \
-        "	isb														\n" \
-        "	dsb														\n" \
-        :"=r" (ulNewBASEPRI) : "i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ) : "memory"
+        "   .syntax unified                                 \n"
+        "                                                   \n"
+        "   mrs r0, basepri                                 \n" /* r0 = basepri. Return original basepri value. */
+        "   mov r1, %0                                      \n" /* r1 = configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+        "   msr basepri, r1                                 \n" /* Disable interrupts up to configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+        "   dsb                                             \n"
+        "   isb                                             \n"
+        "   bx lr                                           \n" /* Return. */
+        ::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ) : "memory"
     );
 }
 /*-----------------------------------------------------------*/
 
-void vPortSetBASEPRI( uint32_t ulNewMaskValue )
+void vClearInterruptMask( __attribute__( ( unused ) ) uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */
 {
     __asm volatile
     (
-        "	msr basepri, %0	" :: "r" ( ulNewMaskValue ) : "memory"
+        "   .syntax unified                                 \n"
+        "                                                   \n"
+        "   msr basepri, r0                                 \n" /* basepri = ulMask. */
+        "   dsb                                             \n"
+        "   isb                                             \n"
+        "   bx lr                                           \n" /* Return. */
+        ::: "memory"
     );
 }
 /*-----------------------------------------------------------*/
