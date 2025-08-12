@@ -407,16 +407,40 @@ static void set_drive_strength(uint32_t rtlPin, uint32_t drvStrength) {
 	PINMUX->PADCTR[rtlPin] = temp;
 }
 
+static BOOL configure_spi_pins_if_needed() {
+	const uint32_t spi_pins[] = {_PB_12, _PB_14, _PB_15, _PB_17};
+	BOOL pin_configured = _FALSE;
+
+	for (unsigned i = 0; i < sizeof(spi_pins) / sizeof(uint32_t); i++) {
+		uint32_t padctr = PINMUX->PADCTR[spi_pins[i]];
+		if ((padctr & PAD_BIT_MASK_FUNCTION_ID) != PINMUX_FUNCTION_SPIF) {
+			// Configuring *any* pin for SPI pin function, configures *all* SPI capable pins for SPI pin function
+			Pinmux_SpicCtrl(spi_pins[i], ON);
+			pin_configured = _TRUE;
+		}
+	}
+
+	return pin_configured;
+}
+
 void flash_operation_config(void)
 {
 	u8 read_mode;
 	u8 flash_speed;
 
-	// Particle: Higher drive strength is required for higher frequencies to work correctly
-	Pinmux_SpicCtrl(_PB_17, ON);
-	Pinmux_SpicCtrl(_PB_15, ON);
-	Pinmux_SpicCtrl(_PB_14, ON);
-	Pinmux_SpicCtrl(_PB_12, ON);
+	// Backup PB18-21 pin config
+	uint32_t altSpiPinBackup[4] = {};
+    for (unsigned i = 0; i < 4; i++) {
+        altSpiPinBackup[i] = PINMUX->PADCTR[_PB_18+i];
+    }
+	
+	if (configure_spi_pins_if_needed()) {
+		// Restore alt SPI pins config if needed
+	    for (unsigned i = 0; i < 4; i++) {
+	        PINMUX->PADCTR[_PB_18+i] = altSpiPinBackup[i];
+	    }	
+	}
+	
 	PAD_CMD(_PB_17, ENABLE);
 	PAD_CMD(_PB_15, ENABLE);
 	PAD_CMD(_PB_14, ENABLE);
@@ -425,6 +449,7 @@ void flash_operation_config(void)
 	PAD_PullCtrl(_PB_15, GPIO_PuPd_NOPULL);
 	PAD_PullCtrl(_PB_14, GPIO_PuPd_NOPULL);
 	PAD_PullCtrl(_PB_12, GPIO_PuPd_NOPULL);
+	// Particle: Higher drive strength is required for higher frequencies to work correctly
 	set_drive_strength(_PB_17, PAD_DRV_STRENGTH_2);
 	set_drive_strength(_PB_15, PAD_DRV_STRENGTH_2);
 	set_drive_strength(_PB_14, PAD_DRV_STRENGTH_2);
