@@ -407,40 +407,14 @@ static void set_drive_strength(uint32_t rtlPin, uint32_t drvStrength) {
 	PINMUX->PADCTR[rtlPin] = temp;
 }
 
-static BOOL configure_spi_pins_if_needed() {
-	const uint32_t spi_pins[] = {_PB_12, _PB_14, _PB_15, _PB_17};
-	BOOL pin_configured = _FALSE;
-
-	for (unsigned i = 0; i < sizeof(spi_pins) / sizeof(uint32_t); i++) {
-		uint32_t padctr = PINMUX->PADCTR[spi_pins[i]];
-		if ((padctr & PAD_BIT_MASK_FUNCTION_ID) != PINMUX_FUNCTION_SPIF) {
-			// Configuring *any* pin for SPI pin function, configures *all* SPI capable pins for SPI pin function
-			Pinmux_SpicCtrl(spi_pins[i], ON);
-			pin_configured = _TRUE;
-		}
-	}
-
-	return pin_configured;
-}
-
 void flash_operation_config(void)
 {
 	u8 read_mode;
 	u8 flash_speed;
-
-	// Backup PB18-21 pin config
-	uint32_t altSpiPinBackup[4] = {};
-    for (unsigned i = 0; i < 4; i++) {
-        altSpiPinBackup[i] = PINMUX->PADCTR[_PB_18+i];
-    }
 	
-	if (configure_spi_pins_if_needed()) {
-		// Restore alt SPI pins config if needed
-	    for (unsigned i = 0; i < 4; i++) {
-	        PINMUX->PADCTR[_PB_18+i] = altSpiPinBackup[i];
-	    }	
-	}
-	
+    // Pinlocation 1 = configure PB12-17 for SPI
+    // PinLocation 0 = configure PB18-23 for SPI
+	Pinmux_SpicCtrl(1, ON);
 	PAD_CMD(_PB_17, ENABLE);
 	PAD_CMD(_PB_15, ENABLE);
 	PAD_CMD(_PB_14, ENABLE);
