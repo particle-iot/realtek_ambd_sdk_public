@@ -411,12 +411,10 @@ void flash_operation_config(void)
 {
 	u8 read_mode;
 	u8 flash_speed;
-
-	// Particle: Higher drive strength is required for higher frequencies to work correctly
-	Pinmux_SpicCtrl(_PB_17, ON);
-	Pinmux_SpicCtrl(_PB_15, ON);
-	Pinmux_SpicCtrl(_PB_14, ON);
-	Pinmux_SpicCtrl(_PB_12, ON);
+	
+    // Pinlocation 1 = configure PB12-17 for SPI
+    // PinLocation 0 = configure PB18-23 for SPI
+	Pinmux_SpicCtrl(1, ON);
 	PAD_CMD(_PB_17, ENABLE);
 	PAD_CMD(_PB_15, ENABLE);
 	PAD_CMD(_PB_14, ENABLE);
@@ -425,6 +423,7 @@ void flash_operation_config(void)
 	PAD_PullCtrl(_PB_15, GPIO_PuPd_NOPULL);
 	PAD_PullCtrl(_PB_14, GPIO_PuPd_NOPULL);
 	PAD_PullCtrl(_PB_12, GPIO_PuPd_NOPULL);
+	// Particle: Higher drive strength is required for higher frequencies to work correctly
 	set_drive_strength(_PB_17, PAD_DRV_STRENGTH_2);
 	set_drive_strength(_PB_15, PAD_DRV_STRENGTH_2);
 	set_drive_strength(_PB_14, PAD_DRV_STRENGTH_2);
