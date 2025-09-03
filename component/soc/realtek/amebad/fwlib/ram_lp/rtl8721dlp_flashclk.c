@@ -415,19 +415,19 @@ void flash_operation_config(void)
     // Pinlocation 1 = configure PB12-17 for SPI
     // PinLocation 0 = configure PB18-23 for SPI
 	Pinmux_SpicCtrl(1, ON);
-	PAD_CMD(_PB_17, ENABLE);
-	PAD_CMD(_PB_15, ENABLE);
-	PAD_CMD(_PB_14, ENABLE);
-	PAD_CMD(_PB_12, ENABLE);
-	PAD_PullCtrl(_PB_17, GPIO_PuPd_NOPULL);
-	PAD_PullCtrl(_PB_15, GPIO_PuPd_NOPULL);
-	PAD_PullCtrl(_PB_14, GPIO_PuPd_NOPULL);
-	PAD_PullCtrl(_PB_12, GPIO_PuPd_NOPULL);
-	// Particle: Higher drive strength is required for higher frequencies to work correctly
-	set_drive_strength(_PB_17, PAD_DRV_STRENGTH_2);
-	set_drive_strength(_PB_15, PAD_DRV_STRENGTH_2);
-	set_drive_strength(_PB_14, PAD_DRV_STRENGTH_2);
-	set_drive_strength(_PB_12, PAD_DRV_STRENGTH_2);
+	// PAD_CMD(_PB_17, ENABLE);
+	// PAD_CMD(_PB_15, ENABLE);
+	// PAD_CMD(_PB_14, ENABLE);
+	// PAD_CMD(_PB_12, ENABLE);
+	// PAD_PullCtrl(_PB_17, GPIO_PuPd_NOPULL);
+	// PAD_PullCtrl(_PB_15, GPIO_PuPd_NOPULL);
+	// PAD_PullCtrl(_PB_14, GPIO_PuPd_NOPULL);
+	// PAD_PullCtrl(_PB_12, GPIO_PuPd_NOPULL);
+	// // Particle: Higher drive strength is required for higher frequencies to work correctly
+	// set_drive_strength(_PB_17, PAD_DRV_STRENGTH_2);
+	// set_drive_strength(_PB_15, PAD_DRV_STRENGTH_2);
+	// set_drive_strength(_PB_14, PAD_DRV_STRENGTH_2);
+	// set_drive_strength(_PB_12, PAD_DRV_STRENGTH_2);
 
 	if (SOCPS_DsleepWakeStatusGet() == TRUE) {
 		return;
