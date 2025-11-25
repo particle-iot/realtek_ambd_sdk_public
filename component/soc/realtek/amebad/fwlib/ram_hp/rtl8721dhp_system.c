@@ -49,7 +49,7 @@
  *----------------------------------------------------------------------------*/
 uint32_t SystemCoreClock = __SYSTEM_CLOCK;/*!< System Clock Frequency (Core Clock)*/
 
-u32
+__attribute__((used, section(".xip.text"))) u32
 SystemGetCpuClk(void)
 {
 	return CPU_ClkGet(IS_FPGA_VERIF);
@@ -58,7 +58,7 @@ SystemGetCpuClk(void)
 /*----------------------------------------------------------------------------
   Clock functions
  *----------------------------------------------------------------------------*/
-void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
+__attribute__((used, section(".xip.text"))) void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
 {
 	SystemCoreClock = SystemGetCpuClk();
 }
@@ -87,7 +87,16 @@ void SystemSetCpuClk(u8 CpuClk)
  * @brief  Setup the microcontroller system.
  *         Initialize the System.
  */
-void SystemInit (void)
+extern uintptr_t link_psram_code_flash_start;
+extern uintptr_t link_psram_code_start;
+extern uintptr_t link_psram_code_end;
+#define link_psram_code_size ((uintptr_t)&link_psram_code_end - (uintptr_t)&link_psram_code_start)
+extern uintptr_t link_dynalib_flash_start;
+extern uintptr_t link_dynalib_start;
+extern uintptr_t link_dynalib_end;
+#define link_dynalib_size ((uintptr_t)&link_dynalib_end - (uintptr_t)&link_dynalib_start)
+
+__attribute__((used, section(".xip.text"))) void SystemInit (void)
 {
 	// TODO: Hardware initial
 #ifdef UNALIGNED_SUPPORT_DISABLE
@@ -95,6 +104,19 @@ void SystemInit (void)
 #endif
 
 	SystemCoreClockUpdate();
+
+    Cache_Enable(1);
+    __DSB();
+    __ISB();
+
+    if ( (&link_psram_code_start != &link_psram_code_flash_start) && (link_psram_code_size != 0))
+    {
+        _memcpy(&link_psram_code_start, &link_psram_code_flash_start, link_psram_code_size);
+    }
+    if ( (&link_dynalib_start != &link_dynalib_flash_start) && (link_dynalib_size != 0))
+    {
+        _memcpy(&link_dynalib_start, &link_dynalib_flash_start, link_dynalib_size);
+    }
 }
 
 /**
