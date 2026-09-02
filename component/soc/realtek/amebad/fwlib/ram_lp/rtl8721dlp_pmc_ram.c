@@ -272,6 +272,9 @@ void SOCPS_SleepCG_RAM(VOID)
 
 	FLASH_DeepPowerDown(ENABLE);//120us
 
+	// Particle: Workaround for power leakage issue on PB12, set it to pull-up to avoid leakage
+	PAD_PullCtrl(_PB_12, GPIO_PuPd_UP);
+
 	SOCPS_AudioLDO(DISABLE);//15us
 
 	/* don't close CPU */
@@ -324,6 +327,9 @@ void SOCPS_SleepCG_RAM(VOID)
 
 	//move to km4 on to shrink wakeup time
 	//SOCPS_AudioLDO(ENABLE);//84
+
+	// Particle: Re-configure PB12 to no pull. See flash_operation_config().
+	PAD_PullCtrl(_PB_12, GPIO_PuPd_NOPULL);
 
 	/* wakeup */
 	FLASH_DeepPowerDown(DISABLE);//257
