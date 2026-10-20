@@ -79,6 +79,7 @@ extern struct netif xnetif[NET_IF_NUM];
  *               Variables Definitions
  ******************************************************/
 static internal_scan_handler_t scan_result_handler_ptr = {0, 0, 0, RTW_FALSE, 0, 0, 0, 0, 0};
+static _mutex scan_result_handler_mutex = NULL;
 static internal_join_result_t* join_user_data;
 static unsigned char ap_bssid[6];
 #if CONFIG_WIFI_IND_USE_THREAD
@@ -2310,7 +2311,26 @@ exit:
 	return ret;
 }
 
-void wifi_scan_each_report_hdl( char* buf, int buf_len, int flags, void* userdata)
+static void wifi_scan_lock(void)
+{
+	if(scan_result_handler_mutex)
+		rtw_mutex_get(&scan_result_handler_mutex);
+}
+
+static void wifi_scan_unlock(void)
+{
+	if(scan_result_handler_mutex)
+		rtw_mutex_put(&scan_result_handler_mutex);
+}
+
+static int wifi_scan_in_progress(void)
+{
+	return scan_result_handler_ptr.ap_details != NULL && scan_result_handler_ptr.pap_details != NULL;
+}
+
+static void wifi_scan_reset_state(void);
+
+static void _wifi_scan_each_report_hdl( char* buf, int buf_len, int flags, void* userdata)
 {
 	/* To avoid gcc warnings */
 	( void ) buf_len;
@@ -2375,7 +2395,7 @@ void wifi_scan_each_report_hdl( char* buf, int buf_len, int flags, void* userdat
 	rtw_memset(*result_ptr, 0, sizeof(rtw_scan_result_t));
 }
 
-void wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
+static void _wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
 {
 	/* To avoid gcc warnings */
 	( void ) buf;
@@ -2438,16 +2458,52 @@ void wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
 	scan_result_report.user_data = scan_result_handler_ptr.user_data;
 	(*scan_result_handler_ptr.gscan_result_handler)(&scan_result_report);
 
-	rtw_free(scan_result_handler_ptr.ap_details);
-	rtw_free(scan_result_handler_ptr.pap_details);
 #if SCAN_USE_SEMAPHORE
 	rtw_up_sema(&scan_result_handler_ptr.scan_semaphore);
-#else
-	scan_result_handler_ptr.scan_running = 0;
 #endif
+	wifi_scan_reset_state();
+	return;
+}
+
+void wifi_scan_each_report_hdl( char* buf, int buf_len, int flags, void* userdata)
+{
+	wifi_scan_lock();
+	if(wifi_scan_in_progress())
+		_wifi_scan_each_report_hdl(buf, buf_len, flags, userdata);
+	wifi_scan_unlock();
+}
+
+void wifi_scan_done_hdl( char* buf, int buf_len, int flags, void* userdata)
+{
+	wifi_scan_lock();
+	if(wifi_scan_in_progress() && scan_result_handler_ptr.gscan_result_handler)
+		_wifi_scan_done_hdl(buf, buf_len, flags, userdata);
+	wifi_scan_unlock();
+}
+
+static void wifi_scan_reset_state(void)
+{
 	wifi_unreg_event_handler(WIFI_EVENT_SCAN_RESULT_REPORT, wifi_scan_each_report_hdl);
 	wifi_unreg_event_handler(WIFI_EVENT_SCAN_DONE, wifi_scan_done_hdl);
-	return;
+	if(scan_result_handler_ptr.ap_details)
+		rtw_free(scan_result_handler_ptr.ap_details);
+	if(scan_result_handler_ptr.pap_details)
+		rtw_free(scan_result_handler_ptr.pap_details);
+	scan_result_handler_ptr.ap_details = NULL;
+	scan_result_handler_ptr.pap_details = NULL;
+	scan_result_handler_ptr.scan_cnt = 0;
+	scan_result_handler_ptr.gscan_result_handler = NULL;
+	scan_result_handler_ptr.user_data = NULL;
+#if !SCAN_USE_SEMAPHORE
+	scan_result_handler_ptr.scan_running = 0;
+#endif
+}
+
+void wifi_scan_networks_abort(void)
+{
+	wifi_scan_lock();
+	wifi_scan_reset_state();
+	wifi_scan_unlock();
 }
 
 void wifi_scan_done_hdl_mcc( char* buf, int buf_len, int flags, void* userdata)
@@ -2829,6 +2885,8 @@ int wifi_scan_networks(rtw_scan_result_handler_t results_handler, void* user_dat
 		return RTW_TIMEOUT;
 	}
 #else
+	if(scan_result_handler_mutex == NULL)
+		rtw_mutex_init(&scan_result_handler_mutex);
 	if(scan_result_handler_ptr.scan_running){
 		int count = 100;
 		while(scan_result_handler_ptr.scan_running && count > 0)
@@ -2846,6 +2904,9 @@ int wifi_scan_networks(rtw_scan_result_handler_t results_handler, void* user_dat
 #endif
 
 	scan_result_handler_ptr.gscan_result_handler = results_handler;
+	scan_result_handler_ptr.user_data = user_data;
+	scan_result_handler_ptr.scan_complete = RTW_FALSE;
+	scan_result_handler_ptr.scan_cnt = 0;
 	
 	scan_result_handler_ptr.max_ap_size = max_ap_size;
 	scan_result_handler_ptr.ap_details = (rtw_scan_result_t*)rtw_zmalloc(max_ap_size*sizeof(rtw_scan_result_t));
@@ -2858,11 +2919,6 @@ int wifi_scan_networks(rtw_scan_result_handler_t results_handler, void* user_dat
 	if(scan_result_handler_ptr.pap_details == NULL)
 		goto error2_with_result_ptr;
 	rtw_memset(scan_result_handler_ptr.pap_details, 0, max_ap_size*sizeof(rtw_scan_result_t*));
-	
-	scan_result_handler_ptr.scan_cnt = 0;
-
-	scan_result_handler_ptr.scan_complete = RTW_FALSE;
-	scan_result_handler_ptr.user_data = user_data;
 
 	if (wifi_scan( RTW_SCAN_COMMAMD<<4 | RTW_SCAN_TYPE_ACTIVE, RTW_BSS_TYPE_ANY, NULL) != RTW_SUCCESS)
 	{
@@ -2872,9 +2928,11 @@ int wifi_scan_networks(rtw_scan_result_handler_t results_handler, void* user_dat
 	return RTW_SUCCESS;
 
 error1_with_result_ptr:
-	rtw_free((u8*)scan_result_handler_ptr.pap_details);
-	scan_result_handler_ptr.pap_details = NULL;
-	
+	wifi_scan_lock();
+	wifi_scan_reset_state();
+	wifi_scan_unlock();
+	return RTW_ERROR;
+
 error2_with_result_ptr:
 	rtw_free((u8*)scan_result_handler_ptr.ap_details);
 	scan_result_handler_ptr.ap_details = NULL;

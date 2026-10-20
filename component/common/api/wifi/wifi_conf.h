@@ -751,6 +751,13 @@ int wifi_scan(rtw_scan_type_t                    scan_type,
 int wifi_scan_networks(rtw_scan_result_handler_t results_handler, void* user_data);
 
 /**
+ * @brief  Abort the scan started by wifi_scan_networks() and detach its results handler.
+ *         The handler is not called after this function returns.
+ * @return  None
+ */
+void wifi_scan_networks_abort(void);
+
+/**
  * @brief  Initiate a scan to search for 802.11 networks, a higher level API based on wifi_scan
  *			to simplify the scan operation. This API separate full scan channel to partial scan
  *			each channel for concurrent mode. MCC means Multi-channel concurrent.
