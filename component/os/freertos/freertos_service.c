@@ -341,9 +341,133 @@ static void _freertos_cpu_unlock(void)
 #endif
 }
 
+#if USE_MUTEX_FOR_SPINLOCK
+#define SPINLOCK_QUARANTINE_SIZE	64
+#define SPINLOCK_QUARANTINE_TIME_MS	10000
+#define SPINLOCK_SKIP_TABLE_SIZE	8
+
+static struct {
+	_lock lock;
+	TickType_t time;
+} spinlock_quarantine[SPINLOCK_QUARANTINE_SIZE];
+
+static struct {
+	TaskHandle_t task;
+	unsigned count;
+} spinlock_skips[SPINLOCK_SKIP_TABLE_SIZE];
+
+static void _freertos_spinlock_skip_push(void)
+{
+	TaskHandle_t self = xTaskGetCurrentTaskHandle();
+	int free_slot = -1;
+	int i;
+
+	if(self == NULL)
+		return;
+	taskENTER_CRITICAL();
+	for(i = 0; i < SPINLOCK_SKIP_TABLE_SIZE; i++) {
+		if(spinlock_skips[i].task == self) {
+			spinlock_skips[i].count++;
+			break;
+		}
+		if(spinlock_skips[i].task == NULL && free_slot < 0)
+			free_slot = i;
+	}
+	if(i == SPINLOCK_SKIP_TABLE_SIZE && free_slot >= 0) {
+		spinlock_skips[free_slot].task = self;
+		spinlock_skips[free_slot].count = 1;
+	}
+	taskEXIT_CRITICAL();
+}
+
+static int _freertos_spinlock_skip_pop(void)
+{
+	TaskHandle_t self = xTaskGetCurrentTaskHandle();
+	int ret = 0;
+	int i;
+
+	if(self == NULL)
+		return 0;
+	taskENTER_CRITICAL();
+	for(i = 0; i < SPINLOCK_SKIP_TABLE_SIZE; i++) {
+		if(spinlock_skips[i].task == self) {
+			if(--spinlock_skips[i].count == 0)
+				spinlock_skips[i].task = NULL;
+			ret = 1;
+			break;
+		}
+	}
+	taskEXIT_CRITICAL();
+	return ret;
+}
+
+static void _freertos_spinlock_reap(int force)
+{
+	_lock expired[SPINLOCK_QUARANTINE_SIZE];
+	int count = 0;
+	int i;
+	TickType_t now = xTaskGetTickCount();
+
+	taskENTER_CRITICAL();
+	for(i = 0; i < SPINLOCK_QUARANTINE_SIZE; i++) {
+		_lock lock = spinlock_quarantine[i].lock;
+		if(lock == NULL)
+			continue;
+		if((force || now - spinlock_quarantine[i].time >= pdMS_TO_TICKS(SPINLOCK_QUARANTINE_TIME_MS)) &&
+				xSemaphoreGetMutexHolder(lock) == NULL) {
+			expired[count++] = lock;
+			spinlock_quarantine[i].lock = NULL;
+		}
+	}
+	taskEXIT_CRITICAL();
+
+	for(i = 0; i < count; i++)
+		vSemaphoreDelete(expired[i]);
+}
+
+static int _freertos_spinlock_quarantine(_lock lock)
+{
+	int i;
+	int ret = 0;
+
+	taskENTER_CRITICAL();
+	for(i = 0; i < SPINLOCK_QUARANTINE_SIZE; i++) {
+		if(spinlock_quarantine[i].lock == NULL) {
+			spinlock_quarantine[i].lock = lock;
+			spinlock_quarantine[i].time = xTaskGetTickCount();
+			ret = 1;
+			break;
+		}
+	}
+	taskEXIT_CRITICAL();
+	return ret;
+}
+
+static void _freertos_spinlock_release_quarantined(void)
+{
+	TaskHandle_t self = xTaskGetCurrentTaskHandle();
+	_lock held = NULL;
+	int i;
+
+	taskENTER_CRITICAL();
+	for(i = 0; i < SPINLOCK_QUARANTINE_SIZE; i++) {
+		_lock lock = spinlock_quarantine[i].lock;
+		if(lock != NULL && xSemaphoreGetMutexHolder(lock) == self) {
+			held = lock;
+			break;
+		}
+	}
+	taskEXIT_CRITICAL();
+
+	if(held != NULL)
+		xSemaphoreGive(held);
+}
+#endif
+
 static void _freertos_spinlock_init(_lock *plock)
 {
 #if USE_MUTEX_FOR_SPINLOCK
+	_freertos_spinlock_reap(0);
 	*plock = xSemaphoreCreateMutex();
 #endif
 }
@@ -351,21 +475,35 @@ static void _freertos_spinlock_init(_lock *plock)
 static void _freertos_spinlock_free(_lock *plock)
 {
 #if USE_MUTEX_FOR_SPINLOCK
-	if(*plock != NULL)
-		vSemaphoreDelete(*plock);
+	_lock lock = *plock;
 
 	*plock = NULL;
+	if(lock == NULL)
+		return;
+
+	_freertos_spinlock_reap(0);
+	if(!_freertos_spinlock_quarantine(lock)) {
+		_freertos_spinlock_reap(1);
+		if(!_freertos_spinlock_quarantine(lock))
+			vSemaphoreDelete(lock);
+	}
 #endif
 }
 
 static void _freertos_spinlock(_lock *plock)
 {
 #if USE_MUTEX_FOR_SPINLOCK
+	_lock lock;
 #if defined(CONFIG_PLATFORM_8710C)
 	if(_freertos_get_scheduler_state() == OS_SCHEDULER_SUSPENDED)
 		return;
 #endif
-	while(xSemaphoreTake(*plock, 60 * 1000 / portTICK_RATE_MS) != pdTRUE)
+	lock = *plock;
+	if(lock == NULL) {
+		_freertos_spinlock_skip_push();
+		return;
+	}
+	while(xSemaphoreTake(lock, 60 * 1000 / portTICK_RATE_MS) != pdTRUE)
 		printf("[%s] %s(%p) failed, retry\n", pcTaskGetTaskName(NULL), __FUNCTION__, plock);
 #endif
 }
@@ -373,11 +511,18 @@ static void _freertos_spinlock(_lock *plock)
 static void _freertos_spinunlock(_lock *plock)
 {
 #if USE_MUTEX_FOR_SPINLOCK
+	_lock lock;
 #if defined(CONFIG_PLATFORM_8710C)
 	if(_freertos_get_scheduler_state() == OS_SCHEDULER_SUSPENDED)
 		return;
 #endif
-	xSemaphoreGive(*plock);
+	lock = *plock;
+	if(lock == NULL || xSemaphoreGetMutexHolder(lock) != xTaskGetCurrentTaskHandle()) {
+		if(!_freertos_spinlock_skip_pop())
+			_freertos_spinlock_release_quarantined();
+		return;
+	}
+	xSemaphoreGive(lock);
 #endif
 }
 
@@ -388,7 +533,12 @@ static void _freertos_spinlock_irqsave(_lock *plock, _irqL *irqL)
 	
 	taskENTER_CRITICAL();
 #if USE_MUTEX_FOR_SPINLOCK
-	while(xSemaphoreTake(*plock, 60 * 1000 / portTICK_RATE_MS) != pdTRUE)
+	_lock lock = *plock;
+	if(lock == NULL) {
+		_freertos_spinlock_skip_push();
+		return;
+	}
+	while(xSemaphoreTake(lock, 60 * 1000 / portTICK_RATE_MS) != pdTRUE)
 		printf("[%s] %s(%p) failed, retry\n", pcTaskGetTaskName(NULL), __FUNCTION__, plock);
 #endif
 }
@@ -398,7 +548,11 @@ static void _freertos_spinunlock_irqsave(_lock *plock, _irqL *irqL)
 	/* To avoid gcc warnings */
 	( void ) irqL;
 #if USE_MUTEX_FOR_SPINLOCK
-	xSemaphoreGive(*plock);
+	_lock lock = *plock;
+	if(lock != NULL && xSemaphoreGetMutexHolder(lock) == xTaskGetCurrentTaskHandle())
+		xSemaphoreGive(lock);
+	else if(!_freertos_spinlock_skip_pop())
+		_freertos_spinlock_release_quarantined();
 #endif
 	taskEXIT_CRITICAL();
 }
