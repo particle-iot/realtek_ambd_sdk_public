@@ -342,7 +342,7 @@ static void _freertos_cpu_unlock(void)
 }
 
 #if USE_MUTEX_FOR_SPINLOCK
-#define SPINLOCK_QUARANTINE_SIZE	64
+#define SPINLOCK_QUARANTINE_SIZE	128
 #define SPINLOCK_QUARANTINE_TIME_MS	10000
 #define SPINLOCK_SKIP_TABLE_SIZE	8
 
@@ -401,28 +401,41 @@ static int _freertos_spinlock_skip_pop(void)
 	return ret;
 }
 
-static void _freertos_spinlock_reap(int force)
+static _lock _freertos_spinlock_reap_one(int force)
 {
-	_lock expired[SPINLOCK_QUARANTINE_SIZE];
-	int count = 0;
+	_lock lock = NULL;
+	int found = -1;
 	int i;
 	TickType_t now = xTaskGetTickCount();
 
 	taskENTER_CRITICAL();
 	for(i = 0; i < SPINLOCK_QUARANTINE_SIZE; i++) {
-		_lock lock = spinlock_quarantine[i].lock;
-		if(lock == NULL)
+		_lock l = spinlock_quarantine[i].lock;
+		if(l == NULL || xSemaphoreGetMutexHolder(l) != NULL)
 			continue;
-		if((force || now - spinlock_quarantine[i].time >= pdMS_TO_TICKS(SPINLOCK_QUARANTINE_TIME_MS)) &&
-				xSemaphoreGetMutexHolder(lock) == NULL) {
-			expired[count++] = lock;
-			spinlock_quarantine[i].lock = NULL;
+		if(now - spinlock_quarantine[i].time >= pdMS_TO_TICKS(SPINLOCK_QUARANTINE_TIME_MS)) {
+			found = i;
+			break;
 		}
+		if(force && (found < 0 || now - spinlock_quarantine[i].time > now - spinlock_quarantine[found].time))
+			found = i;
+	}
+	if(found >= 0) {
+		lock = spinlock_quarantine[found].lock;
+		spinlock_quarantine[found].lock = NULL;
 	}
 	taskEXIT_CRITICAL();
+	return lock;
+}
 
-	for(i = 0; i < count; i++)
-		vSemaphoreDelete(expired[i]);
+static void _freertos_spinlock_reap(int force)
+{
+	_lock lock;
+
+	while((lock = _freertos_spinlock_reap_one(force)) != NULL) {
+		vSemaphoreDelete(lock);
+		force = 0;
+	}
 }
 
 static int _freertos_spinlock_quarantine(_lock lock)
