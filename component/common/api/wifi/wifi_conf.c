@@ -2903,6 +2903,7 @@ int wifi_scan_networks(rtw_scan_result_handler_t results_handler, void* user_dat
 	scan_result_handler_ptr.scan_running = 1;
 #endif
 
+	wifi_scan_lock();
 	scan_result_handler_ptr.gscan_result_handler = results_handler;
 	scan_result_handler_ptr.user_data = user_data;
 	scan_result_handler_ptr.scan_complete = RTW_FALSE;
@@ -2917,28 +2918,21 @@ int wifi_scan_networks(rtw_scan_result_handler_t results_handler, void* user_dat
 
 	scan_result_handler_ptr.pap_details = (rtw_scan_result_t**)rtw_zmalloc(max_ap_size*sizeof(rtw_scan_result_t*));
 	if(scan_result_handler_ptr.pap_details == NULL)
-		goto error2_with_result_ptr;
+		goto err_exit;
 	rtw_memset(scan_result_handler_ptr.pap_details, 0, max_ap_size*sizeof(rtw_scan_result_t*));
+	wifi_scan_unlock();
 
 	if (wifi_scan( RTW_SCAN_COMMAMD<<4 | RTW_SCAN_TYPE_ACTIVE, RTW_BSS_TYPE_ANY, NULL) != RTW_SUCCESS)
 	{
-		goto error1_with_result_ptr;
+		wifi_scan_lock();
+		goto err_exit;
 	}
 
 	return RTW_SUCCESS;
 
-error1_with_result_ptr:
-	wifi_scan_lock();
+err_exit:
 	wifi_scan_reset_state();
 	wifi_scan_unlock();
-	return RTW_ERROR;
-
-error2_with_result_ptr:
-	rtw_free((u8*)scan_result_handler_ptr.ap_details);
-	scan_result_handler_ptr.ap_details = NULL;
-
-err_exit:
-	rtw_memset((void *)&scan_result_handler_ptr, 0, sizeof(scan_result_handler_ptr));
 	return RTW_ERROR;
 }
 
